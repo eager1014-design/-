@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ai-bridge": {
+      "command": "node",
+      "args": ["tools/ai-bridge/server.mjs"]
+    }
+  }
+}

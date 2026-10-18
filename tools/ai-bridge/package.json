@@ -1,0 +1,13 @@
+{
+  "name": "ai-bridge",
+  "private": true,
+  "type": "module",
+  "description": "Claude에서 제미나이·챗GPT를 부르는 MCP 연결 프로그램",
+  "main": "server.mjs",
+  "dependencies": {
+    "@google/genai": "2.27.0",
+    "@modelcontextprotocol/sdk": "1.32.0",
+    "openai": "7.27.0",
+    "zod": "4.6.5"
+  }
+}
