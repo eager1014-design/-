@@ -6,10 +6,13 @@ AI_PROVIDERS 에 적힌 순서대로 시도하고, 키가 없거나 오류가 �
 """
 import json
 import os
+import threading
 import urllib.error
 import urllib.request
+from datetime import date
 
-TIMEOUT = 120
+# 한 AI를 기다리는 최대 시간(초). 넘으면 다음 AI로 넘어간다.
+TIMEOUT = int(os.environ.get("LLM_TIMEOUT", "150"))
 
 
 def _post(url, headers, body):
@@ -44,11 +47,19 @@ def _gemini(system, messages, max_tokens):
     data = _post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                  {"x-goog-api-key": key},
                  {"systemInstruction": {"parts": [{"text": system}]}, "contents": contents,
-                  "generationConfig": {"maxOutputTokens": max_tokens}})
+                  "generationConfig": _gemini_config(model, max_tokens)})
     cands = data.get("candidates") or []
     if not cands:
         raise RuntimeError(f"빈 응답: {json.dumps(data.get('promptFeedback', data), ensure_ascii=False)[:300]}")
     return "".join(p.get("text", "") for p in cands[0].get("content", {}).get("parts", []) if not p.get("thought"))
+
+
+def _gemini_config(model, max_tokens):
+    """제미나이 3 이후 모델은 답하기 전 '생각'이 길어 느리다 → 생각을 짧게(low) 해서 속도를 확보."""
+    cfg = {"maxOutputTokens": max_tokens}
+    if model.startswith("gemini-") and not model.startswith(("gemini-1", "gemini-2")):
+        cfg["thinkingConfig"] = {"thinkingLevel": os.environ.get("GEMINI_THINKING", "low")}
+    return cfg
 
 
 def _openai(system, messages, max_tokens):
@@ -90,8 +101,36 @@ def label(name):
     return f"{name}:{PROVIDERS[name]['model']()}" if name in PROVIDERS else name
 
 
+# 하루 AI 호출 상한(비용 안전장치). 넘으면 AI 대신 규칙 기반 풀이로 대체된다. 0이면 제한 없음.
+DAILY_LIMIT = int(os.environ.get("AI_DAILY_LIMIT", "150"))
+_usage_lock = threading.Lock()
+
+
+def _take_quota():
+    """오늘 사용량을 1 늘리고, 상한 안이면 True."""
+    if DAILY_LIMIT <= 0:
+        return True
+    import db  # llm.py 를 다른 곳에서 단독으로 쓸 때 DB 의존을 피하려고 여기서 import
+    today = date.today().isoformat()
+    with _usage_lock:
+        c = db.conn()
+        c.execute("CREATE TABLE IF NOT EXISTS ai_usage (day TEXT PRIMARY KEY, calls INTEGER NOT NULL)")
+        row = c.execute("SELECT calls FROM ai_usage WHERE day=?", (today,)).fetchone()
+        used = row[0] if row else 0
+        if used >= DAILY_LIMIT:
+            return False
+        c.execute("INSERT INTO ai_usage(day, calls) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET calls=calls+1", (today,))
+        c.commit()
+        if used + 1 in (int(DAILY_LIMIT * 0.8), DAILY_LIMIT):
+            print(f"[llm] ⚠️ 오늘 AI 사용 {used + 1}/{DAILY_LIMIT}회")
+        return True
+
+
 def generate(system, messages, max_tokens=3000):
     """(text, engine) — engine 은 실제로 답한 AI 예: 'gemini:gemini-3.8-flash'. 모두 실패하면 (None, None)."""
+    if available() and not _take_quota():
+        print(f"[llm] 오늘 AI 사용 상한({DAILY_LIMIT}회) 도달 → 기본 풀이로 대체")
+        return None, None
     for name in available():
         try:
             # 생각하는 모델은 생각에도 토큰을 쓰므로 여유를 둔다.

@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 import db
 
-TRIAL_DAYS = 7
+TRIAL_DAYS = 3  # 무료체험 기간(일). 화면 문구도 이 값을 따른다.
 PLANS = {
     "monthly": {"name": "월간 구독", "price": 9900, "days": 30, "desc": "매월 자동결제 · 언제든 해지"},
     "yearly": {"name": "연간 구독", "price": 79000, "days": 365, "desc": "월 6,583원 꼴 · 33% 할인"},

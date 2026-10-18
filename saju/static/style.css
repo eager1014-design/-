@@ -213,3 +213,9 @@ details.learn summary { cursor: pointer; font-weight: 700; }
 /* 궁합 점수 */
 .score { font: 700 56px "Noto Serif KR", serif; color: var(--accent); line-height: 1.1; margin: 6px 0; }
 .score small { font-size: 20px; margin-left: 2px; }
+
+/* 궁합 공유 카드 미리보기 */
+.sharecard { width: 100%; max-width: 300px; margin: 16px auto 0; display: block; border-radius: 16px; box-shadow: 0 6px 24px rgba(0,0,0,.12); }
+
+/* 약관·방침 */
+.legal h3 { margin-top: 22px; }

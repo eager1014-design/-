@@ -1,0 +1,7 @@
+# 서버에는 saju 폴더의 코드만 올린다. 비밀·데이터·시험 파일은 제외.
+*
+!saju/
+saju/.env
+saju/data/
+saju/tests/
+saju/**/__pycache__/

@@ -21,7 +21,9 @@ MODE = "smtp" if HOST and USER and PASS else "mock"
 def send(to, subject, text):
     """성공 여부(bool). 실패해도 예외를 밖으로 던지지 않는다."""
     if MODE == "mock":
-        print(f"\n[메일 모의 발송] 받는 사람: {to}\n제목: {subject}\n{text}\n")
+        public = os.environ.get("PUBLIC_URL", "http://localhost").split("//")[-1].split(":")[0].split("/")[0] not in ("localhost", "127.0.0.1")
+        # 공개 서버 로그에 비밀번호 재설정 링크가 남으면 위험하므로 본문은 내 컴퓨터에서만 출력
+        print(f"\n[메일 모의 발송] 받는 사람: {to}\n제목: {subject}\n" + ("(공개 서버라 본문 생략)" if public else text) + "\n")
         return True
     msg = EmailMessage()
     msg["Subject"] = subject

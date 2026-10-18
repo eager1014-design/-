@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "saju-test",
+      "runtimeExecutable": "env",
+      "runtimeArgs": ["AI_PROVIDERS=none", "SAJU_DB=.tmp/test.db", "PORT=8765", "PYTHONUNBUFFERED=1", "python3", "saju/server.py"],
+      "port": 8765
+    }
+  ]
+}

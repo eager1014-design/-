@@ -84,7 +84,9 @@ def _migrate(c):
     cols = {r[1] for r in c.execute("PRAGMA table_info(users)")}
     if "email_verified" not in cols:
         c.execute("ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0")
-        c.commit()
+    if "ai_consent_at" not in cols:
+        c.execute("ALTER TABLE users ADD COLUMN ai_consent_at TEXT")  # 개인정보 국외 이전(AI) 동의 시각
+    c.commit()
 
 
 def one(sql, *args):

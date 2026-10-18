@@ -74,7 +74,7 @@ function renderNav() {
       <a class="${on("#/account")}" href="#/account">내 구독</a>`;
     nav.querySelector("a.on")?.scrollIntoView({ inline: "center", block: "nearest" });
   } else {
-    nav.innerHTML = `<a href="#/login">로그인</a><a class="btn" style="padding:7px 14px;color:#fff" href="#/signup">7일 무료체험</a>`;
+    nav.innerHTML = `<a href="#/login">로그인</a><a class="btn" style="padding:7px 14px;color:#fff" href="#/signup">${S.config.trial_days}일 무료체험</a>`;
   }
   // 메뉴가 화면보다 길면 오른쪽을 흐리게 해서 옆으로 밀 수 있음을 알려준다.
   const hint = () => nav.classList.toggle("more", nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 4);
@@ -110,6 +110,7 @@ function renderNav() {
 
 
 /* ------------------------------------------------------------ 공통 도우미 */
+const AI_CONSENT_TEXT = "[필수] AI 풀이를 위해 입력한 생년월일·상황·고민 내용이 Google(미국)·OpenAI(미국)·Anthropic(미국)의 AI 서버로 전송되는 것(개인정보 국외 이전)에 동의합니다. <a href=\"#/privacy\" target=\"_blank\">자세히</a>";
 function engineLabel(e) {
   if (!e || e === "rules") return "기본 해석";
   const name = { gemini: "제미나이", openai: "챗GPT", claude: "Claude" }[e.split(":")[0]] || e;
@@ -153,7 +154,7 @@ pages["#/"] = () => {
     <p class="lead">생년월일시만으로 정해진 이야기를 듣는 대신, 지금 내가 처한 현실과 고민을 함께 털어놓으세요.
     타고난 기운이 왜 지금 이런 상황을 만드는지 설명하고, 그 기운을 어떻게 써야 할지 방향을 함께 찾습니다.</p>
     <div class="row" style="justify-content:center">
-      <a class="btn lg" href="#/signup">7일 무료로 시작하기</a>
+      <a class="btn lg" href="#/signup">${S.config.trial_days}일 무료로 시작하기</a>
       <a class="btn ghost lg" href="#/login">이미 회원이에요</a>
     </div>
     <p class="muted small" style="margin-top:12px">가입 시 결제수단 등록 없음 · 체험 종료 후 자동결제 없음</p>
@@ -211,13 +212,15 @@ pages["#/"] = () => {
 pages["#/signup"] = () => {
   app.innerHTML = `
   <div class="narrow card">
-    <h2>7일 무료체험 시작</h2>
+    <h2>${S.config.trial_days}일 무료체험 시작</h2>
     <p class="muted small">결제수단 없이 바로 시작합니다. 체험 기간에는 모든 상담을 제한 없이 이용할 수 있어요.</p>
     <form id="f">
+      ${S.config.invite_required ? '<label>초대 코드</label><input name="invite" required autocomplete="off" placeholder="초대받은 코드를 입력해 주세요">' : ""}
       <label>이름 또는 닉네임</label><input name="name" required maxlength="30" autocomplete="nickname">
       <label>이메일</label><input name="email" type="email" required autocomplete="email">
       <label>비밀번호 (8자 이상)</label><input name="password" type="password" minlength="8" required autocomplete="new-password">
-      <label class="check"><input type="checkbox" name="agree"> <span>[필수] 이용약관·개인정보 처리방침에 동의하며, 7일 무료체험은 결제수단 등록 없이 제공되고 체험 종료 후 자동결제되지 않음을 확인했습니다.</span></label>
+      <label class="check"><input type="checkbox" name="agree"> <span>[필수] <a href="#/terms" target="_blank">이용약관</a>·<a href="#/privacy" target="_blank">개인정보 처리방침</a>에 동의하며, ${S.config.trial_days}일 무료체험은 결제수단 등록 없이 제공되고 체험 종료 후 자동결제되지 않음을 확인했습니다.</span></label>
+      <label class="check"><input type="checkbox" name="agree_ai"> <span>${AI_CONSENT_TEXT}</span></label>
       <label class="check"><input type="checkbox" name="marketing"> <span>[선택] 체험 종료 안내 및 월간 운세 소식 받기</span></label>
       <div class="err" id="err"></div>
       <button class="btn block lg">무료체험 시작하기</button>
@@ -229,7 +232,7 @@ pages["#/signup"] = () => {
     const f = new FormData(e.target), btn = e.target.querySelector("button");
     btn.disabled = true;
     try {
-      const r = await api("/api/signup", { name: f.get("name"), email: f.get("email"), password: f.get("password"), agree: !!f.get("agree"), marketing: !!f.get("marketing") });
+      const r = await api("/api/signup", { name: f.get("name"), email: f.get("email"), password: f.get("password"), agree: !!f.get("agree"), agree_ai: !!f.get("agree_ai"), marketing: !!f.get("marketing"), invite: f.get("invite") || "" });
       await refreshMe();
       toast("가입 완료! 인증 메일을 보냈어요.");
       devLink(r);
@@ -248,7 +251,7 @@ pages["#/login"] = () => {
       <div class="err" id="err"></div>
       <button class="btn block lg">로그인</button>
     </form>
-    <p class="small muted" style="text-align:center"><a href="#/forgot">비밀번호를 잊으셨나요?</a> · 처음이신가요? <a href="#/signup">7일 무료체험</a></p>
+    <p class="small muted" style="text-align:center"><a href="#/forgot">비밀번호를 잊으셨나요?</a> · 처음이신가요? <a href="#/signup">${S.config.trial_days}일 무료체험</a></p>
   </div>`;
   $("#f").onsubmit = async (e) => {
     e.preventDefault();
@@ -306,6 +309,7 @@ pages["#/onboard"] = () => {
       <label>어떻게 되고 싶나요? <span class="muted small">(선택)</span></label>
       <input name="goal" value="${esc(s.goal)}" placeholder="예: 1년 안에 안정적으로 독립하고 싶다">
       <div class="err" id="err"></div>
+      ${S.me.user.ai_consent ? "" : `<label class="check"><input type="checkbox" name="ai_consent"> <span>${AI_CONSENT_TEXT}</span></label>`}
       <button class="btn block lg">내 사주 풀어보기</button>
     </div>
     </form>
@@ -320,6 +324,7 @@ pages["#/onboard"] = () => {
       await api("/api/profile", {
         birth: { year: f.year, month: f.month, day: f.day, calendar: f.calendar, leap: !!f.leap, hour: f.hour, minute: f.minute, gender: f.gender, city: f.city },
         situation: { job: f.job, concern: f.concern, story: f.story, mood: f.mood, goal: f.goal },
+        ai_consent: !!f.ai_consent,
       });
       S.chart = null;
       await refreshMe();
@@ -455,7 +460,7 @@ function paywallHTML(acc, teaser) {
 
 pages["#/reading"] = async (q) => {
   if (!needProfile()) return;
-  app.innerHTML = `<div class="card">${loading("사주와 지금의 이야기를 함께 읽고 있습니다… (최대 1분)")}</div>`;
+  app.innerHTML = `<div class="card">${loading("사주와 지금의 이야기를 함께 읽고 있습니다… (1~2분 걸려요)")}</div>`;
   try {
     const r = await api("/api/reading", { refresh: q.get("refresh") === "1" });
     app.innerHTML = `
@@ -631,9 +636,26 @@ pages["#/account"] = async (q) => {
         <a class="btn ghost" href="#/onboard">사주·상황 정보 수정</a>
         <button class="btn ghost" id="logout">로그아웃</button>
       </div>
+      <div class="card">
+        <details class="learn"><summary class="muted small">회원 탈퇴</summary>
+          <p class="small">탈퇴하면 사주 정보, 적어주신 고민, 모든 상담 기록이 <b>즉시 삭제되고 되돌릴 수 없어요.</b> 구독 중이라면 자동결제도 멈춥니다. (결제 기록만 전자상거래법에 따라 5년간 보관돼요.)</p>
+          <input type="password" id="delpw" placeholder="비밀번호 확인" autocomplete="current-password">
+          <div class="err" id="delerr"></div>
+          <button class="btn ghost block" id="delbtn" style="color:var(--accent)">탈퇴하고 모든 정보 삭제</button>
+        </details>
+      </div>
       ${c.mode === "mock" ? `<div class="card"><b>🧪 개발자 도구</b><p class="muted small">무료체험/결제 기간이 끝난 상황을 즉시 재현합니다(결제 수단이 있으면 갱신 결제가 시뮬레이션됩니다).</p><button class="btn ghost" id="expire">체험·결제기간 종료 시뮬레이션</button></div>` : ""}
     </div>`;
   $("#logout").onclick = async () => { await api("/api/logout", {}); S.me = null; S.chart = null; await refreshMe(); location.hash = "#/"; };
+  $("#delbtn").onclick = async () => {
+    if (!confirm("정말 탈퇴할까요? 모든 사주·상담 기록이 즉시 삭제되고 되돌릴 수 없습니다.")) return;
+    try {
+      await api("/api/account/delete", { password: $("#delpw").value });
+      S.me = null; S.chart = null; await refreshMe();
+      toast("탈퇴가 완료되었습니다. 그동안 함께해 주셔서 감사합니다.");
+      location.hash = "#/";
+    } catch (e) { $("#delerr").textContent = e.message; }
+  };
   const cancel = $("#cancel");
   if (cancel) cancel.onclick = async () => {
     if (!confirm("구독을 해지할까요? 남은 기간까지는 계속 이용할 수 있습니다.")) return;
@@ -648,7 +670,7 @@ pages["#/account"] = async (q) => {
 pages["#/yearly"] = async (q) => {
   if (!needProfile()) return;
   if (!S.me.access.has_access) { app.innerHTML = paywallHTML(S.me.access); return; }
-  app.innerHTML = `<div class="card">${loading("열두 달의 흐름을 펼치는 중… (최대 1분)")}</div>`;
+  app.innerHTML = `<div class="card">${loading("열두 달의 흐름을 펼치는 중… (1~2분 걸려요)")}</div>`;
   try {
     const year = q.get("year") || "";
     const r = await api(`/api/yearly?year=${encodeURIComponent(year)}${q.get("refresh") === "1" ? "&refresh=1" : ""}`);
@@ -728,7 +750,7 @@ pages["#/match"] = async () => {
     const f = Object.fromEntries(new FormData(form));
     if (!f.gender) return ($("#err").textContent = "상대방 성별을 선택해 주세요.");
     const btn = form.querySelector("button.block"); btn.disabled = true; $("#err").textContent = "";
-    $("#result").innerHTML = `<div class="card">${loading("두 사람의 기운을 함께 읽는 중… (최대 1분)")}</div>`;
+    $("#result").innerHTML = `<div class="card">${loading("두 사람의 기운을 함께 읽는 중… (1~2분 걸려요)")}</div>`;
     $("#result").scrollIntoView({ block: "start" });
     try {
       const r = await api("/api/match", {
@@ -738,7 +760,12 @@ pages["#/match"] = async () => {
       $("#result").innerHTML = `
         ${r.score ? `<div class="card" style="text-align:center"><div class="muted small">${esc(S.me.user.name)} × ${esc(r.partner_name)}</div><div class="score">${r.score}<small>점</small></div><div class="muted small">참고용 점수예요. 관계는 두 사람이 만들어 갑니다.</div></div>` : ""}
         <article class="card md">${md(r.markdown)}</article>
+        <div class="card" style="text-align:center">
+          <button class="btn lg" id="mkcard">📸 인스타 스토리용 카드 만들기</button>
+          <div id="cardout"></div>
+        </div>
         <p class="muted small" style="text-align:center">${fmtDate(r.created_at)} · ${engineLabel(r.engine)}</p>`;
+      $("#mkcard").onclick = () => showMatchCard({ me: S.me.user.name, partner: r.partner_name, score: r.score, relation: r.relation, line: summaryLine(r.markdown) });
     } catch (err) { $("#result").innerHTML = ""; $("#err").textContent = err.message; }
     btn.disabled = false;
   };
@@ -799,6 +826,155 @@ pages["#/verify"] = async (q) => {
     if (S.me?.user) await refreshMe();
     app.innerHTML = `<div class="narrow card" style="text-align:center"><h2>이메일 인증 완료 ✅</h2><p class="muted">이제 구독을 포함한 모든 기능을 이용할 수 있어요.</p><a class="btn" href="${S.me?.user ? "#/chart" : "#/login"}">${S.me?.user ? "내 사주 보기" : "로그인하기"}</a></div>`;
   } catch (e) { app.innerHTML = `<div class="narrow card err">${esc(e.message)}</div>`; }
+};
+
+/* ------------------------------------------------------------ 궁합 공유 카드 */
+function summaryLine(markdown) {
+  // '## 한 줄 요약' 바로 아래 첫 문장을 카드 문구로 쓴다.
+  const m = markdown.match(/##\s*한 줄 요약\s*\n+([^\n]+)/);
+  return (m ? m[1] : "").replace(/\*\*/g, "").replace(/\s*—\s*참고 점수.*$/, "").trim();
+}
+
+function wrapText(ctx, text, maxWidth) {
+  const lines = []; let cur = "";
+  for (const ch of text) {
+    if (ctx.measureText(cur + ch).width > maxWidth && cur) { lines.push(cur); cur = ch.trimStart(); }
+    else cur += ch;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+async function drawMatchCard({ me, partner, score, relation, line }) {
+  await document.fonts.ready;
+  const W = 1080, H = 1920, c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  // 카드 색은 화면 테마와 무관하게 고정(공유 이미지는 늘 같은 모습이어야 함)
+  const BG = "#f6f1e7", PAPER = "#fffdf8", INK = "#1f1b16", SUB = "#7a7064", ACCENT = "#9c2f22", GOLD = "#b88a3b";
+  x.fillStyle = BG; x.fillRect(0, 0, W, H);
+  x.fillStyle = PAPER; x.strokeStyle = GOLD; x.lineWidth = 4;
+  x.beginPath(); x.roundRect(80, 220, W - 160, 1440, 48); x.fill(); x.stroke();
+  x.textAlign = "center";
+  x.fillStyle = ACCENT; x.font = '700 44px "Noto Serif KR", serif'; x.fillText("運結 · 궁합", W / 2, 160);
+  x.fillStyle = SUB; x.font = '500 40px "Noto Sans KR", sans-serif'; x.fillText(relation ? `${relation} 궁합` : "두 사람의 궁합", W / 2, 360);
+  x.fillStyle = INK; x.font = '700 76px "Noto Serif KR", serif';
+  const names = `${me}  ×  ${partner}`;
+  const nameSize = Math.min(76, Math.floor(76 * 820 / Math.max(x.measureText(names).width, 1)));
+  x.font = `700 ${nameSize}px "Noto Serif KR", serif`; x.fillText(names, W / 2, 480);
+  x.fillStyle = ACCENT; x.font = '700 300px "Noto Serif KR", serif'; x.fillText(String(score ?? "—"), W / 2 - 40, 860);
+  x.font = '700 80px "Noto Serif KR", serif'; x.fillText("점", W / 2 + (score >= 100 ? 300 : 230), 860);
+  x.strokeStyle = "#e6dccb"; x.lineWidth = 2; x.beginPath(); x.moveTo(200, 960); x.lineTo(W - 200, 960); x.stroke();
+  x.fillStyle = INK; x.font = '500 52px "Noto Sans KR", sans-serif';
+  const lines = wrapText(x, line || "서로 다른 기운이 만나 만드는 이야기", 760).slice(0, 5);
+  const top = 1250 - ((lines.length - 1) * 78) / 2;  // 구분선과 안내 문구 사이 가운데
+  lines.forEach((l, i) => x.fillText(l, W / 2, top + i * 78));
+  x.fillStyle = SUB; x.font = '400 34px "Noto Sans KR", sans-serif';
+  x.fillText("참고용 점수예요. 관계는 두 사람이 만들어 갑니다.", W / 2, 1580);
+  x.fillStyle = INK; x.font = '700 46px "Noto Sans KR", sans-serif'; x.fillText("나도 궁합 보기 →", W / 2, 1780);
+  x.fillStyle = SUB; x.font = '400 36px "Noto Sans KR", sans-serif'; x.fillText(location.host, W / 2, 1840);
+  return new Promise((res) => c.toBlob(res, "image/png"));
+}
+
+async function showMatchCard(info) {
+  const out = $("#cardout"), btn = $("#mkcard");
+  btn.disabled = true;
+  const blob = await drawMatchCard(info);
+  const url = URL.createObjectURL(blob);
+  const file = new File([blob], `운결_궁합_${info.partner}.png`, { type: "image/png" });
+  const canShare = navigator.canShare?.({ files: [file] });
+  out.innerHTML = `<img src="${url}" alt="궁합 공유 카드" class="sharecard">
+    <div class="row" style="justify-content:center;margin-top:12px">
+      ${canShare ? '<button class="btn" id="sharebtn">공유하기</button>' : ""}
+      <a class="btn ghost" href="${url}" download="${esc(file.name)}">이미지 저장</a>
+    </div>
+    <p class="muted small">저장한 이미지를 인스타 스토리에 올려보세요.</p>`;
+  const sb = $("#sharebtn");
+  if (sb) sb.onclick = () => navigator.share({ files: [file], title: "운결 궁합" }).catch(() => {});
+  btn.disabled = false;
+}
+
+
+/* ------------------------------------------------------------ 약관 · 개인정보 처리방침 (초안) */
+// ⚠️ 초안입니다. [대괄호] 부분을 채우고, 실제 판매 전 전문가(변호사·개인정보 컨설팅) 검토를 받으세요.
+const COMPANY = { name: "[상호]", ceo: "[대표자 이름]", bizno: "[사업자등록번호]", mailorder: "[통신판매업 신고번호]",
+  address: "[사업장 주소]", email: "[문의 이메일]", privacyOfficer: "[개인정보 보호책임자 이름·연락처]", effective: "[시행일 YYYY-MM-DD]" };
+
+pages["#/privacy"] = () => {
+  const c = COMPANY;
+  app.innerHTML = `<article class="narrow card md legal">${md(`## 개인정보 처리방침
+${c.name}(이하 '회사')는 '운결' 서비스 이용자의 개인정보를 소중히 다루며, 개인정보 보호법에 따라 다음과 같이 처리합니다. 시행일: ${c.effective}
+
+### 1. 수집하는 항목과 목적
+- **회원 관리**: 이메일, 이름(닉네임), 비밀번호(복원할 수 없는 형태로 저장) — 본인 확인, 로그인, 공지
+- **사주 풀이**: 생년월일·태어난 시각·성별·태어난 지역(양력/음력), 직업·고민 분야·상황과 고민 내용·마음 상태·원하는 결과 — 사주 계산과 맞춤 풀이
+- **궁합**: 상대방의 이름(닉네임)·생년월일·시각·성별·지역 — 궁합 풀이. *상대방 정보는 이용자가 입력한 범위에서만 사용하며, 상대방의 동의를 받고 입력해 주세요.*
+- **결제(구독 시)**: 결제수단 정보는 회사가 아닌 토스페이먼츠가 보관하며, 회사는 카드사명·카드번호 일부만 보관
+- **자동 수집**: 접속 IP, 접속 시각(보안·부정이용 방지 목적)
+
+### 2. 보유 기간
+- 회원 탈퇴 시 **즉시 삭제**합니다(사주·고민·상담 기록 포함).
+- 단, 관계 법령에 따라 보관: 계약·청약철회, 대금결제 및 재화 공급 기록 5년, 소비자 불만·분쟁 처리 기록 3년(전자상거래법), 접속 기록 3개월(통신비밀보호법).
+
+### 3. 개인정보 처리 위탁 및 국외 이전
+AI 풀이를 위해 아래 업체에 정보를 전송합니다. 전송된 정보는 풀이 생성에만 쓰이며, 각 업체의 API 약관상 AI 학습에 사용되지 않는 유료 API를 사용합니다. [업체별 데이터 보관 정책 확인 후 기재]
+
+- **이전 항목**: 사주 계산 결과, 상황·고민 내용, 이름(닉네임), 궁합 상대의 이름과 사주
+- **이전 시기·방법**: 풀이를 요청할 때마다 암호화 통신(HTTPS)으로 전송
+- **이전받는 자(국가)**: Google LLC — Gemini API(미국, 기본) / OpenAI, L.L.C.(미국, 장애 시 대체) / Anthropic, PBC(미국, 장애 시 대체)
+- **목적**: AI 풀이 생성
+- **보유 기간**: [업체별 API 데이터 보관 정책 확인 후 기재]
+
+- 결제 처리: (주)비바리퍼블리카(토스페이먼츠) — 국내
+- 이메일 발송: [메일 발송 업체명] — [국가]
+- 서버 운영: [호스팅 업체명] — [국가]
+
+국외 이전을 원하지 않으면 동의하지 않을 수 있으나, 이 경우 AI 풀이 서비스를 제공할 수 없습니다.
+
+### 4. 이용자의 권리
+언제든지 내 정보 조회·수정('내 구독 → 사주·상황 정보 수정'), 삭제·탈퇴('내 구독 → 회원 탈퇴')를 할 수 있습니다. 그 밖의 요청은 아래 연락처로 해주세요.
+
+### 5. 파기 방법
+전자적 파일은 복구할 수 없는 방법으로 삭제합니다.
+
+### 6. 안전성 확보 조치
+비밀번호 일방향 암호화 저장, 로그인 시도 제한, 암호화 통신(HTTPS), 접근 권한 최소화, 접속 기록 보관.
+
+### 7. 개인정보 보호책임자
+${c.privacyOfficer} · ${c.email}
+
+권익 침해 상담: 개인정보침해신고센터(국번없이 118), 개인정보분쟁조정위원회(1833-6972)`)}</article>`;
+};
+
+pages["#/terms"] = () => {
+  const c = COMPANY;
+  app.innerHTML = `<article class="narrow card md legal">${md(`## 이용약관
+시행일: ${c.effective}
+
+### 제1조 (목적)
+이 약관은 ${c.name}(이하 '회사')가 제공하는 사주 상담 서비스 '운결'의 이용 조건과 절차를 정합니다.
+
+### 제2조 (서비스의 성격)
+운결은 명리학을 바탕으로 자기 이해와 방향 설정을 돕는 **참고용 콘텐츠**입니다. 의료·법률·투자·심리 치료 등 전문 자문을 대신하지 않으며, 중요한 결정은 해당 분야 전문가와 상의해야 합니다. 풀이 결과는 AI가 생성하며 사실과 다를 수 있습니다.
+
+### 제3조 (무료체험)
+가입 즉시 ${S.config.trial_days}일 무료체험이 시작되며 결제수단을 받지 않습니다. 체험 종료 후 자동결제되지 않습니다.
+
+### 제4조 (구독과 자동결제)
+1. 이용자가 결제수단을 등록하고 요금제를 선택하면 매 결제주기마다 자동결제됩니다.
+2. 체험 중 등록한 경우 체험 종료일에 첫 결제가 진행됩니다.
+3. 회사는 자동결제 전 [N]일 전에 결제 예정일과 금액을 이메일로 안내합니다.
+4. 가격을 변경할 때는 시행 [30]일 전에 알리고, 동의하지 않으면 해지할 수 있습니다.
+
+### 제5조 (해지와 환불)
+1. '내 구독'에서 언제든 해지할 수 있으며, 해지해도 이미 결제한 기간까지는 이용할 수 있습니다.
+2. 결제 후 7일 이내이고 유료 기능을 이용하지 않은 경우 전액 환불합니다. [환불 기준 확정 필요 — 전자상거래법·콘텐츠이용자보호지침 검토]
+
+### 제6조 (이용자의 의무)
+타인의 정보를 동의 없이 입력하거나, 서비스를 부정한 목적으로 이용해서는 안 됩니다.
+
+### 제7조 (사업자 정보)
+상호 ${c.name} · 대표 ${c.ceo} · 사업자등록번호 ${c.bizno} · 통신판매업 신고 ${c.mailorder} · ${c.address} · ${c.email}`)}</article>`;
 };
 
 /* ------------------------------------------------------------ 라우터 */

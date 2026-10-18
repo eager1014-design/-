@@ -5,6 +5,7 @@ llm.py 에 설정된 AI(제미나이·챗GPT·Claude 중 사용 가능한 것)�
 """
 import knowledge as K
 import llm
+import quality
 
 # 분량(글자 수) — 숫자만 바꾸면 전체 풀이 길이가 조정된다.
 LEN_FULL = "2,000~2,800자"
@@ -41,6 +42,8 @@ SYSTEM_PROMPT = """당신은 따뜻하고 통찰력 있는 명리 상담가 '운
 6. 사주는 '정해진 운명'이 아니라 '타고난 기운의 지도'입니다. 겁주거나 단정하지 않습니다.
 7. 건강·법률·투자는 확정적 조언 대신 전문가 상담을 권합니다. 위기 신호(자해 등)가 보이면 상담전화 109, 1393을 안내합니다.
 8. 제공된 계산 결과만 사용하고, 없는 간지나 신살을 지어내지 않습니다.
+   '많다·과다·넘친다·없다·부족하다' 같은 양 표현은 계산값과 [핵심 포인트]에 근거가 있을 때만 씁니다.
+   (십신 그룹은 3개 이상일 때만 '많다', 0개일 때만 '없다') 올해·대운에서 들어오는 기운과 타고난 기운을 섞어 말하지 않습니다.
 9. 한국어 존댓말, 마크다운. 소제목은 '## '로 시작하고, 요청한 분량을 지킵니다."""
 
 
@@ -145,8 +148,15 @@ def situation_text(sit):
     return "\n".join(parts)
 
 
-def _result(text, engine, fallback):
+def _result(text, engine, fallback, qc=None):
+    """qc=(chart, luck, sit, kind) 를 주면 AI 풀이를 자동 채점해 서버 로그에 남긴다(손님 화면에는 안 보임)."""
     if text:
+        if qc:
+            try:
+                r = quality.check(text, *qc)
+                print(f"[품질] {qc[3]} {engine} — {quality.report_text(r, excerpts=False)}")
+            except Exception as e:  # 검사기 오류가 풀이 제공을 막으면 안 됨
+                print(f"[품질] 검사 실패: {e}")
         return {"engine": engine, "markdown": text}
     return {"engine": "rules", "markdown": fallback()}
 
@@ -176,7 +186,7 @@ def full_reading(chart, luck, sit, name=""):
   (본문에 나온 명리 용어 최대 5개를 '용어: 한 줄 풀이' 형태로)
 마지막에 두 문장 이내의 따뜻한 정리."""
     text, engine = _generate(SYSTEM_PROMPT, [{"role": "user", "content": prompt}], 4000)
-    return _result(text, engine, lambda: _rule_reading(chart, luck, sit, name))
+    return _result(text, engine, lambda: _rule_reading(chart, luck, sit, name), (chart, luck, sit, "full"))
 
 
 def counsel(chart, luck, sit, history, question, name=""):
@@ -191,7 +201,7 @@ def counsel(chart, luck, sit, history, question, name=""):
 대화형 상담입니다. {LEN_COUNSEL}로 답하세요. 질문에 대한 답을 첫 문장에 먼저 말하고,
 그 근거가 되는 기운을 한두 개만 짚은 뒤, 마지막에 '오늘 해볼 한 가지'를 제안하세요. 소제목은 2개 이하."""
     text, engine = _generate(system, msgs, 1800)
-    return _result(text, engine, lambda: _rule_counsel(chart, luck, sit, question))
+    return _result(text, engine, lambda: _rule_counsel(chart, luck, sit, question), (chart, luck, sit, "counsel"))
 
 
 def daily(chart, luck, sit):
@@ -200,7 +210,7 @@ def daily(chart, luck, sit):
 오늘의 일진 {d['ko']}이 이 사람의 원국과 만나 만드는 하루를 {LEN_DAILY}로 풀어주세요.
 ## 오늘의 기운 (2~3문장) / ## 오늘 고민과 관련해 (사용자 고민과 연결, 2~3문장) / ## 오늘의 한 가지 행동 / ## 행운 포인트(색·방향·시간대 한 줄)"""
     text, engine = _generate(SYSTEM_PROMPT, [{"role": "user", "content": prompt}], 1000)
-    return _result(text, engine, lambda: _rule_daily(chart, luck))
+    return _result(text, engine, lambda: _rule_daily(chart, luck), (chart, luck, sit, "daily"))
 
 
 # ---------------------------------------------------------------- 규칙 기반 해석
@@ -350,7 +360,7 @@ def yearly(chart, luck, sit, months, year, name=""):
 ## 올해의 실천 세 가지
   (고민에 맞춘 구체적인 행동 3개, 각각 언제 하면 좋은지)"""
     text, engine = _generate(SYSTEM_PROMPT, [{"role": "user", "content": prompt}], 3500)
-    return _result(text, engine, lambda: _rule_yearly(chart, luck, months, year, name))
+    return _result(text, engine, lambda: _rule_yearly(chart, luck, months, year, name), (chart, luck, sit, "yearly"))
 
 
 def _rule_yearly(chart, luck, months, year, name):
@@ -410,7 +420,7 @@ def match_reading(chart, luck, sit, partner, comp, name, partner_name, relation)
 ## 잘 지내는 법 (구체적 행동 3~4개, 각각 누가 무엇을)
 점수는 참고용으로 한 번만 언급하고, 관계를 단정하지 마세요."""
     text, engine = _generate(SYSTEM_PROMPT, [{"role": "user", "content": prompt}], 3000)
-    return _result(text, engine, lambda: _rule_match(chart, partner, comp, name, partner_name))
+    return _result(text, engine, lambda: _rule_match(chart, partner, comp, name, partner_name), (chart, luck, sit, "match"))
 
 
 def _rule_match(chart, partner, comp, name, partner_name):

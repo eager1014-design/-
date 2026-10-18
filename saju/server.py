@@ -16,6 +16,7 @@ import mimetypes
 import os
 import re
 import secrets
+import threading
 import time
 from datetime import datetime, timedelta, date
 from http.cookies import SimpleCookie
@@ -36,6 +37,12 @@ STATIC = os.path.join(ROOT, "static")
 PORT = int(os.environ.get("PORT", "8000"))
 PUBLIC_URL = os.environ.get("PUBLIC_URL", f"http://localhost:{PORT}")
 COUNSEL_DAILY_LIMIT = 20
+IS_LOCAL = urlparse(PUBLIC_URL).hostname in ("localhost", "127.0.0.1")
+HTTPS = PUBLIC_URL.startswith("https://")
+TRUST_PROXY = os.environ.get("TRUST_PROXY") == "1"  # 터널·프록시 뒤에서 실제 접속자 IP를 쓰려면 1
+# 결제 키 없이 인터넷에 공개하면 누구나 공짜 구독이 되므로, 지인 테스트처럼 의도한 경우에만 허용
+ALLOW_MOCK_BILLING = IS_LOCAL or os.environ.get("ALLOW_MOCK_BILLING") == "1"
+INVITE_CODE = os.environ.get("INVITE_CODE", "").strip()  # 설정하면 이 코드를 아는 사람만 가입(지인 테스트용)
 MATCH_DAILY_LIMIT = 10
 VERIFY_TTL_H = 48
 RESET_TTL_H = 1
@@ -89,7 +96,32 @@ def read_token(tok):
 
 def public_user(u):
     return {"id": u["id"], "email": u["email"], "name": u["name"], "created_at": u["created_at"],
-            "email_verified": bool(u.get("email_verified"))}
+            "email_verified": bool(u.get("email_verified")), "ai_consent": bool(u.get("ai_consent_at"))}
+
+
+# ---------------------------------------------------------------- 시도 횟수 제한
+_attempts = {}
+_attempts_lock = threading.Lock()
+
+
+def too_many(key, limit, window_sec):
+    """window_sec 안에 limit 번을 넘으면 True. 호출할 때마다 1회로 센다."""
+    now_t = time.time()
+    with _attempts_lock:
+        hits = [t for t in _attempts.get(key, []) if now_t - t < window_sec]
+        hits.append(now_t)
+        _attempts[key] = hits
+        if len(_attempts) > 50_000:  # 메모리 보호
+            _attempts.clear()
+        return len(hits) > limit
+
+
+def clear_attempts(key):
+    with _attempts_lock:
+        _attempts.pop(key, None)
+
+
+_DUMMY_SALT = secrets.token_hex(16)
 
 
 # ---------------------------------------------------------------- 이메일 토큰
@@ -194,6 +226,28 @@ class Handler(BaseHTTPRequestHandler):
         print("[%s] %s" % (datetime.now().strftime("%H:%M:%S"), fmt % args))
 
     # -- 응답 헬퍼
+    CSP = ("default-src 'self'; script-src 'self' https://js.tosspayments.com; "
+           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
+           "img-src 'self' data: blob:; connect-src 'self' https://*.tosspayments.com; "
+           "frame-src https://*.tosspayments.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+
+    def end_headers(self):
+        # 모든 응답에 붙는 브라우저 보안 설정
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Security-Policy", self.CSP)
+        if HTTPS:
+            self.send_header("Strict-Transport-Security", "max-age=31536000")
+        super().end_headers()
+
+    def client_ip(self):
+        if TRUST_PROXY:
+            fwd = self.headers.get("CF-Connecting-IP") or (self.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+            if fwd:
+                return fwd
+        return self.client_address[0]
+
     def send_json(self, obj, status=200, cookie=None):
         body = json.dumps(obj, ensure_ascii=False).encode()
         self.send_response(status)
@@ -229,7 +283,7 @@ class Handler(BaseHTTPRequestHandler):
         return read_token(c["sid"].value)
 
     def cookie(self, token, max_age=60 * 60 * 24 * 30):
-        return f"sid={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}"
+        return f"sid={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}" + ("; Secure" if HTTPS else "")
 
     # -- 라우팅
     def do_GET(self):
@@ -247,6 +301,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         u = urlparse(self.path)
         if u.path.startswith("/api/"):
+            if not (self.headers.get("Content-Type") or "").startswith("application/json"):
+                return self.error("잘못된 요청입니다.", 415)
             return self.route_api("POST", u.path, {})
         self.error("not found", 404)
 
@@ -254,7 +310,7 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/", "") or not os.path.splitext(path)[1]:
             path = "/index.html"
         full = os.path.normpath(os.path.join(STATIC, path.lstrip("/")))
-        if not full.startswith(STATIC) or not os.path.isfile(full):
+        if not full.startswith(STATIC + os.sep) or not os.path.isfile(full):
             return self.error("not found", 404)
         data = open(full, "rb").read()
         self.send_response(200)
@@ -285,6 +341,7 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", "/api/verify"): self.api_verify,
             ("POST", "/api/password/forgot"): self.api_password_forgot,
             ("POST", "/api/password/reset"): self.api_password_reset,
+            ("POST", "/api/account/delete"): self.api_account_delete,
             ("POST", "/api/billing/prepare"): self.api_billing_prepare,
             ("POST", "/api/billing/mock-register"): self.api_billing_mock,
             ("POST", "/api/billing/cancel"): self.api_billing_cancel,
@@ -299,7 +356,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:  # noqa
             import traceback
             traceback.print_exc()
-            self.error("서버 오류가 발생했습니다: " + str(e), 500)
+            self.error("일시적인 서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.", 500)  # 내부 정보는 로그에만
 
     # -- 인증 필요 헬퍼
     def need_user(self):
@@ -322,7 +379,7 @@ class Handler(BaseHTTPRequestHandler):
     def api_config(self, q):
         self.send_json({"plans": billing.PLANS, "trial_days": billing.TRIAL_DAYS, "mode": billing.MODE,
                         "toss_client_key": billing.TOSS_CLIENT if billing.MODE == "toss" else None,
-                        "ai": bool(llm.available()), "mail_mode": mailer.MODE, "cities": list(CITIES.keys()),
+                        "ai": bool(llm.available()), "mail_mode": mailer.MODE, "invite_required": bool(INVITE_CODE), "cities": list(CITIES.keys()),
                         "concerns": {k: v["label"] for k, v in K.CONCERNS.items()}})
 
     def api_signup(self, b):
@@ -336,22 +393,34 @@ class Handler(BaseHTTPRequestHandler):
         if len(pw) < 8:
             return self.error("비밀번호는 8자 이상이어야 합니다.")
         if not b.get("agree"):
-            return self.error("이용약관 및 무료체험 조건에 동의해 주세요.")
+            return self.error("이용약관 및 개인정보 처리방침에 동의해 주세요.")
+        if not b.get("agree_ai"):
+            return self.error("AI 풀이를 위한 개인정보 국외 이전에 동의해 주세요. 동의하지 않으면 서비스를 제공할 수 없습니다.")
+        if INVITE_CODE and not hmac.compare_digest((b.get("invite") or "").strip().upper(), INVITE_CODE.upper()):
+            return self.error("초대 코드가 올바르지 않습니다. 지금은 초대받은 분만 가입할 수 있어요.")
+        if too_many("signup:" + self.client_ip(), 10, 3600):
+            return self.error("가입 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.", 429)
         if db.one("SELECT id FROM users WHERE email=?", email):
             return self.error("이미 가입된 이메일입니다.")
         h, salt = hash_pw(pw)
         n = datetime.now()
-        uid = db.run("INSERT INTO users(email,name,pw_hash,salt,created_at,trial_ends_at,marketing_ok) VALUES (?,?,?,?,?,?,?)",
+        uid = db.run("INSERT INTO users(email,name,pw_hash,salt,created_at,trial_ends_at,marketing_ok,ai_consent_at) VALUES (?,?,?,?,?,?,?,?)",
                      email, name, h, salt, billing.iso(n), billing.iso(n + timedelta(days=billing.TRIAL_DAYS)),
-                     1 if b.get("marketing") else 0)
+                     1 if b.get("marketing") else 0, billing.iso(n))
         u = db.one("SELECT * FROM users WHERE id=?", uid)
         link = send_verify_mail(u)
         self.send_json(dict({"ok": True, "id": uid}, **self.dev_link(link)), cookie=self.cookie(make_token(u)))
 
     def api_login(self, b):
-        u = db.one("SELECT * FROM users WHERE email=?", (b.get("email") or "").strip().lower())
-        if not u or not hmac.compare_digest(hash_pw(b.get("password") or "", u["salt"])[0], u["pw_hash"]):
+        email = (b.get("email") or "").strip().lower()
+        if too_many("login-ip:" + self.client_ip(), 30, 900) or too_many("login:" + email, 8, 900):
+            return self.error("로그인 시도가 너무 많습니다. 15분 뒤에 다시 시도하거나 비밀번호 찾기를 이용해 주세요.", 429)
+        u = db.one("SELECT * FROM users WHERE email=?", email)
+        # 가입 여부와 관계없이 같은 계산을 해서 응답 시간으로 회원 여부를 알 수 없게 함
+        h = hash_pw(b.get("password") or "", u["salt"] if u else _DUMMY_SALT)[0]
+        if not u or not hmac.compare_digest(h, u["pw_hash"]):
             return self.error("이메일 또는 비밀번호가 올바르지 않습니다.", 401)
+        clear_attempts("login:" + email)
         self.send_json({"ok": True}, cookie=self.cookie(make_token(u)))
 
     def api_logout(self, b):
@@ -367,6 +436,10 @@ class Handler(BaseHTTPRequestHandler):
         u = self.need_user()
         if not u:
             return
+        if not u.get("ai_consent_at"):
+            if not b.get("ai_consent"):
+                return self.error("AI 풀이를 위한 개인정보 국외 이전에 동의해 주세요.", need_consent=True)
+            db.run("UPDATE users SET ai_consent_at=? WHERE id=?", billing.iso(datetime.now()), u["id"])
         birth, sit = b.get("birth") or {}, b.get("situation") or {}
         try:
             clean_birth = parse_birth(birth)
@@ -510,30 +583,33 @@ class Handler(BaseHTTPRequestHandler):
             return self.error("상대방 정보: " + str(e))
         key = hashlib.sha256((json.dumps(p["birth"], sort_keys=True) + json.dumps(pbirth, sort_keys=True)
                               + pname + relation).encode()).hexdigest()
+        chart, luck = chart_for(p)
+        partner = chart_of_birth(pbirth)
+        comp = compatibility(chart, partner)  # 계산은 무료라 저장본을 돌려줄 때도 점수를 다시 계산
         if not b.get("refresh"):
             cached = db.one("SELECT * FROM readings WHERE user_id=? AND kind='match' AND cache_key=? ORDER BY id DESC LIMIT 1",
                             u["id"], key)
             if cached:
-                return self.send_json({"markdown": cached["content"], "engine": cached["engine"],
-                                       "created_at": cached["created_at"], "cached": True, "partner_name": pname})
+                return self.send_json({"markdown": cached["content"], "engine": cached["engine"], "score": comp["score"],
+                                       "created_at": cached["created_at"], "cached": True, "partner_name": pname,
+                                       "relation": relation})
         today = date.today().isoformat()
         cnt = db.one("SELECT COUNT(*) c FROM readings WHERE user_id=? AND kind='match' AND created_at >= ?", u["id"], today)["c"]
         if cnt >= MATCH_DAILY_LIMIT:
             return self.error(f"궁합은 하루 {MATCH_DAILY_LIMIT}번까지 볼 수 있습니다. 내일 다시 이용해 주세요.", 429)
-        chart, luck = chart_for(p)
-        partner = chart_of_birth(pbirth)
-        comp = compatibility(chart, partner)
         res = interpret.match_reading(chart, luck, p["situation"], partner, comp, u["name"], pname, relation)
         n = billing.iso(datetime.now())
         db.run("INSERT INTO readings(user_id,kind,question,content,engine,cache_key,created_at) VALUES (?,?,?,?,?,?,?)",
                u["id"], "match", f"{pname}님과의 궁합" + (f" ({relation})" if relation else ""), res["markdown"],
                res["engine"], key, n)
-        self.send_json(dict(res, score=comp["score"], partner_name=pname, created_at=n, cached=False))
+        self.send_json(dict(res, score=comp["score"], partner_name=pname, relation=relation, created_at=n, cached=False))
 
     # -- 이메일 인증 · 비밀번호 찾기
     def dev_link(self, link):
-        """메일 모의 모드에서만 화면에 링크를 돌려준다(개발 편의)."""
-        return {"dev_link": link} if mailer.MODE == "mock" else {}
+        """메일 모의 모드 + 내 컴퓨터(localhost)에서만 화면에 링크를 돌려준다(개발 편의).
+        인터넷에 공개된 주소에서 이걸 열면 남의 비밀번호 재설정 링크를 받아갈 수 있으므로 절대 열지 않는다."""
+        local = urlparse(PUBLIC_URL).hostname in ("localhost", "127.0.0.1")
+        return {"dev_link": link} if mailer.MODE == "mock" and local else {}
 
     def api_verify_send(self, b):
         u = self.need_user()
@@ -556,6 +632,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def api_password_forgot(self, b):
         email = (b.get("email") or "").strip().lower()
+        if too_many("forgot:" + self.client_ip(), 10, 3600):
+            return self.error("요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.", 429)
         u = db.one("SELECT * FROM users WHERE email=?", email)
         extra = {}
         if u:
@@ -584,6 +662,23 @@ class Handler(BaseHTTPRequestHandler):
         db.run("UPDATE users SET pw_hash=?, salt=?, email_verified=1 WHERE id=?", h, salt, uid)
         u = db.one("SELECT * FROM users WHERE id=?", uid)
         self.send_json({"ok": True}, cookie=self.cookie(make_token(u)))  # 기존 로그인은 모두 풀리고 이 기기만 로그인
+
+    def api_account_delete(self, b):
+        """회원 탈퇴: 사주·고민·상담 기록·인증 정보를 즉시 삭제. 결제 기록만 법정 보관(전자상거래법 5년)."""
+        u = self.need_user()
+        if not u:
+            return
+        if too_many("delete:" + str(u["id"]), 5, 900):
+            return self.error("시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.", 429)
+        if not hmac.compare_digest(hash_pw(b.get("password") or "", u["salt"])[0], u["pw_hash"]):
+            return self.error("비밀번호가 올바르지 않습니다.", 401)
+        uid = u["id"]
+        for sql in ("DELETE FROM readings WHERE user_id=?", "DELETE FROM profiles WHERE user_id=?",
+                    "DELETE FROM email_tokens WHERE user_id=?", "DELETE FROM subscriptions WHERE user_id=?",
+                    "DELETE FROM users WHERE id=?"):
+            db.run(sql, uid)
+        print(f"[탈퇴] 회원 {uid} 데이터 삭제 완료")
+        self.send_json({"ok": True}, cookie=self.cookie("", 0))
 
     # -- 결제
     def api_billing_prepare(self, b):
@@ -619,8 +714,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def api_billing_mock(self, b):
         """결제 키가 없는 개발 환경용: 카드 등록과 결제를 시뮬레이션."""
-        if billing.MODE != "mock":
-            return self.error("mock 모드가 아닙니다.", 403)
+        if billing.MODE != "mock" or not ALLOW_MOCK_BILLING:
+            return self.error("결제 시뮬레이션은 사용할 수 없습니다.", 403)
         u = self.need_user()
         if not u:
             return
@@ -650,7 +745,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def api_dev_expire(self, b):
         """[개발 전용] 무료체험 종료 상황을 즉시 재현."""
-        if billing.MODE != "mock":
+        if billing.MODE != "mock" or not ALLOW_MOCK_BILLING:
             return self.error("개발 모드에서만 사용할 수 있습니다.", 403)
         u = self.need_user()
         if not u:
@@ -664,6 +759,13 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     db.conn()
+    if not IS_LOCAL:
+        if billing.MODE == "mock":
+            print("⚠️  결제 키 없이 공개 주소로 실행 중: " + ("결제 시뮬레이션 허용(ALLOW_MOCK_BILLING=1)" if ALLOW_MOCK_BILLING else "구독 결제 불가"))
+        if mailer.MODE == "mock":
+            print("⚠️  메일 설정 없음: 인증·비밀번호 찾기 메일이 실제로 발송되지 않습니다.")
+        if not HTTPS:
+            print("⚠️  PUBLIC_URL 이 https 가 아닙니다. 공개 서비스는 반드시 https 로 운영하세요.")
     billing.start_scheduler()
     print(f"운결 사주 서버 실행: {PUBLIC_URL}  (AI: {' → '.join(llm.label(n) for n in llm.available()) or '규칙 기반'}, 결제: {billing.MODE}, 메일: {mailer.MODE})")
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
