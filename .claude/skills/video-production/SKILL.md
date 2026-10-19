@@ -77,7 +77,9 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
    - 클로드에게는 "sfx 폴더에 click, paper 넣었어" 한 줄만 → 클로드가 장면에 `"sfx": [{"name": "click", "ext": "mp3", "cue": "단어"}]` 로 붙임
    - 한 번 받은 효과음은 모든 편에서 재사용. 처음에 10개 정도 모아두면 끝
    - 클로드가 받을 때는 `node tools/freesound.mjs pick <이름>="<영어 검색어>"` (무료, CC0만, 미리보기 → 사장님 승인 → `--yes`). 사이트를 읽지 않고 도구가 골라서 토큰이 적게 듦. 출처는 `sfx/SOURCES.md` 에 자동 기록
-   - 픽사베이는 로봇 차단(403)이라 도구로 못 받음 → 사장님이 직접. 유튜브 오디오 보관함도 사장님 로그인이 필요해서 직접
+   - 픽사베이는 로봇 차단(403)이라 도구로 못 받음 → 사장님이 직접
+   - **유튜브 오디오 보관함 창고 `video/sfx/` (2026-10-19, 999개·1.6GB, 출처 표기 필요 없음)**: 분류 폴더(ambiences·water·weather·household·office·cartoon·impacts·alarms·human_voices·animals·foley·doors). 먼저 `video/sfx/index.json` 에서 제목·길이로 찾고, 고른 파일만 `video/public/sfx/<영어이름>.mp3` 로 복사해서 쓴다 (창고 통째로 public 에 넣으면 렌더가 느려짐). 총·공포·스포츠·교통·SF·공구는 채널 분위기와 안 맞아 뺐다
+   - 창고 다시 채우기: 앱 안 브라우저에서 사장님 로그인 → 스튜디오 오디오 보관함 → 페이지 안 스크립트로 목록·다운로드 주소를 뽑아 `node tools/sfx_download.mjs <뽑은 json> 10`. 주소는 약 10분 뒤 만료되니 400개씩 뽑자마자 받기. 동시받기 16개는 끊김 → 10개. 앱 브라우저는 파일 다운로드·localhost 전송이 막혀 있어서, 결과를 크게 돌려받아 도구 결과 파일로 저장되게 하는 방식으로 넘긴다
    - 지금 있는 효과음 (2026-10-19): chime·pop·whoosh(.wav, 직접 만든 것) + click·swipe·typing·paper·notification·bubble·riser·ding·camera·sparkle·heartbeat·softhit(.mp3, Freesound CC0)
 6-4. **쇼츠(세로)에서 가로 그림 쓰기**: 세로 화면에는 그림 폭의 약 32%만 보인다. 장면에 `"focusX"`(캐릭터 가로 위치 0~1)를 꼭 적으면 캐릭터가 가운데 오게 잘린다. 글씨는 자동으로 화면 위쪽으로 감
    - 옆 캐릭터(`pose`)는 bigNumber·citation 처럼 글씨가 많은 장면에서 출처 글씨를 가린다 → 쇼츠에서는 statement 같은 짧은 장면에만
@@ -88,9 +90,15 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
    - 썸네일: `cd video && npx remotion still Thumbnail out/<편>_thumb.png --props=public/episodes/<편>/upload.json` (upload.json 의 `thumbnail`: kicker, lines, image, format)
      - **쇼츠는 컴퓨터에서 썸네일을 못 바꿈** → 휴대폰 유튜브 앱에서 표지 장면 고르기. 썸네일 이미지는 긴 영상·커뮤니티용
    - **AI 복제 목소리(천성준)를 쓰면 "변경되거나 합성된 콘텐츠: 예"** (사장님 결정, 2026-10-19)
-   - 올리기: Claude in Chrome 이 연결돼 있으면 제가 스튜디오에 입력하고 공개 범위 화면에서 멈춤 → 사장님 게시.
-     연결 안 돼 있으면(VS Code 안에서는 안 됨): `open https://studio.youtube.com` + `open -R <영상>` 으로 열어드리고, 채팅에 붙여넣을 제목·설명·태그를 줌
-   - 공식 API 업로드는 구글 심사 전까지 영상이 비공개로 잠김 → 매일 자동 업로드가 필요해지면 그때 심사 신청
+   - **올리기 = 업로드 도구 (2026-10-19 연결 완료, 무료·하루 약 6편)**
+     1. 사장님이 고른 제목으로 `<편 폴더>/youtube.json` 만들기: `title`(1개), `description`, `tags`, `thumbnail`(긴 영상만, 2MB 이하), `altered_content`, 예약이면 `publishAt`
+     2. 미리보기(무료, 안 올라감): ai-bridge `youtube_upload` (confirm=false) 또는 `node tools/youtube_upload.mjs upload <영상.mp4> <youtube.json>`
+     3. 미리보기를 사장님께 보여주고 **"올려" 확인을 받은 뒤에만** confirm=true / `--yes`
+     4. 영상은 비공개로 올라감 (구글 심사 안 받은 개인용 연결이라 유튜브가 잠금) → 스튜디오 링크 드리고 사장님이 확인 후 공개
+   - 연결 정보: 구글 클라우드 "My First Project" → OAuth 클라이언트 `youtube-upload`(데스크톱), 테스트 사용자 eager1014 계정. 열쇠 파일 `credentials.json`·`token.json`(둘 다 git 제외)
+   - **7일마다 열쇠 만료** (구글 "테스트 중" 앱 규칙) → "열쇠가 만료" 오류가 나면 `node tools/youtube_upload.mjs login` 을 백그라운드로 돌리고 사장님께 브라우저에서 허용 눌러달라고 하기
+   - 썸네일 실패 = 채널 전화번호 인증 안 됨 → 사장님이 youtube.com/verify 에서 인증
+   - Claude in Chrome·앱 브라우저로 스튜디오에 직접 올리는 건 파일 선택 창이 막혀서 안 됨 → 도구를 쓸 것
 
 ## 장면 종류 (video/src/scenes.jsx)
 | type | 쓰는 곳 | 주요 칸 |

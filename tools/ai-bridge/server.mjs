@@ -132,5 +132,32 @@ server.registerTool(
   },
 );
 
+// 유튜브 업로드: 실제 일은 tools/youtube_upload.mjs 가 한다. 공개는 되돌리기 어려우니 confirm 없이는 미리보기만.
+const yt = () => import("../youtube_upload.mjs");
+
+server.registerTool(
+  "youtube_upload",
+  {
+    title: "유튜브에 영상 올리기",
+    description:
+      "완성 영상을 사장님 유튜브 채널에 올린다. 무료(하루 약 6편). 기본은 비공개. confirm=false면 무엇을 올릴지 보여주기만 하고, 사장님이 채팅에서 '올려'라고 확인한 뒤에만 confirm=true 로 다시 부른다.",
+    inputSchema: {
+      video: z.string().describe("영상 파일 경로 (mp4)"),
+      meta: z.string().describe("정보 JSON 경로: title, description, tags, thumbnail(선택), privacy(private 기본), publishAt(선택)"),
+      confirm: z.boolean().default(false).describe("true일 때만 실제 업로드"),
+    },
+  },
+  async ({ video, meta, confirm }) => {
+    try {
+      const { readMeta, describe, upload } = await yt();
+      const m = readMeta(video, meta);
+      if (!confirm) return ok(`${describe(video, m)}\n\n(아직 안 올림 — 사장님 확인 후 confirm=true)`);
+      return ok(await upload(video, m));
+    } catch (e) {
+      return fail(e);
+    }
+  },
+);
+
 await server.connect(new StdioServerTransport());
 log("준비 완료");
