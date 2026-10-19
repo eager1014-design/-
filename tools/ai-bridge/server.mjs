@@ -1,35 +1,25 @@
 // Claude Code에서 제미나이·챗GPT를 부를 수 있게 해주는 MCP 연결 프로그램.
 // 키는 프로젝트 맨 위 폴더의 .env 에서만 읽는다. 이 파일에 키를 적지 말 것.
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { GoogleGenAI, createPartFromUri } from "@google/genai";
 import OpenAI from "openai";
 import { z } from "zod";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawn } from "node:child_process";
+import { GEMINI_MODEL, gemini, watchVideo } from "./gemini.mjs"; // .env 도 여기서 읽는다
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const ENV_PATH = path.join(ROOT, ".env");
-if (fs.existsSync(ENV_PATH)) process.loadEnvFile(ENV_PATH);
-
-// 모델 이름은 .env 에서 바꿀 수 있다. 비워두면 아래 기본값을 쓴다.
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-6.1-sol";
 
 // MCP는 표준출력으로 대화하므로, 로그는 반드시 표준에러로만 보낸다.
 const log = (...args) => console.error("[ai-bridge]", ...args);
 
-function requireKey(name, where) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} 가 .env 에 없습니다. ${where} 에서 키를 발급받아 .env 에 넣어주세요.`);
-  }
-  return value;
-}
-
-const gemini = () => new GoogleGenAI({ apiKey: requireKey("GEMINI_API_KEY", "https://aistudio.google.com/apikey") });
-const openai = () => new OpenAI({ apiKey: requireKey("OPENAI_API_KEY", "https://platform.openai.com/api-keys") });
+const openai = () => {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("OPENAI_API_KEY 가 .env 에 없습니다. https://platform.openai.com/api-keys 에서 키를 발급받아 .env 에 넣어주세요.");
+  return new OpenAI({ apiKey: key });
+};
 
 const ok = (text) => ({ content: [{ type: "text", text }] });
 const fail = (err) => {
@@ -37,19 +27,29 @@ const fail = (err) => {
   return { isError: true, content: [{ type: "text", text: `실패: ${err?.message ?? err}` }] };
 };
 
-const VIDEO_TYPES = { ".mp4": "video/mp4", ".mov": "video/quicktime", ".webm": "video/webm", ".mkv": "video/x-matroska", ".avi": "video/x-msvideo" };
-
-async function waitUntilActive(ai, file) {
-  // 제미나이는 올린 영상을 처리하는 데 시간이 걸린다. 최대 5분 기다린다.
-  for (let i = 0; i < 60 && file.state === "PROCESSING"; i++) {
-    await new Promise((r) => setTimeout(r, 5000));
-    file = await ai.files.get({ name: file.name });
-  }
-  if (file.state !== "ACTIVE") throw new Error(`영상 처리가 끝나지 않았습니다 (상태: ${file.state}).`);
-  return file;
-}
-
 const server = new McpServer({ name: "ai-bridge", version: "1.0.0" });
+
+// 챗GPT 질문은 API 키(유료) 대신 코덱스 CLI(사장님 ChatGPT 구독)로 보낸다. 안 되면 API로 몰래 넘어가지 않고 멈춘다.
+const askCodex = (prompt) =>
+  new Promise((resolve, reject) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "codex-ask-"));
+    const out = path.join(dir, "answer.txt");
+    const child = spawn("codex", ["exec", "--skip-git-repo-check", "--ephemeral", "-s", "read-only", "-C", dir, "-o", out, "-"], {
+      stdio: ["pipe", "ignore", "pipe"],
+    });
+    let err = "";
+    child.stderr.on("data", (d) => (err += d));
+    child.on("error", () => reject(new Error("codex 프로그램을 못 찾았습니다. 설치: npm install -g --prefix ~/.local @openai/codex")));
+    child.on("close", (code) => {
+      const answer = fs.existsSync(out) ? fs.readFileSync(out, "utf8").trim() : "";
+      fs.rmSync(dir, { recursive: true, force: true });
+      if (answer) return resolve(answer);
+      if (/not logged in|login/i.test(err)) return reject(new Error("코덱스 로그인이 풀렸습니다. 터미널에서 `codex login` 으로 ChatGPT 계정에 다시 로그인해주세요."));
+      if (/usage limit|rate limit/i.test(err)) return reject(new Error("ChatGPT 사용 한도에 걸렸습니다. 잠시 뒤 다시 시도해주세요."));
+      reject(new Error(`챗GPT(코덱스)가 답을 주지 않았습니다 (종료코드 ${code}). ${err.slice(-400)}`));
+    });
+    child.stdin.end(prompt);
+  });
 
 server.registerTool(
   "ask_gemini",
@@ -81,27 +81,8 @@ server.registerTool(
   },
   async ({ source, prompt }) => {
     try {
-      const ai = gemini();
-      let videoPart;
-      if (/^https?:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\//.test(source)) {
-        // youtu.be/ID?si=..., shorts/ID 같은 모양을 표준 watch?v=ID 로 바꾼다.
-        const id = source.match(/(?:youtu\.be\/|[?&]v=|shorts\/|live\/)([\w-]{11})/)?.[1];
-        if (!id) throw new Error(`유튜브 영상 ID를 찾을 수 없습니다: ${source}`);
-        videoPart = { fileData: { fileUri: `https://www.youtube.com/watch?v=${id}` } };
-      } else {
-        const filePath = path.resolve(ROOT, source);
-        const mimeType = VIDEO_TYPES[path.extname(filePath).toLowerCase()];
-        if (!fs.existsSync(filePath)) throw new Error(`파일을 찾을 수 없습니다: ${filePath}`);
-        if (!mimeType) throw new Error(`지원하지 않는 영상 형식입니다: ${path.extname(filePath)}`);
-        log("영상 올리는 중:", filePath);
-        const uploaded = await waitUntilActive(ai, await ai.files.upload({ file: filePath, config: { mimeType } }));
-        videoPart = createPartFromUri(uploaded.uri, uploaded.mimeType);
-      }
-      const res = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: [{ role: "user", parts: [videoPart, { text: prompt }] }],
-      });
-      return ok(res.text ?? "(빈 답변)");
+      const { text, tokens } = await watchVideo(source, prompt, { log });
+      return ok(`${text || "(빈 답변)"}\n\n(사용 토큰 ${tokens?.toLocaleString("ko-KR") ?? "알 수 없음"})`);
     } catch (e) {
       return fail(e);
     }
@@ -112,13 +93,12 @@ server.registerTool(
   "ask_chatgpt",
   {
     title: "챗GPT에게 질문",
-    description: "OpenAI 챗GPT에게 질문한다. 두 번째 의견이 필요할 때 쓴다. 유료 API(소액)를 쓴다.",
+    description: "챗GPT에게 질문한다. 두 번째 의견이 필요할 때 쓴다. 사장님 ChatGPT 구독(코덱스 로그인)으로 물어서 API 요금이 없다.",
     inputSchema: { prompt: z.string().describe("챗GPT에게 보낼 질문") },
   },
   async ({ prompt }) => {
     try {
-      const res = await openai().responses.create({ model: OPENAI_MODEL, input: prompt });
-      return ok(res.output_text || "(빈 답변)");
+      return ok(await askCodex(prompt));
     } catch (e) {
       return fail(e);
     }

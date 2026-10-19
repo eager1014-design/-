@@ -1,0 +1,19 @@
+{
+  "title": "장면 틀 견본",
+  "format": "long",
+  "chapters": ["일의 조건", "환경", "회복"],
+  "music": null,
+  "scenes": [
+    { "id": "s01", "type": "hook", "narration": "회사를 7번 그만뒀습니다. 저는 제가 고장 난 줄 알았어요.", "lines": [{ "text": "회사를 **7번** 그만뒀습니다", "cue": "회사를" }, { "text": "제가 **고장 난** 줄 알았어요", "cue": "저는" }] },
+    { "id": "s02", "type": "roadmap", "narration": "오늘은 예민한 사람에게 맞는 일의 조건, 딱 세 가지만 말씀드릴게요.", "title": "예민한 사람에게 맞는 **일의 조건**", "items": ["사람이 적은 일", "깊이가 결과가 되는 일", "쉼을 내가 정하는 일"] },
+    { "id": "s03", "type": "chapter", "number": 1, "title": "사람이 적은 일", "sub": "에너지가 새는 곳부터 막기", "narration": "첫 번째 조건입니다." },
+    { "id": "s04", "type": "bigNumber", "narration": "연구에 따르면 열 명 중 두 명 정도가 이런 기질을 타고난다고 해요.", "kicker": "생각보다 흔해요", "value": 20, "suffix": "%", "label": "**열 명 중 두 명**은 예민한 기질", "source": "Aron & Aron, 1997", "cue": "열 명" },
+    { "id": "s05", "type": "citation", "narration": "1997년 일레인 아론 박사가 이 기질을 처음 정리했어요. 예민함은 병이 아니라 타고난 신경계의 특징이라는 거예요.", "authors": "Aron & Aron", "year": 1997, "title": "Sensory-processing sensitivity and its relation to introversion and emotionality", "journal": "Journal of Personality and Social Psychology", "finding": "예민함은 **병이 아니라** 타고난 기질", "cue": "1997년", "findingCue": "예민함은" },
+    { "id": "s06", "type": "compare", "narration": "어디서든 잘 자라는 민들레가 있고, 맞는 곳에서만 활짝 피는 난초가 있어요.", "title": "**민들레** vs **난초**", "left": { "title": "민들레", "emoji": "🌼", "cue": "민들레", "items": ["어디서든 잘 자람"] }, "right": { "title": "난초", "emoji": "🪷", "cue": "난초", "items": [{ "text": "맞는 곳에서 활짝", "cue": "활짝" }] } },
+    { "id": "s07", "type": "checklist", "narration": "오늘 바로 해볼 것. 하루 중 혼자 있는 시간 정하기, 그리고 사람 만난 뒤 쉬는 시간 확보하기.", "title": "오늘 해볼 것", "items": [{ "text": "**혼자 있는 시간** 정하기", "cue": "하루" }, { "text": "만난 뒤 **쉬는 시간** 확보", "cue": "사람" }] },
+    { "id": "s08", "type": "bars", "narration": "자극이 많은 날과 적은 날, 저녁에 남은 에너지를 비교해 봤어요.", "title": "저녁에 남은 에너지 (예시)", "unit": "%", "bars": [{ "label": "자극 많은 날", "value": 20, "color": "#C8745A" }, { "label": "자극 적은 날", "value": 70 }] },
+    { "id": "s09", "type": "story", "narration": "바다에서 수업을 하던 날, 처음으로 숨이 쉬어졌어요.", "emoji": "🌊", "lines": [{ "text": "처음으로 **숨이 쉬어졌어요**", "cue": "처음으로" }] },
+    { "id": "s10", "type": "statement", "narration": "예민함은 고칠 게 아니라, 놓을 자리를 찾는 거예요.", "kicker": "오늘의 한 줄", "text": "예민함은 고칠 게 아니라\n**놓을 자리**를 찾는 것", "musicMute": true },
+    { "id": "s11", "type": "outro", "narration": "당신은 민들레인가요, 난초인가요? 댓글로 한 가지만 남겨주세요.", "question": "당신은 **민들레**인가요, **난초**인가요?", "cue": "당신은", "channelCue": "댓글로" }
+  ]
+}

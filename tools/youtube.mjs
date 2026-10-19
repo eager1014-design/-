@@ -4,6 +4,7 @@
 // 사용법:
 //   node tools/youtube.mjs search "검색어" [개수=10] [--order=relevance|views|date]
 //   node tools/youtube.mjs channel "@채널핸들 | 채널 링크 | UC로 시작하는 채널ID" [최근영상수=10]
+//   node tools/youtube.mjs keywords "씨앗 단어" ["씨앗2" …] [--check=5]   (자동완성 무료 + 상위 N개 조회수 확인 101점씩)
 //
 // 한도: 하루 10,000점. search = 101점, channel = 약 3점(핸들/ID로 찾을 때). 넘어도 요금은 안 나간다.
 // 결과: 화면 표 + .tmp/youtube_<종류>_<시각>.json (구글 시트 Tool이 가져다 씀)
@@ -176,10 +177,51 @@ async function channel(input, recent = 10) {
   save("channel", { channel: info, checked_at: new Date().toISOString(), recent_videos: videos });
 }
 
+// 유튜브 검색창 자동완성 = 사람들이 실제로 많이 치는 말. 키·한도 필요 없음.
+async function suggest(q) {
+  const url = new URL("https://suggestqueries.google.com/complete/search");
+  for (const [k, v] of Object.entries({ client: "firefox", ds: "yt", hl: "ko", gl: "kr", q })) url.searchParams.set(k, v);
+  const res = await fetch(url).catch(() => null);
+  if (!res?.ok) return [];
+  const data = await res.json().catch(() => []);
+  return data[1] || [];
+}
+
+// 키워드 조사: 씨앗 단어마다 자동완성을 넓게 모으고(무료), 많이 나온 후보 몇 개는 상위 영상 조회수로 수요·경쟁을 본다(101점/개).
+async function keywords(seeds, check = 5) {
+  if (!seeds.length) die('씨앗 단어를 넣어주세요. 예: node tools/youtube.mjs keywords "예민한 사람" "HSP" [--check=5]');
+  const tails = ["", " 특징", " 직업", " 일", " 이유", " 회사", " 퇴사", " 극복", " 장점", " 성격", " 테스트"];
+  const score = new Map(); // 자동완성 위쪽에 자주 나올수록 높음
+  for (const seed of seeds) {
+    for (const t of tails) {
+      const list = await suggest(seed + t);
+      list.forEach((s, i) => score.set(s, (score.get(s) || 0) + (10 - i)));
+    }
+  }
+  const ranked = [...score.entries()].sort((a, b) => b[1] - a[1]).map(([kw, s]) => ({ keyword: kw, suggest_score: s }));
+  console.log(`\n🔑 자동완성 후보 ${ranked.length}개 (위쪽일수록 사람들이 많이 침)`);
+  ranked.slice(0, 30).forEach((k, i) => console.log(`${String(i + 1).padStart(2)}. ${k.keyword} (${k.suggest_score})`));
+
+  check = Math.min(Math.max(Number(check) || 0, 0), 10);
+  if (check) console.log(`\n📊 상위 ${check}개는 검색 1페이지 영상 조회수로 확인 (한도 ${check * 101}점, 무료)`);
+  for (const k of ranked.slice(0, check)) {
+    const data = await call("search", { part: "snippet", type: "video", q: k.keyword, maxResults: 10, regionCode: "KR", relevanceLanguage: "ko" });
+    const ids = (data.items || []).map((x) => x.id.videoId).filter(Boolean);
+    const vids = ids.length ? await videoDetails(ids) : [];
+    const views = vids.map((v) => v.views || 0).sort((a, b) => a - b);
+    k.median_views = views.length ? views[Math.floor(views.length / 2)] : 0;
+    k.top_views = views.at(-1) || 0;
+    k.top_video = vids.find((v) => v.views === k.top_views)?.title || "";
+    console.log(`   ${k.keyword} → 1페이지 중간 조회 ${fmt(k.median_views)} · 최고 ${fmt(k.top_views)} (${k.top_video.slice(0, 30)})`);
+  }
+  save("keywords", { seeds, checked_at: new Date().toISOString(), keywords: ranked });
+}
+
 const [cmd, ...rest] = process.argv.slice(2);
 const flags = Object.fromEntries(rest.filter((a) => a.startsWith("--")).map((a) => a.slice(2).split("=")));
 const args = rest.filter((a) => !a.startsWith("--"));
 
 if (cmd === "search") await search(args[0], args[1], flags.order);
 else if (cmd === "channel") await channel(args[0], args[1]);
-else die('사용법:\n   node tools/youtube.mjs search "검색어" [개수] [--order=relevance|views|date]\n   node tools/youtube.mjs channel "@채널핸들" [최근영상수]');
+else if (cmd === "keywords") await keywords(args, flags.check ?? 5);
+else die('사용법:\n   node tools/youtube.mjs search "검색어" [개수] [--order=relevance|views|date]\n   node tools/youtube.mjs channel "@채널핸들" [최근영상수]\n   node tools/youtube.mjs keywords "씨앗 단어" ["씨앗2" …] [--check=5]');

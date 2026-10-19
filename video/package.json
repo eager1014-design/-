@@ -1,0 +1,21 @@
+{
+  "name": "video",
+  "private": true,
+  "type": "module",
+  "description": "예민한자립가 채널 영상 공장 (Remotion: 코드로 만드는 모션그래픽)",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.531",
+    "@remotion/fonts": "4.0.531",
+    "@remotion/install-whisper-cpp": "^4.0.531",
+    "@remotion/media-utils": "4.0.531",
+    "@remotion/transitions": "4.0.531",
+    "pngjs": "^7.0.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.531"
+  }
+}

@@ -18,3 +18,20 @@ saju/.env
 
 # 맥 시스템 파일
 .DS_Store
+
+# 영상 공장: 완성 영상과 편별 소리·그림 파일 (용량 큼). 대본(episode.json)·조사(research.md)는 보관
+video/out/
+video/public/episodes/**/*.wav
+video/public/episodes/**/*.mp3
+video/public/episodes/**/*.mp4
+video/public/episodes/**/*.png
+video/public/episodes/**/*.jpg
+
+# 받아쓰기 프로그램·모델 (용량 큼, 다시 설치 가능)
+video/whisper/
+video/public/music/*.mp3
+
+# 유튜브 오디오 보관함 효과음 (1.5GB, tools/sfx_download.mjs 로 다시 받을 수 있음). 목록 index.json 만 보관
+video/sfx/**
+!video/sfx/*/
+!video/sfx/index.json
