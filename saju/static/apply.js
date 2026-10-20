@@ -46,6 +46,7 @@ async function init() {
   const cfg = await api("/api/apply/config");
   window.PRODUCTS = cfg.products;
   window.FREE_FIRST = cfg.free_first;
+  initQuick();
   if (cfg.products.daily) {
     const price = cfg.products.daily.price;
     $("#sub-price").textContent = `월 ${won(price)}`;
@@ -263,28 +264,110 @@ function decorate() {
   move();
 }
 
+const TYPE_QUEUE = new Map();
+let TOON_IO = null;
+
+/* 장면 하나를 '화면에 들어오면 나타나기 + 대사 한 글자씩'에 등록 (나중에 생기는 '바로 보기' 결과 장면도 같은 방식) */
+function watchPanel(p, speed = 70) {
+  TYPE_QUEUE.set(p, { lines: [...p.querySelectorAll("[data-type]")].map(typeLine), speed });
+  TOON_IO.observe(p);
+}
+
 function startToon() {
   const panels = document.querySelectorAll(".panel");
   if (!panels.length) return;
   decorate();
-  const queue = new Map();
-  panels.forEach((p) => queue.set(p, [...p.querySelectorAll("[data-type]")].map(typeLine)));
-  const io = new IntersectionObserver((entries) => {
+  TOON_IO = new IntersectionObserver((entries) => {
     entries.forEach((e) => {
       if (!e.isIntersecting) return;
       const p = e.target;
-      io.unobserve(p);
+      TOON_IO.unobserve(p);
       p.classList.add("show");
       Sound.gong(p.classList.contains("reveal"));
-      let delay = 600;
-      (queue.get(p) || []).forEach((chars) => {
-        chars.forEach((c, i) => setTimeout(() => c.classList.add("on"), CALM ? 0 : delay + i * 70));
-        delay += chars.length * 70 + 500;
+      const { lines = [], speed = 70 } = TYPE_QUEUE.get(p) || {};
+      let delay = 500;
+      lines.forEach((chars) => {
+        chars.forEach((c, i) => setTimeout(() => c.classList.add("on"), CALM ? 0 : delay + i * speed));
+        delay += chars.length * speed + 400;
       });
     });
-  }, { threshold: 0.35 });
-  panels.forEach((p) => io.observe(p));
+  }, { threshold: 0.3 });
+  panels.forEach((p) => watchPanel(p));
   if (!CALM) setInterval(ember, 700);
+}
+
+/* ---------- 무료 바로 보기: 생년월일 → 도령이 '너는 누구인지' 웹툰처럼 ---------- */
+function quickPanel(html, cls = "") {
+  const p = document.createElement("div");
+  p.className = `panel q ${cls}`;
+  p.innerHTML = html;
+  $("#quick-result").appendChild(p);
+  if (TOON_IO) watchPanel(p, 45);
+  else p.classList.add("show"), p.querySelectorAll(".line .c").forEach((c) => c.classList.add("on"));
+  return p;
+}
+
+const say = (t, cls = "") => `<p class="line ${cls}" data-type>${esc(t)}</p>`;
+const dory = (t) => `<div class="talk"><img src="/img/toon/uneasy.jpg" alt="" class="ava"><p class="line bubble" data-type>${esc(t)}</p></div>`;
+
+function showQuick(r, birth) {
+  const box = $("#quick-result");
+  box.innerHTML = "";
+  const EL = { 목: "나무", 화: "불", 토: "흙", 금: "쇠", 수: "물" };
+  quickPanel(dory(`…${r.birth_text}. 보인다.`));
+  quickPanel(`<p class="kicker">너는</p><p class="line gold big2" data-type>「${esc(r.image)}」</p>${say(r.core)}`);
+  quickPanel(`<p class="kicker">네 힘은</p>${r.good.map((g) => say("· " + g)).join("")}`);
+  quickPanel(`<p class="kicker">다만…</p>${r.shadow.map((g) => say("· " + g, "small")).join("")}`);
+  const max = Math.max(...Object.values(r.elements), 1);
+  quickPanel(`<p class="kicker">네 안의 다섯 기운</p><div class="bars5">${Object.entries(r.elements).map(([k, v]) =>
+      `<div class="b5"><span>${EL[k]}</span><i class="e-${k}" style="--w:${Math.max(v / max * 100, 4)}%"></i><b>${v}</b></div>`).join("")}</div>
+    ${r.notes.map((n) => say(n, "small")).join("")}`);
+  if (r.stars.length) quickPanel(`<p class="kicker">너에게 있는 별</p>${r.stars.map((s) => say(s, "small")).join("")}`);
+  quickPanel(`<p class="kicker">올해 ${r.year.year}년 · ${esc(r.year.ko)}</p>${say(r.year.text)}
+    <p class="kicker" style="margin-top:22px">오늘 ${esc(r.today.date)} · ${esc(r.today.ko)}일</p>${say(r.today.text)}`, "fortune");
+  quickPanel(dory(r.tip));
+  const recs = quickPanel(`<p class="kicker">여기까지가 겉이다</p>${say("더 깊이 보고 싶다면… 너에게는 이게 맞겠다.")}
+    <div class="recs">${r.recs.map((x) => `<button class="rec" data-key="${x.key}">
+      <b>${esc(x.label)}</b><span>${esc(x.why)}</span>
+      <em>${x.subscription ? `월 ${won(x.price)}` : window.FREE_FIRST ? `처음이면 무료 · 원래 ${won(x.price)}` : won(x.price)}</em></button>`).join("")}</div>
+    <button class="linkbtn" id="rec-all">다른 풀이도 보기 ↓</button>`, "recs-panel");
+  recs.querySelectorAll(".rec").forEach((b) => (b.onclick = () => pickProduct(b.dataset.key, birth)));
+  $("#rec-all").onclick = () => pickProduct(null, birth);
+  setTimeout(() => box.firstElementChild?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
+}
+
+/* 추천을 누르면: 그 풀이를 골라두고, 방금 넣은 생년월일을 신청서에 채워서 내려간다 */
+function pickProduct(key, birth) {
+  if (key) {
+    const el = document.querySelector(`input[name="product"][value="${key}"]`);
+    if (el) { el.checked = true; onProduct(); }
+  }
+  if (birth) {
+    $("#me-y").value = birth.year; $("#me-m").value = birth.month; $("#me-d").value = birth.day;
+    $("#me-h").value = birth.hour ?? "";
+    const cal = birth.calendar === "lunar" ? (birth.leap ? "leap" : "lunar") : "solar";
+    document.querySelector(`input[name="me-cal"][value="${cal}"]`).checked = true;
+    const g = document.querySelector(`input[name="me-g"][value="${birth.gender}"]`); if (g) g.checked = true;
+  }
+  $("#form").scrollIntoView({ behavior: "smooth" });
+}
+
+function initQuick() {
+  const qf = $("#qform");
+  if (!qf) return;
+  $("#q-birth").innerHTML = birthFields("q");
+  qf.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = $("#q-go"), err = $("#q-err");
+    err.textContent = "";
+    const birth = readBirth("q");
+    btn.disabled = true; btn.textContent = "들여다보는 중…";
+    try {
+      showQuick(await api("/api/quick", { birth }), birth);
+      Sound.gong(true);
+    } catch (x) { err.textContent = x.message; }
+    finally { btn.disabled = false; btn.textContent = "다시 보기"; }
+  };
 }
 
 function ember() {

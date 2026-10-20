@@ -36,6 +36,7 @@ import longform
 import orders
 import products
 import promo
+import quick
 import retention
 import subs
 import threads
@@ -373,6 +374,7 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", "/api/dev/expire-trial"): self.api_dev_expire,
             ("GET", "/api/apply/config"): self.api_apply_config,
             ("POST", "/api/apply"): self.api_apply,
+            ("POST", "/api/quick"): self.api_quick,
             ("GET", "/api/admin/orders"): self.api_admin_orders,
             ("GET", "/api/admin/order"): self.api_admin_order,
             ("POST", "/api/admin/order/create"): self.api_admin_create,
@@ -677,6 +679,16 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json({"products": products.public(), "bank": bool(orders.BANK_ACCOUNT), "free_first": orders.FREE_FIRST,
                         "cities": list(CITIES.keys()),
                         "concerns": {k: v["label"] for k, v in K.CONCERNS.items()}})
+
+    def api_quick(self, b):
+        """첫 화면 무료 '바로 보기': 생년월일 → 성향·올해·오늘 + 추천. 저장하지 않음, AI 안 씀."""
+        if too_many("quick:" + self.client_ip(), 40, 3600):
+            return self.error("잠시 후 다시 해주세요.", 429)
+        try:
+            birth = parse_birth(b.get("birth") or {})
+        except ValueError as e:
+            return self.error(str(e))
+        self.send_json(quick.reading(birth, chart_of_birth))
 
     def read_order_form(self, b):
         """신청서·직접 입력 공통 검사. (product, name, email, birth, partner, situation) — 잘못되면 ValueError."""

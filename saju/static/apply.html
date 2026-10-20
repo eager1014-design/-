@@ -184,6 +184,39 @@
   @keyframes flash { 0% { opacity: .85; } 100% { opacity: 0; } }
   .panel.cut .line { padding: 0 16px; }
 
+  /* 무료 바로 보기 */
+  .quick .q-ask { min-height: auto; padding-bottom: 30px; }
+  .qcard { width: 100%; max-width: 480px; margin-top: 20px; padding: 18px 16px; border: 1px solid rgba(217,178,106,.35);
+    border-radius: 12px; background: linear-gradient(180deg, #17131e, #120f17); text-align: left; position: relative; z-index: 2; }
+  .qcard .btn { margin-top: 18px; font: 400 19px "Song Myung", serif; border-radius: 4px; background: linear-gradient(180deg, #c0283a, #8e1625); }
+  .panel.q { min-height: auto; padding: 26px 18px; }
+  .panel.q .line { max-width: 520px; }
+  .kicker { margin: 0 0 6px; font: 700 12px "Noto Sans KR", sans-serif; letter-spacing: .2em; color: var(--accent-2); opacity: 0; transition: opacity .8s; }
+  .panel.show .kicker { opacity: 1; }
+  .big2 { font-size: clamp(30px, 9vw, 44px) !important; }
+  .talk { display: flex; align-items: center; gap: 12px; max-width: 540px; }
+  .talk .ava { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; object-position: 30% 30%; flex: none;
+    box-shadow: 0 0 0 2px var(--gold), 0 0 20px rgba(192,40,58,.5); opacity: 0; transition: opacity .8s; }
+  .panel.show .talk .ava { opacity: 1; }
+  .talk .line { margin: 0; text-align: left; font-size: clamp(18px, 4.8vw, 23px); }
+  .bars5 { width: 100%; max-width: 420px; margin: 8px 0 6px; }
+  .b5 { display: grid; grid-template-columns: 42px 1fr 22px; gap: 8px; align-items: center; margin: 7px 0; font-size: 14px; color: var(--ink-2); }
+  .b5 i { display: block; height: 10px; border-radius: 99px; width: 0; transition: width 1.4s ease-out; }
+  .panel.show .b5 i { width: var(--w); }
+  .b5 b { text-align: right; color: var(--ink); }
+  .fortune { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .recs { display: grid; gap: 10px; width: 100%; max-width: 520px; margin-top: 16px; }
+  .rec { display: grid; gap: 4px; text-align: left; padding: 14px 16px; border-radius: 10px; cursor: pointer; color: var(--ink);
+    border: 1px solid rgba(217,178,106,.4); background: linear-gradient(180deg, #1d1522, #120e17); font: 400 14px "Noto Sans KR", sans-serif;
+    opacity: 0; transform: translateY(10px); transition: .7s; }
+  .panel.show .rec { opacity: 1; transform: none; }
+  .panel.show .rec:nth-child(2) { transition-delay: .25s; } .panel.show .rec:nth-child(3) { transition-delay: .5s; }
+  .rec b { font: 400 18px "Song Myung", serif; color: #f6e7c4; }
+  .rec span { color: var(--ink-2); line-height: 1.5; }
+  .rec em { font-style: normal; color: var(--gold); font-weight: 700; }
+  .rec:active { transform: scale(.98); }
+  .linkbtn { margin-top: 14px; background: none; border: 0; color: var(--ink-2); text-decoration: underline; font-size: 14px; cursor: pointer; }
+
   /* 입장 화면 · 소리 버튼 */
   #gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; text-align: center; padding: 24px;
     background: radial-gradient(ellipse at 50% 40%, #1c1424, #07060a 70%); transition: opacity 1s; }
@@ -245,7 +278,7 @@
 <button id="snd" aria-label="소리 끄기" hidden>🔊</button>
 <main id="app">
   <section class="toon" aria-label="운결 도령의 이야기">
-    <div class="skip"><a href="#form">바로 신청하기 ↓</a></div>
+    <div class="skip"><a href="#quick">무료로 바로 보기 ↓</a></div>
 
     <!-- 웹툰 컷 (사장님이 만든 그림을 잘라서) + 움직임 효과. kb = 천천히 확대·이동, fx-* = 효과 -->
     <div class="panel cut" data-voice="n01">
@@ -312,6 +345,22 @@
       <div class="par"><div class="frame fx-flash fx-red" style="--s0:1.12;--s1:1.0">
         <img src="/img/toon/reveal.jpg" alt="운결 도령: 너의 인생이 보인다"></div></div>
     </div>
+
+    <!-- 무료 바로 보기: 생년월일만 넣으면 바로 (저장 안 함, AI 안 씀) -->
+    <section id="quick" class="quick">
+      <div class="panel blank q-ask">
+        <div class="smoke"></div>
+        <p class="line" data-type>…궁금하냐.</p>
+        <p class="line bubble" data-type>태어난 날만 알려다오. 지금 바로 보여주마.</p>
+        <form id="qform" class="qcard" novalidate>
+          <div id="q-birth"></div>
+          <button class="btn block" id="q-go">내 사주 바로 보기 · 무료</button>
+          <p class="err" id="q-err"></p>
+          <p class="muted small">입력한 생년월일은 저장하지 않아요. 태어난 시간을 몰라도 돼요.</p>
+        </form>
+      </div>
+      <div id="quick-result"></div>
+    </section>
 
     <div class="panel blank" data-voice="n11">
       <div class="smoke"></div>

@@ -84,6 +84,11 @@ def main():
     ok(apply(guest, "pet", "견주2")[1].get("error", "").startswith("반려동물"), "반려동물 정보 없으면 거절")
     ok(apply(guest, "reunion", "재회", partner={"birth": {"year": ""}})[0] == 200, "재회운: 상대 정보 없어도 신청")
     ok(apply(guest, "yearly", "숨김")[0] == 400, "숨긴 상품은 신청 불가")
+    # 무료 바로 보기 (생년월일 → 성향·운세·추천, 저장 안 함)
+    st, r = guest("/api/quick", {"birth": B})
+    ok(st == 200 and r["image"] and r["good"] and r["year"]["text"] and r["today"]["text"] and 2 <= len(r["recs"]) <= 3,
+       f"무료 바로 보기: {r.get('image')} / 추천 {[x['key'] for x in r.get('recs', [])]}")
+    ok(guest("/api/quick", {"birth": {"year": 1995}})[0] == 400, "바로 보기: 잘못된 생년월일 거절")
     # 보안
     ok(guest("/api/admin/orders")[0] == 401, "비로그인 → 관리 화면 차단")
     ok(client({"X-Admin-Key": "wrong-key-0123456789abcdefgh"})("/api/admin/orders")[0] == 401, "틀린 기계 열쇠 차단")
