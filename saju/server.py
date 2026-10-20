@@ -823,8 +823,8 @@ class Handler(BaseHTTPRequestHandler):
             free = "invite"  # 친구가 내 링크로 와서 사주를 봤다 → 가벼운 풀이 PDF 1개 무료 (1인 1회)
         before = retention.visits(email)  # 예전에 온 적 있는 손님인가
         disc = 0
-        if product == "life" and invite.status(vid, email)["ready"]:
-            disc = products.FRIEND_DISCOUNT
+        if not free and products.friend_discount(product) and invite.status(vid, email)["ready"]:  # 무료 신청엔 할인 안 붙임
+            disc = products.friend_discount(product)  # 평생 9,900원 · 기본 사주·신년운세 10%
         o = orders.create(*form, source="apply", ip=self.client_ip(), free=free, marketing=bool(b.get("marketing")),
                           channel=src if re.match(r"^[a-z0-9_-]+$", src) else None)
         if disc:  # 친구 할인 적용 (1인 1회)

@@ -103,7 +103,7 @@
     </div>
 
     <!-- 선택: 밖의 5만 원 vs 너와 이야기하고 너를 아는 운결 (구독 이야기는 맨 끝에) -->
-    <div class="panel blank choose">
+    <div class="panel blank choose" data-voice="n14">
       <p class="line red" data-type>선택해라.</p>
       <div class="vs">
         <div class="opt out">
@@ -141,6 +141,13 @@
           <p class="muted small">입력한 생년월일은 저장하지 않아요. 태어난 시간을 몰라도 돼요.</p>
         </form>
       </div>
+    </section>
+
+  </section>
+
+  <!-- 둘째 장: 생년월일을 넣으면 페이지가 넘어가 '너는 이런 사람이다' -->
+  <section id="page-me" hidden>
+    <div class="pagehead"><p class="pno">둘째 장</p><h2>너는 이런 사람이다</h2></div>
       <div id="quick-result"></div>
       <!-- 맨 끝: 매일 아침 구독 (성향을 다 본 뒤에만 보임) -->
       <div id="tail" hidden>
@@ -164,8 +171,7 @@
           <a class="btn" href="?p=daily#form" id="pick-daily">운결에게 맡기기 · 월 9,900원</a>
         </div>
       </div>
-    </section>
-
+    <button class="backlink" id="back-story" type="button">← 처음 이야기로</button>
   </section>
 
   <form id="form" class="card" novalidate>

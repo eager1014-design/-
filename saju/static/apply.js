@@ -12,7 +12,7 @@ function onProduct() {
   $("#story-label").textContent = p === "counsel" ? "궁금한 질문 하나" : "지금 상황과 고민";
   const sub = p && window.PRODUCTS[p].subscription;
   const nofree = p && window.PRODUCTS[p].no_free;
-  const lifeDisc = p === "life" && DISCOUNT.ready ? DISCOUNT.amount : 0;
+  const lifeDisc = p && DISCOUNT.ready ? window.PRODUCTS[p].friend_discount || 0 : 0;  // 친구가 왔으면: 평생 9,900원 · 기본·신년 10%
   $("#submit").textContent = sub ? `월 ${won(window.PRODUCTS[p].price)} 구독 신청`
     : lifeDisc ? `${won(window.PRODUCTS[p].price - lifeDisc)} 신청하기 (친구 할인 -${won(lifeDisc)})`
     : nofree ? `${won(window.PRODUCTS[p].price)} 신청하기`
@@ -45,7 +45,7 @@ async function refreshDiscount() {
     ? `<s style="opacity:.6">${won(life.price)}</s> ${won(price)}` : won(price)));
   const note = $("#life-disc");
   if (note && DISCOUNT.ready) note.innerHTML = `<b style="color:var(--gold)">친구가 왔다. ${won(DISCOUNT.amount)} 할인이 준비됐다 ✓</b>`;
-  if (document.querySelector('input[name="product"]:checked')?.value === "life") onProduct();
+  if (document.querySelector('input[name="product"]:checked')) onProduct();
 }
 
 /* PDF 목차 미리보기: 풀이 내용은 안 보여주고, 무엇이 얼마나 깊게 들어가는지만 */
@@ -279,7 +279,7 @@ const Voice = {
   watch() {
     // 장면마다 '화면을 얼마나 차지하는지'를 재서, 가장 큰 장면이 바뀌는 순간 목소리를 바꾼다
     const seen = new Map();
-    const io = new IntersectionObserver((entries) => {
+    const io = this.io = new IntersectionObserver((entries) => {
       entries.forEach((e) => seen.set(e.target, e.isIntersecting ? e.intersectionRect.height / innerHeight : 0));
       let best = null, max = 0.3;
       seen.forEach((v, el) => { if (v > max) { max = v; best = el; } });
@@ -296,11 +296,13 @@ function enter(withSound) {
   const btn = $("#snd");
   btn.hidden = false;
   if (withSound) { Sound.start(); Voice.preload(); }
+  try { sessionStorage.setItem("ungyeol_sound", withSound ? "1" : "0"); } catch (e) { /* 괜찮음 */ }
   Voice.watch();
   setTimeout(startToon, 300);  // 소리가 켜진 뒤 첫 장면이 시작되게
   btn.textContent = withSound ? "🔊" : "🔇";
   btn.onclick = () => {
     const on = Sound.toggle();
+    try { sessionStorage.setItem("ungyeol_sound", on ? "1" : "0"); } catch (e) { /* 괜찮음 */ }
     btn.textContent = on ? "🔊" : "🔇"; btn.setAttribute("aria-label", on ? "소리 끄기" : "소리 켜기");
     if (on) { Voice.preload(); Voice.play(Voice.active); }  // 소리를 켜면 지금 장면 목소리부터
   };
@@ -386,12 +388,14 @@ function startToon() {
 }
 
 /* ---------- 무료 바로 보기: 생년월일 → 도령이 '너는 누구인지' 웹툰처럼 ---------- */
-function quickPanel(html, cls = "") {
+function quickPanel(html, cls = "", voice = "") {
   const p = document.createElement("div");
   p.className = `panel q ${cls}`;
+  if (voice) p.dataset.voice = voice;  // 이 장면이 보이면 나오는 도령 목소리 (static/voice/<id>.mp3)
   p.innerHTML = html;
   $("#quick-result").appendChild(p);
   if (TOON_IO) watchPanel(p, p.querySelector(".talk.long") ? 18 : 45);  // 긴 풀이는 빠르게
+  if (p.dataset.voice && Voice.io) { Voice.io.observe(p); if (Sound.on) Voice.preload(); }
   else p.classList.add("show"), p.querySelectorAll(".line .c").forEach((c) => c.classList.add("on"));
   return p;
 }
@@ -420,11 +424,22 @@ function showQuick(r, birth) {
     ["match", "궁합", "그 사람과 나"], ["career", "직업 · 재물", "일과 돈의 길"], ["pet", "반려동물", "우리 아이 (재미로)"]];
   quickPanel(`${dory("…이게 너다. 그런데 마음에 걸리는 게 있어서 왔겠지. 앉아라. 묻고, 답해주마.")}
     <div class="topics">${T.map(([k, l, d]) => `<a href="/consult?t=${k}${INV ? `&inv=${encodeURIComponent(INV)}` : ""}">${l}<small>${d}</small></a>`).join("")}</div>
-    <p class="small muted" style="margin-top:12px">도령의 상담은 무료. 네 이야기를 듣고 네 사주로 답한다.</p>`, "askpanel");
+    <p class="small muted" style="margin-top:12px">도령의 상담은 무료. 네 이야기를 듣고 네 사주로 답한다.</p>`, "askpanel", "q01")
+    .querySelectorAll(".topics a").forEach((a) => (a.onclick = (e) => { e.preventDefault(); turnPage("셋째 장 · 도령의 상담실", a.href); }));
+  // 기본 사주도 PDF로 정리해준다 (친구가 오면 10% 할인)
+  const full = window.PRODUCTS.full;
+  if (full) {
+    const fp = quickPanel(`<p class="kicker">네 사주, 한 권으로</p>${say("방금 본 너를… PDF 한 권으로 정리해주마.", "small")}
+      <p class="small muted">타고난 성향 · 다섯 기운 · 일과 돈 · 사람 · 올해의 흐름 · 약 ${full.pages}쪽.
+        친구가 네 링크로 와서 자기 사주를 보면 <b style="color:var(--gold)">${won(full.friend_discount)} 할인</b>.</p>
+      ${tocToggle("full")}
+      <button class="btn ghost lockbtn" id="pick-full">기본 사주 PDF 받기 · ${won(full.price)}</button>`, "lockpanel");
+    fp.querySelector("#pick-full").onclick = () => pickProduct("full", QUICK.birth);
+    bindToc(fp);
+  }
   $("#tail").hidden = false;  // 맨 끝: 매일 아침 구독
   if (TOON_IO) $("#tail").querySelectorAll(".panel").forEach((p) => { if (!TYPE_QUEUE.has(p)) watchPanel(p); });
   if (WANT && window.PRODUCTS[WANT]) checkout(WANT);  // 상품 링크(?p=)로 온 손님은 바로 신청서
-  setTimeout(() => box.firstElementChild?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
 }
 
 let QUICK = null;
@@ -482,6 +497,12 @@ function pickProduct(key, birth) {
 function initQuick() {
   const qf = $("#qform");
   if (!qf) return;
+  $("#back-story").onclick = () => turnPage("첫째 장", () => {
+    $("#page-me").hidden = true;
+    $(".toon").hidden = false;
+    setTimeout(() => $("#quick").scrollIntoView(), 50);
+    return $(".toon");
+  });
   $("#q-birth").innerHTML = birthFields("q");
   qf.onsubmit = async (e) => {
     e.preventDefault();
@@ -490,7 +511,13 @@ function initQuick() {
     const birth = readBirth("q");
     btn.disabled = true; btn.textContent = "들여다보는 중…";
     try {
-      showQuick(await api("/api/quick", { birth, inv: INV, vid: VID }), birth);
+      const r = await api("/api/quick", { birth, inv: INV, vid: VID });
+      await turnPage("둘째 장 · 너는 이런 사람이다", () => {  // 이야기가 끝나면 페이지가 넘어간다
+        $(".toon").hidden = true;
+        $("#page-me").hidden = false;
+        showQuick(r, birth);
+        return $("#page-me");
+      });
       Sound.gong(true);
     } catch (x) { err.textContent = x.message; }
     finally { btn.disabled = false; btn.textContent = "다시 보기"; }

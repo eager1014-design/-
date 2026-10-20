@@ -14,14 +14,28 @@ const INV = (() => {  // 친구가 보낸 링크(?inv=)로 왔으면 기억
   catch (e) { return q || ""; }
 })();
 
+/* 도령 목소리: 첫 화면에서 소리를 켜고 왔으면, 장면마다 static/voice/<id>.mp3 를 튼다 (파일이 없으면 조용히 넘어감) */
+const VOICE = {
+  on: (() => { try { return sessionStorage.getItem("ungyeol_sound") === "1"; } catch (e) { return false; } })(),
+  cur: null,
+  play(id) {
+    if (!this.on || !id) return;
+    if (this.cur) this.cur.pause();
+    const a = (this.cur = new Audio(`/voice/${id}.mp3`));
+    a.play().catch(() => {});
+  },
+};
+
 const S = { topic: null, birth: null, answers: {}, partner: null, story: "" };
 let CFG = null;
+let FRIEND = { ready: false };  // 친구가 내 링크로 와서 사주를 봤는지 (할인·무료 PDF)
 const AVA = '<img src="/img/toon/uneasy.jpg" alt="" class="ava">';
 const chat = () => $("#chat");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const down = (el) => el.scrollIntoView({ behavior: "smooth", block: "end" });
 
-async function dory(text, title) {
+async function dory(text, title, voice) {
+  VOICE.play(voice);
   const w = document.createElement("div");
   w.className = "msg wait";
   w.innerHTML = `${AVA}<div class="say"><span class="dots"></span></div>`;
@@ -69,7 +83,7 @@ async function askBirth() {
     await dory(`네가 태어난 날은 ${birthText(saved)}. 그대로 보면 되겠지?`);
     if (await pick([{ label: "그래, 맞다", value: true }, { label: "다시 적을게", value: false }])) return saved;
   } else {
-    await dory("먼저, 네가 태어난 날을 알려다오. 태어난 시간은 몰라도 된다.");
+    await dory("먼저, 네가 태어난 날을 알려다오. 태어난 시간은 몰라도 된다.", "", "c02");
   }
   return new Promise((done) => {
     const a = answerBox(`<div class="qcard">${birthFields("me")}<button class="btn block" id="b-go">다음</button><p class="err" id="b-err"></p></div>`);
@@ -111,7 +125,7 @@ async function askPartner(need) {
 }
 
 async function askStory(t) {
-  await dory(t.story);
+  await dory(t.story, "", "c03");
   return new Promise((done) => {
     const a = answerBox(`<textarea id="s-text" maxlength="500" placeholder="편하게 적어라. 길게 써도 된다."></textarea>
       <label class="check small"><input type="checkbox" id="s-ok" checked> <span>상담을 위해 AI(구글 Gemini, 미국)에 생년월일·고민을 보내는 것에 동의해요. 상담 내용은 저장하지 않아요.</span></label>
@@ -130,7 +144,7 @@ async function askStory(t) {
 async function start() {
   CFG = await api("/api/consult/config");
   const topics = CFG.topics;
-  await dory("…왔구나. 앉아라. 오늘은 무엇을 물으러 왔느냐?");
+  await dory("…왔구나. 앉아라. 오늘은 무엇을 물으러 왔느냐?", "", "c01");
   const want = new URLSearchParams(location.search).get("t");
   if (topics[want]) { me(topics[want].label); S.topic = want; }
   else S.topic = await pick(Object.entries(topics).map(([k, t]) => ({ label: t.label, value: k })));
@@ -148,6 +162,7 @@ async function start() {
 async function runConsult() {
   const w = document.createElement("div");
   w.className = "msg wait";
+  VOICE.play("c04");
   w.innerHTML = `${AVA}<div class="say">네 사주를 펼쳐 보는 중이다<span class="dots"></span> (길면 30초)</div>`;
   chat().appendChild(w);
   down(w);
@@ -176,8 +191,14 @@ async function runConsult() {
   chat().appendChild(deep);
   down(deep);
   await wait(1200);
-  await dory("여기까지가 오늘의 상담이다. 달마다 언제 움직이고 언제 숨을 고를지, 무엇을 어떻게 할지는… 네 이름으로 PDF에 정확히 적어 보내주마.");
-  offer();
+  await dory("여기까지가 오늘의 상담이다. 달마다 언제 움직이고 언제 숨을 고를지, 무엇을 어떻게 할지는… 네 이름으로 PDF에 정확히 적어 보내주마.", "", "c05");
+  const a = answerBox('<button class="nextbtn" id="to-pdf">넷째 장 · PDF로 받기 →</button>');
+  a.querySelector("#to-pdf").onclick = () => turnPage("넷째 장 · 네 이름으로 쓴 PDF", () => {
+    $(".room-head").hidden = true; $("#chat").hidden = true; $("#page-pdf").hidden = false;
+    if (!$("#pdfbox").children.length) offer();
+    setTimeout(() => VOICE.play("c06"), 900);  // 친구에게 보내라
+    return $("#page-pdf");
+  });
 }
 
 /* PDF 받기: 친구에게 보내고 무료로, 또는 바로 결제 */
@@ -200,8 +221,7 @@ function offer() {
       <p style="margin:0">바로 받고 싶다면 <b>${won(p.price)}</b> · 계좌이체 후 1~2일 안에 이메일로</p>
       <button class="btn ghost" id="pay-go">${won(p.price)}에 바로 받기</button>
     </div>`;
-  chat().appendChild(box);
-  down(box);
+  $("#pdfbox").appendChild(box);
   box.querySelector("#g-share")?.addEventListener("click", () => navigator.share({ title: "운결 · 너의 인생이 보인다",
     text: "태어난 날만 넣으면 사주를 보여줘. 고민 상담도 무료래.", url: link }).catch(() => {}));
   box.querySelector("#g-copy").onclick = async () => {
@@ -223,9 +243,11 @@ function watchFriend(box) {
     try { st = await api(`/api/invite/status?vid=${VID}`); } catch (e) { return; }
     const el = box.querySelector("#g-state");
     if (st.pdf_used) { el.textContent = "친구 초대 무료 PDF는 이미 받았다. (1인 1회)"; opened = true; return; }
+    FRIEND = st;
     if (st.pdf_ready) {
       opened = true;
       el.innerHTML = '<span class="ready">친구가 왔다. 약속대로 PDF를 무료로 보내주마 ✓</span>';
+      VOICE.play("c07");
       orderForm(box.querySelector("#w-gift"), S.topic, true);
     }
   };
@@ -243,7 +265,8 @@ function orderForm(where, product, useInvite) {
     <label>PDF를 받을 이메일</label><input class="m-email" type="email" maxlength="120" autocomplete="email">
     <label class="check small"><input type="checkbox" class="m-agree"> <span>[필수] 개인정보(이름·이메일·생년월일·고민) 수집·이용과, 풀이 작성을 위한 AI 처리(국외 이전)에 동의해요. 발송 후 1년 뒤 파기.</span></label>
     <label class="check small"><input type="checkbox" class="m-mkt"> <span>[선택] 새 운세·할인 소식을 이메일로 받을게요.</span></label>
-    <button class="btn m-go">${useInvite ? "PDF 무료로 받기" : p.subscription ? `월 ${won(p.price)} 구독 신청` : `${won(p.price)} 신청하기`}</button>
+    <button class="btn m-go">${useInvite ? "PDF 무료로 받기" : p.subscription ? `월 ${won(p.price)} 구독 신청`
+      : FRIEND.ready && p.friend_discount ? `${won(p.price - p.friend_discount)} 신청하기 (친구 할인 -${won(p.friend_discount)})` : `${won(p.price)} 신청하기`}</button>
     <p class="err m-err"></p>`;
   where.appendChild(f);
   f.querySelector(".m-name").focus();
@@ -280,24 +303,33 @@ function orderForm(where, product, useInvite) {
   };
 }
 
-/* 맨 마지막: 더 깊게(평생 종합) · 매일 아침 구독 */
-async function tail() {
-  await wait(600);
-  await dory("그리고… 원한다면, 매일 아침. 너의 하루가 어디로 흐르는지 알려주마. 오늘은 밀어붙일 날인지, 숨을 고를 날인지.");
-  const life = CFG.products.life, daily = CFG.products.daily;
+/* 넷째 장 아래: 더 깊은 PDF (친구가 오면 할인: 평생 9,900원 · 기본·신년 10%) → 맨 끝에 매일 아침 구독 */
+function tail() {
+  const P = CFG.products;
+  const deeper = [["full", "타고난 성향부터 일·돈·사람·올해까지, 내 사주 한 권"], ["newyear", "내년 열두 달, 달마다의 흐름"],
+    ["life", "타고난 그릇부터 10년마다 바뀌는 흐름까지"]].filter(([k]) => P[k]);
+  const daily = P.daily;
   const box = document.createElement("div");
   box.className = "offer";
-  box.innerHTML = `${daily ? `<div class="way" id="w-daily" style="margin-top:0">
-      <p style="margin:0"><b>매일 아침, 오늘의 흐름</b> · 월 ${won(daily.price)} (하루 ${Math.round(daily.price / 30).toLocaleString("ko-KR")}원)</p>
-      <p class="muted small" style="margin:6px 0 0">매일 아침 7시 메일. 답장으로 요즘 일을 알려주면 다음 날 풀이에 담는다. 언제든 그만둘 수 있다.</p>
-      <button class="btn ghost" id="d-go">구독 신청하기</button></div>` : ""}
-    ${life ? `<div class="way" id="w-life">
-      <p style="margin:0"><b>평생 종합 사주</b> · ${won(life.price)} · PDF 약 ${life.pages}쪽</p>
-      <p class="muted small" style="margin:6px 0 0">타고난 그릇부터 10년마다 바뀌는 흐름까지. 친구가 네 링크로 오면 ${won(life.friend_discount)} 할인.</p>
-      <button class="btn ghost" id="l-go">평생 종합 신청하기</button></div>` : ""}`;
-  chat().appendChild(box);
-  box.querySelector("#d-go")?.addEventListener("click", () => orderForm(box.querySelector("#w-daily"), "daily", false));
-  box.querySelector("#l-go")?.addEventListener("click", () => orderForm(box.querySelector("#w-life"), "life", false));
+  box.innerHTML = `<h3>더 깊게 보고 싶다면</h3>
+    <p class="muted small" style="margin:0">친구가 네 링크로 와서 자기 사주를 보면 할인해주마 (1인 1회).</p>
+    ${deeper.map(([k, d]) => `<div class="way" id="w-${k}">
+      <p style="margin:0"><b>${esc(P[k].label)}</b> · ${won(P[k].price)} · PDF 약 ${P[k].pages}쪽</p>
+      <p class="muted small" style="margin:6px 0 0">${esc(d)}. <span style="color:var(--gold)">친구가 오면 ${won(P[k].friend_discount)} 할인</span></p>
+      <button class="btn ghost" data-k="${k}">신청하기</button></div>`).join("")}
+    ${daily ? `<div class="way" id="w-daily" style="margin-top:22px;border-color:rgba(217,178,106,.5)">
+      <p style="margin:0">그리고… 원한다면, <b>매일 아침, 오늘의 흐름</b> · 월 ${won(daily.price)} (하루 ${Math.round(daily.price / 30).toLocaleString("ko-KR")}원)</p>
+      <p class="muted small" style="margin:6px 0 0">매일 아침 7시 메일. 오늘은 밀어붙일 날인지, 숨을 고를 날인지. 답장으로 요즘 일을 알려주면 다음 날 풀이에 담는다. 언제든 그만둘 수 있다.</p>
+      <button class="btn ghost" data-k="daily">구독 신청하기</button></div>` : ""}`;
+  $("#pdfbox").appendChild(box);
+  box.querySelectorAll("button[data-k]").forEach((b) => (b.onclick = () => orderForm(box.querySelector(`#w-${b.dataset.k}`), b.dataset.k, false)));
 }
 
 start().catch((x) => dory(x.message || "잠시 후 다시 와라."));
+
+/* 앞 페이지에서 내려온 막을 올린다 · 넷째 장에서 상담으로 돌아가기 */
+setTimeout(() => document.querySelector(".curtain")?.classList.remove("on"), 350);
+$("#back-chat").onclick = () => turnPage("셋째 장 · 도령의 상담실", () => {
+  $("#page-pdf").hidden = true; $(".room-head").hidden = false; $("#chat").hidden = false;
+  return $("#chat");
+});

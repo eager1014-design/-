@@ -74,3 +74,23 @@ function partnerFields(need) {
     </div>
     ${birthFields("p")}`;
 }
+
+/* 페이지 넘김 (첫 화면·상담실 공용): 막을 내리고 → 바꾸고 → 막을 올린다. 다른 주소로 갈 때는 막을 내린 채로 이동 */
+function turnPage(title, swap) {
+  let c = document.querySelector(".curtain");
+  if (!c) {
+    c = document.createElement("div");
+    c.className = "curtain";
+    c.innerHTML = '<div class="cseal">運</div><p class="ctitle"></p>';
+    document.body.appendChild(c);
+  }
+  c.querySelector(".ctitle").textContent = title || "";
+  requestAnimationFrame(() => c.classList.add("on"));
+  return new Promise((done) => setTimeout(() => {
+    if (typeof swap === "string") { location.href = swap; return; }  // 다음 페이지에서 막이 올라감
+    const el = swap && swap();
+    window.scrollTo(0, 0);
+    if (el) { el.classList.remove("page-in"); void el.offsetWidth; el.classList.add("page-in"); }
+    setTimeout(() => { c.classList.remove("on"); done(); }, 650);
+  }, 750));
+}

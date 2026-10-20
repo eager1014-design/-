@@ -133,6 +133,17 @@ for _p in _CATALOG:
 
 TIER_ORDER = ["가볍게", "깊게", "프리미엄", "구독"]
 FRIEND_DISCOUNT = int(os.environ.get("FRIEND_DISCOUNT", "9900"))  # 평생 종합: 친구가 내 링크로 사주를 보면 깎아주는 금액
+FRIEND_PCT_KEYS = ("full", "newyear")  # 기본 사주·신년운세: 친구가 오면 10% 할인 (사장님 결정 2026-10-20 밤)
+FRIEND_PCT = int(os.environ.get("FRIEND_PCT", "10"))
+
+
+def friend_discount(key):
+    """친구가 내 링크로 와서 사주를 보면 깎아주는 금액 (1인 1회). 가벼운 풀이는 할인 대신 1개 무료."""
+    if key == "life":
+        return FRIEND_DISCOUNT
+    if key in FRIEND_PCT_KEYS and key in PRODUCTS:
+        return PRODUCTS[key]["price"] * FRIEND_PCT // 100 // 10 * 10  # 10원 단위
+    return 0
 
 
 def toc(p):
@@ -151,5 +162,5 @@ def public():
     order = lambda kv: (TIER_ORDER.index(kv[1]["tier"]) if kv[1]["tier"] in TIER_ORDER else 9, kv[1]["price"])
     return {k: dict({kk: p[kk] for kk in ("label", "price", "tier", "pages", "partner", "desc")},
                     subscription=bool(p.get("subscription")), no_free=bool(p.get("no_free") or p.get("subscription")),
-                    toc=toc(p), friend_discount=FRIEND_DISCOUNT if k == "life" else 0)
+                    toc=toc(p), friend_discount=friend_discount(k))
             for k, p in sorted(PRODUCTS.items(), key=order) if not p.get("hidden")}

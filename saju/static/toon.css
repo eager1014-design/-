@@ -311,3 +311,22 @@
     .art img, .big, .line .c { transition: none !important; opacity: 1 !important; transform: none !important; }
     .smoke, .ember { display: none; }
   }
+
+  /* 페이지 넘김: 섹션이 끝나면 막이 내려왔다가 다음 페이지로 */
+  .curtain { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; flex-direction: column;
+    background: radial-gradient(circle at 50% 45%, #1d0d14, #07060a 70%); opacity: 0; pointer-events: none; transition: opacity .55s ease; }
+  .curtain.on { opacity: 1; pointer-events: auto; }
+  .curtain .cseal { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 8px; background: #c0283a; color: #fff;
+    font: 400 34px "Song Myung", serif; box-shadow: 0 0 40px rgba(192,40,58,.6); transform: scale(.8); opacity: 0; transition: .6s .15s; }
+  .curtain .ctitle { margin-top: 16px; font: 400 22px "Song Myung", serif; color: #f6e7c4; letter-spacing: .1em; opacity: 0; transition: .6s .25s; }
+  .curtain.on .cseal, .curtain.on .ctitle { opacity: 1; transform: none; }
+  .page-in { animation: pagein .9s ease-out both; }
+  @keyframes pagein { from { opacity: 0; transform: translateY(24px); } }
+  .pagehead { text-align: center; padding: 34px 16px 4px; }
+  .pagehead .pno { font: 700 12px "Noto Sans KR", sans-serif; letter-spacing: .3em; color: var(--accent-2); }
+  .pagehead h2 { margin: 8px 0 0; font: 400 28px "Song Myung", serif; color: #f6e7c4; }
+  .nextbtn { display: block; width: calc(100% - 32px); max-width: 520px; margin: 26px auto 10px; padding: 16px; border-radius: 4px; border: 1px solid rgba(217,178,106,.5);
+    background: linear-gradient(180deg, #c0283a, #8e1625); color: #fff; font: 400 20px "Song Myung", serif; cursor: pointer; text-align: center; text-decoration: none;
+    box-shadow: 0 0 30px rgba(192,40,58,.4); }
+  .backlink { display: block; margin: 8px auto 0; text-align: center; color: var(--ink-3); font-size: 14px; background: none; border: 0; text-decoration: underline; cursor: pointer; }
+  [hidden] { display: none !important; }

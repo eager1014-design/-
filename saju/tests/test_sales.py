@@ -145,6 +145,13 @@ def main():
     ok(guest("/api/invite/status?vid=GV12345678")[1]["pdf_used"], "무료 PDF 받은 기록")
     st, r = guest("/api/apply", dict(form, product="career", use_invite=True))
     ok(not r["free"] and r["amount"] > 0, "친구 무료 PDF는 한 번만")
+    # 비싼 PDF는 친구 할인: 기본 사주·신년운세 10%, 평생 9,900원 (할인은 1인 1회)
+    guest("/api/quick", {"birth": dict(B, year=2003), "inv": "PC12345678", "vid": "FF11112222"})
+    guest("/api/apply", dict(form, product="counsel", email="pct@test.com", name="퍼센트"))  # 첫 무료를 먼저 써둔다
+    st, r = guest("/api/apply", dict(form, product="full", email="pct@test.com", name="퍼센트", vid="PC12345678"))
+    ok(r["discount"] == 990 and r["amount"] == 9900 - 990, f"기본 사주 친구 할인 10% ({r['amount']:,}원)")
+    st, r = guest("/api/apply", dict(form, product="life", email="pct@test.com", name="퍼센트", vid="PC12345678"))
+    ok(r["discount"] == 0 and r["amount"] == 34900, "할인은 1인 1회 (평생·기본·신년 중 하나)")
     # 보안
     ok(guest("/api/admin/orders")[0] == 401, "비로그인 → 관리 화면 차단")
     ok(client({"X-Admin-Key": "wrong-key-0123456789abcdefgh"})("/api/admin/orders")[0] == 401, "틀린 기계 열쇠 차단")

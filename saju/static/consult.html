@@ -45,6 +45,8 @@
   .ans .btn { font: 400 18px "Song Myung", serif; border-radius: 4px; background: linear-gradient(180deg, #c0283a, #8e1625); }
   .ans .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .ans .check { color: var(--ink-3); text-align: left; }
+  .room-head .pno { margin: 14px 0 0; font: 700 12px "Noto Sans KR", sans-serif; letter-spacing: .3em; color: var(--accent-2); }
+  #page-pdf .offer { margin-left: 0; }
   .offer { margin: 18px 0 0 50px; padding: 16px; border: 1px solid rgba(217,178,106,.5); border-radius: 12px;
     background: linear-gradient(180deg, #1d1522, #120e17); animation: rise .6s ease-out both; }
   .offer h3 { margin: 0 0 6px; font: 400 20px "Song Myung", serif; color: #f6e7c4; }
@@ -63,16 +65,32 @@
 </style>
 </head>
 <body class="apply">
+<div class="curtain on"><div class="cseal">運</div><p class="ctitle">셋째 장 · 도령의 상담실</p></div>
 <header class="topbar">
   <a class="brand" href="/" aria-label="운결 처음 화면으로"><span class="seal">運</span>운결</a>
 </header>
 <main class="room" id="app">
   <div class="room-head">
     <img src="/img/toon/uneasy.jpg" alt="운결 도령">
+    <p class="pno">셋째 장</p>
     <h1>도령의 상담실</h1>
     <p>묻는 말에 답해라. 네 사주로 답해주마. 상담은 무료다.</p>
   </div>
   <div id="chat" aria-live="polite"></div>
+  <!-- 넷째 장: 대화가 끝나면 페이지가 넘어가 PDF 받기 -->
+  <section id="page-pdf" hidden>
+    <div class="pagehead"><p class="pno">넷째 장</p><h2>네 이름으로 쓴 PDF</h2></div>
+    <div class="pdfprev">
+      <div class="pdfstrip">
+        <figure><img src="/img/pdf/cover.jpg" alt="PDF 표지" loading="lazy"><figcaption>표지 · 네 이름</figcaption></figure>
+        <figure><img src="/img/pdf/open.jpg" alt="여는 말과 사주표, 차례" loading="lazy"><figcaption>여는 말 · 사주 네 기둥 · 차례</figcaption></figure>
+        <figure><img src="/img/pdf/chapter.jpg" alt="장마다 핵심 요약과 풀이" loading="lazy"><figcaption>장마다 핵심 + 깊은 풀이</figcaption></figure>
+        <figure><img src="/img/pdf/closing.jpg" alt="맺는 말과 서명" loading="lazy"><figcaption>맺는 말 · 도령 서명</figcaption></figure>
+      </div>
+    </div>
+    <div id="pdfbox"></div>
+    <button class="backlink" id="back-chat" type="button">← 상담 다시 보기</button>
+  </section>
 </main>
 <footer class="foot">
   <p>운결은 명리학을 바탕으로 자기 이해와 방향 설정을 돕는 서비스이며, 의료·법률·투자 자문을 대신하지 않습니다. 등장인물은 AI로 만든 가상 캐릭터입니다.</p>
