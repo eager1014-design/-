@@ -36,6 +36,9 @@ function showDone(r) {
         : "입금이 확인되면 1~2일 안에 풀이를 PDF로 보내드립니다."}<br>
       메일이 안 보이면 스팸함도 확인해 주세요.</p>
     </div>`}`;
+  $(".done-box").insertAdjacentHTML("beforeend", `<div class="done-actions">
+      <a class="btn ghost" href="/">처음으로</a>
+      <a class="btn" href="/#form">다른 풀이도 보기</a></div>`);
   window.scrollTo(0, 0);
 }
 
@@ -198,7 +201,10 @@ function enter(withSound) {
 if ($("#gate")) {
   $("#enter-sound").onclick = () => enter(true);
   $("#enter-quiet").onclick = () => enter(false);
-  if (location.search.includes("p=") || location.hash === "#form") enter(false);  // 상품 링크로 바로 온 손님은 입장 화면 없이
+  if (location.search.includes("p=") || location.hash === "#form") {  // 상품 링크·'다른 풀이도 보기'로 온 손님은 입장 화면 없이 신청서로
+    enter(false);
+    if (location.hash === "#form") setTimeout(() => $("#form")?.scrollIntoView(), 400);
+  }
 }
 
 /* ---------- 웹툰 연출: 장면이 화면에 들어오면 나타나고, 대사는 한 글자씩 ---------- */

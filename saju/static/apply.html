@@ -22,7 +22,9 @@
     color-scheme: dark; background: var(--bg); color: var(--ink);
   }
   .apply .topbar { background: color-mix(in srgb, var(--bg) 80%, transparent); border-bottom-color: var(--line); }
-  .apply .brand { color: var(--ink); }
+  .apply .brand { color: var(--ink); text-decoration: none; }
+  .done-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+  .done-actions .btn { font: 400 17px "Song Myung", serif; border-radius: 4px; }
   .apply main { max-width: 640px; padding-top: 0; }
   .serif2 { font-family: "Song Myung", "Noto Serif KR", serif; }
 
@@ -228,7 +230,7 @@
 </head>
 <body class="apply">
 <header class="topbar">
-  <span class="brand"><span class="seal">運</span>운결</span>
+  <a class="brand" href="/" aria-label="운결 처음 화면으로"><span class="seal">運</span>운결</a>
 </header>
 <div id="gate" role="dialog" aria-label="입장">
   <div class="gate-in">
