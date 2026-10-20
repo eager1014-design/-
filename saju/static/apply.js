@@ -10,7 +10,9 @@ function onProduct() {
   if (need && need !== PARTNER_FOR) box.innerHTML = partnerFields(need);  // 같은 종류로 바꾸면 입력값 유지
   if (need) PARTNER_FOR = need;
   $("#story-label").textContent = p === "counsel" ? "궁금한 질문 하나" : "지금 상황과 고민";
-  $("#submit").textContent = window.FREE_FIRST ? "신청하기 · 처음이면 무료" : p ? `${won(window.PRODUCTS[p].price)} 신청하기` : "신청하기";
+  const sub = p && window.PRODUCTS[p].subscription;
+  $("#submit").textContent = sub ? `월 ${won(window.PRODUCTS[p].price)} 구독 신청` : window.FREE_FIRST ? "신청하기 · 처음이면 무료"
+    : p ? `${won(window.PRODUCTS[p].price)} 신청하기` : "신청하기";
 }
 
 function showDone(r) {
@@ -27,7 +29,9 @@ function showDone(r) {
       <p class="muted">신청번호 <b>${esc(r.code)}</b> · ${esc(r.product)}</p>
       <p>아래 계좌로 <b>${won(r.amount)}</b>을 입금해 주세요.<br>입금자명은 <b>${esc(r.name)}</b>으로 해 주세요.</p>
       <div class="bankline">${r.bank ? esc(r.bank) : "입금 계좌는 이메일로 곧 안내해 드릴게요"}</div>
-      <p class="muted small">같은 내용을 이메일로도 보내드렸어요. 입금이 확인되면 1~2일 안에 풀이를 PDF로 보내드립니다.<br>
+      <p class="muted small">같은 내용을 이메일로도 보내드렸어요. ${window.PRODUCTS[r.key]?.subscription
+        ? "입금이 확인되면 그다음 아침부터 30일 동안 매일 7시에 '오늘의 흐름'을 보내드립니다."
+        : "입금이 확인되면 1~2일 안에 풀이를 PDF로 보내드립니다."}<br>
       메일이 안 보이면 스팸함도 확인해 주세요.</p>
     </div>`}`;
   window.scrollTo(0, 0);
@@ -37,14 +41,15 @@ async function init() {
   const cfg = await api("/api/apply/config");
   window.PRODUCTS = cfg.products;
   window.FREE_FIRST = cfg.free_first;
+  if (cfg.products.daily) $("#sub-price").textContent = `월 ${won(cfg.products.daily.price)}`;
   document.body.classList.toggle("no-free", !cfg.free_first);
   let lastTier = "";
   $("#products").innerHTML = Object.entries(cfg.products).map(([k, p]) => {
     const head = p.tier !== lastTier ? `<div class="tier">${esc(p.tier)}</div>` : "";
     lastTier = p.tier;
     return `${head}<label class="product"><input type="radio" name="product" value="${k}">
-      <span><b>${esc(p.label)}</b> <span class="pages">PDF 약 ${p.pages}쪽</span><br><span class="muted small">${esc(p.desc)}</span></span>
-      <span class="p">${won(p.price)}</span></label>`;
+      <span><b>${esc(p.label)}</b> <span class="pages">${p.subscription ? "매일 아침 메일" : `PDF 약 ${p.pages}쪽`}</span><br><span class="muted small">${esc(p.desc)}</span></span>
+      <span class="p">${won(p.price)}${p.subscription ? '<br><span class="muted small">/ 월</span>' : ""}</span></label>`;
   }).join("");
   $("#concern").innerHTML = Object.entries(cfg.concerns).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
   $("#me-birth").innerHTML = birthFields("me");
@@ -77,6 +82,87 @@ async function init() {
   };
 }
 
+/* ---------- 소리: 음악 파일 없이 브라우저가 직접 만든다 (저작권 걱정 없음) ---------- */
+const Sound = {
+  ctx: null, master: null, on: false, beat: null,
+  start() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const c = (this.ctx = new AC());
+    this.master = c.createGain(); this.master.gain.value = 0; this.master.connect(c.destination);
+    this.master.gain.linearRampToValueAtTime(0.9, c.currentTime + 3);
+    // 낮게 깔리는 울림 (두 음을 살짝 어긋나게 → 일렁임)
+    const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 380;
+    const dg = c.createGain(); dg.gain.value = 0.16; lp.connect(dg).connect(this.master);
+    [[55, "sine", 1], [55.7, "sine", 1], [82.4, "triangle", 0.25], [110.3, "sine", 0.12]].forEach(([f, t, g]) => {
+      const o = c.createOscillator(); o.type = t; o.frequency.value = f;
+      const og = c.createGain(); og.gain.value = g; o.connect(og).connect(lp); o.start();
+    });
+    const lfo = c.createOscillator(); lfo.frequency.value = 0.07; const lg = c.createGain(); lg.gain.value = 160;
+    lfo.connect(lg).connect(lp.frequency); lfo.start();
+    // 바람 소리 (잡음을 걸러서)
+    const buf = c.createBuffer(1, c.sampleRate * 3, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const n = c.createBufferSource(); n.buffer = buf; n.loop = true;
+    const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 520; bp.Q.value = 0.8;
+    const wg = c.createGain(); wg.gain.value = 0.045; n.connect(bp).connect(wg).connect(this.master); n.start();
+    const wl = c.createOscillator(); wl.frequency.value = 0.05; const wlg = c.createGain(); wlg.gain.value = 320;
+    wl.connect(wlg).connect(bp.frequency); wl.start();
+    this.noise = buf;
+    // 심장 박동
+    this.beat = setInterval(() => this.heart(), 1500);
+    this.on = true;
+    document.addEventListener("visibilitychange", () => this.ctx && (document.hidden ? this.ctx.suspend() : this.on && this.ctx.resume()));
+  },
+  thump(t, vol) {
+    const c = this.ctx, o = c.createOscillator(), g = c.createGain();
+    o.frequency.setValueAtTime(58, t); o.frequency.exponentialRampToValueAtTime(34, t + 0.18);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    o.connect(g).connect(this.master); o.start(t); o.stop(t + 0.25);
+  },
+  heart() {
+    if (!this.on || window.scrollY > (document.querySelector("#form")?.offsetTop || 0) - 200) return;
+    const t = this.ctx.currentTime; this.thump(t, 0.45); this.thump(t + 0.24, 0.3);
+  },
+  gong(deep) {
+    if (!this.on) return;
+    const c = this.ctx, t = c.currentTime, base = deep ? 65 : 98;
+    [[1, 0.22], [2.02, 0.1], [2.97, 0.07], [4.2, 0.03]].forEach(([m, v]) => {
+      const o = c.createOscillator(), g = c.createGain(); o.frequency.value = base * m;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v * (deep ? 1.6 : 1), t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (deep ? 7 : 4.5)); o.connect(g).connect(this.master); o.start(t); o.stop(t + 7.5);
+    });
+    if (deep) {  // 크게 드러날 때 '쏴아' 하고 부풀어 오르는 소리
+      const s = c.createBufferSource(); s.buffer = this.noise; const f = c.createBiquadFilter(); f.type = "lowpass";
+      f.frequency.setValueAtTime(200, t - 0); f.frequency.exponentialRampToValueAtTime(2400, t + 1.2);
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 1); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+      s.connect(f).connect(g).connect(this.master); s.start(t); s.stop(t + 2.5);
+    }
+  },
+  toggle() {
+    if (!this.ctx) { this.start(); return true; }
+    this.on = !this.on;
+    this.master.gain.linearRampToValueAtTime(this.on ? 0.9 : 0, this.ctx.currentTime + 0.6);
+    return this.on;
+  },
+};
+
+function enter(withSound) {
+  $("#gate").classList.add("out");
+  setTimeout(() => $("#gate").remove(), 1100);
+  const btn = $("#snd");
+  btn.hidden = false;
+  if (withSound) Sound.start();
+  btn.textContent = withSound ? "🔊" : "🔇";
+  btn.onclick = () => { const on = Sound.toggle(); btn.textContent = on ? "🔊" : "🔇"; btn.setAttribute("aria-label", on ? "소리 끄기" : "소리 켜기"); };
+}
+
+if ($("#gate")) {
+  $("#enter-sound").onclick = () => enter(true);
+  $("#enter-quiet").onclick = () => enter(false);
+  if (location.search.includes("p=") || location.hash === "#form") enter(false);  // 상품 링크로 바로 온 손님은 입장 화면 없이
+}
+
 /* ---------- 웹툰 연출: 장면이 화면에 들어오면 나타나고, 대사는 한 글자씩 ---------- */
 const CALM = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -98,6 +184,7 @@ function startToon() {
       const p = e.target;
       io.unobserve(p);
       p.classList.add("show");
+      Sound.gong(p.classList.contains("reveal"));
       let delay = 600;
       (queue.get(p) || []).forEach((chars) => {
         chars.forEach((c, i) => setTimeout(() => c.classList.add("on"), CALM ? 0 : delay + i * 70));

@@ -114,6 +114,23 @@
   .bankline { font: 700 20px "Noto Serif KR", serif; padding: 14px; border: 1px dashed var(--gold); border-radius: 10px; margin: 14px 0; user-select: all; color: var(--gold); }
   .apply .foot { color: var(--ink-3); border-top-color: var(--line); }
 
+  /* 입장 화면 · 소리 버튼 */
+  #gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; text-align: center; padding: 24px;
+    background: radial-gradient(ellipse at 50% 40%, #1c1424, #07060a 70%); transition: opacity 1s; }
+  #gate.out { opacity: 0; pointer-events: none; }
+  .gate-small { font: 400 15px "Song Myung", serif; letter-spacing: .6em; color: var(--accent); margin: 0 0 18px; }
+  .gate-big { font: 400 clamp(44px, 13vw, 72px)/1.15 "Song Myung", serif; color: #f6e7c4; margin: 0;
+    text-shadow: 0 0 22px rgba(192,40,58,.85), 0 0 50px rgba(192,40,58,.4); animation: breathe 3.5s ease-in-out infinite; }
+  @keyframes breathe { 50% { text-shadow: 0 0 30px rgba(192,40,58,1), 0 0 70px rgba(192,40,58,.55); } }
+  .gate-sub { font: 400 17px/1.6 "Song Myung", serif; color: var(--ink-2); margin: 18px 0 30px; }
+  #gate .btn { font: 400 19px "Song Myung", serif; padding: 15px 30px; border-radius: 2px; background: linear-gradient(180deg, #c0283a, #8e1625);
+    box-shadow: 0 0 0 1px rgba(217,178,106,.5), 0 0 30px rgba(192,40,58,.45); margin-top: 8px; }
+  .gate-quiet { display: block; margin: 16px auto 0; background: none; border: 0; color: var(--ink-3); font-size: 14px; text-decoration: underline; cursor: pointer; }
+  body:not(.no-free) .no-free-only { display: none; }
+  #snd { position: fixed; right: 14px; bottom: 16px; z-index: 40; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+    background: rgba(11,9,16,.8); color: var(--ink); font-size: 18px; cursor: pointer; }
+  .sub-proof { margin-top: 18px; font-size: 14px; color: var(--gold); text-align: center; }
+
   @media (prefers-reduced-motion: reduce) {
     .art img, .big, .line .c { transition: none !important; opacity: 1 !important; transform: none !important; }
     .smoke, .ember { display: none; }
@@ -124,6 +141,17 @@
 <header class="topbar">
   <span class="brand"><span class="seal">運</span>운결</span>
 </header>
+<div id="gate" role="dialog" aria-label="입장">
+  <div class="gate-in">
+    <p class="gate-small">運 結</p>
+    <p class="gate-big free-only">첫 풀이는<br>공짜다.</p>
+    <p class="gate-big no-free-only">너의 인생이<br>보인다.</p>
+    <p class="gate-sub free-only">처음 온 자에게는, 어떤 풀이든 한 번… 그냥 봐주지.</p>
+    <button class="btn" id="enter-sound">🔊 소리 켜고 들어가기</button>
+    <button class="gate-quiet" id="enter-quiet">소리 없이 보기</button>
+  </div>
+</div>
+<button id="snd" aria-label="소리 끄기" hidden>🔊</button>
 <main id="app">
   <section class="toon" aria-label="운결 도령의 이야기">
     <div class="skip"><a href="#form">바로 신청하기 ↓</a></div>
@@ -150,6 +178,14 @@
     <div class="panel reveal">
       <div class="art"><img src="/img/dory.jpg" alt="운결 도령"></div>
       <div class="big">너의 인생이<br>보인다.</div>
+    </div>
+
+    <div class="panel blank">
+      <div class="smoke"></div>
+      <p class="line" data-type>그리고… 원한다면, 매일 아침.</p>
+      <p class="line bubble" data-type>너의 하루가 어디로 흐르는지 알려주마.</p>
+      <p class="line small" data-type>오늘은 밀어붙일 날인지, 숨을 고를 날인지.</p>
+      <p class="proof sub-proof">매일 아침 7시, 내 사주로 본 오늘의 흐름을 메일로 · <b id="sub-price">월 구독</b></p>
     </div>
 
     <div class="panel blank cta">

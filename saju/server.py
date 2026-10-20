@@ -36,6 +36,7 @@ import longform
 import orders
 import products
 import promo
+import subs
 import threads
 from saju_engine import compute_chart, current_luck, year_months, compatibility, CITIES
 
@@ -300,6 +301,8 @@ class Handler(BaseHTTPRequestHandler):
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         if path.startswith("/api/"):
             return self.route_api("GET", path, q)
+        if path == "/stop":
+            return self.stop_page(q)
         if path == "/billing/success":
             return self.billing_success(q)
         if path == "/billing/fail":
@@ -372,6 +375,9 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", "/api/admin/order/generate"): self.api_admin_generate,
             ("POST", "/api/admin/order/save"): self.api_admin_save,
             ("GET", "/api/admin/jobs"): self.api_admin_jobs,
+            ("GET", "/api/admin/subs"): self.api_admin_subs,
+            ("POST", "/api/admin/subs/update"): self.api_admin_subs_update,
+            ("POST", "/api/admin/subs/send-now"): self.api_admin_subs_send_now,
             ("POST", "/api/admin/owner-reset"): self.api_admin_owner_reset,
             ("POST", "/api/admin/jobs/update"): self.api_admin_job_update,
             ("GET", "/api/admin/order/pdf"): self.api_admin_pdf,
@@ -710,7 +716,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.error(str(e))
         src = str(b.get("src") or "").strip().lower()[:20]
         product, name, email, birth = form[:4]
-        free = orders.free_eligible(name, email, birth)
+        free = not orders.PRODUCTS[product].get("subscription") and orders.free_eligible(name, email, birth)
         o = orders.create(*form, source="apply", ip=self.client_ip(), free=free,
                           channel=src if re.match(r"^[a-z0-9_-]+$", src) else None)
         prod = orders.PRODUCTS[o["product"]]
@@ -731,7 +737,7 @@ class Handler(BaseHTTPRequestHandler):
             mailer.send(admin_email, f"[운결] 새 신청 {o['code']} — {o['name']} / {prod['label']} {price}",
                         f"새 신청이 들어왔습니다.\n\n{o['name']} ({o['email']})\n{prod['label']} {price}\n"
                         f"관리 화면: {PUBLIC_URL}/admin")
-        self.send_json({"ok": True, "code": o["code"], "amount": o["amount"], "product": prod["label"], "free": free,
+        self.send_json({"ok": True, "code": o["code"], "amount": o["amount"], "product": prod["label"], "free": free, "key": o["product"],
                         "name": o["name"], "bank": orders.BANK_ACCOUNT})
 
     # -- 사장님 관리 화면
@@ -779,6 +785,10 @@ class Handler(BaseHTTPRequestHandler):
         if b.get("status") not in orders.STATUS:
             return self.error("알 수 없는 상태입니다.")
         orders.set_status(o["id"], b["status"])
+        if b["status"] == "paid" and orders.PRODUCTS.get(o["product"], {}).get("subscription") and o["status"] == "pending":
+            s = subs.activate(o)  # 구독: 입금 확인 = 30일 구독 시작/연장 → 신청은 '발송 완료'로
+            orders.set_status(o["id"], "sent")
+            orders.save_note(o["id"], f"구독 {s['ends_on']}까지")
         if "note" in b:
             orders.save_note(o["id"], str(b.get("note") or "")[:2000])
         self.send_json({"ok": True, "order": orders.get(o["id"])})
@@ -818,6 +828,50 @@ class Handler(BaseHTTPRequestHandler):
 
         threading.Thread(target=job, daemon=True).start()
         self.send_json({"ok": True, "started": True, "order": orders.get(o["id"])})
+
+    # -- 월 구독 (매일 아침 오늘의 흐름)
+    def api_admin_subs(self, q):
+        if self.need_admin():
+            rows = subs.listing()
+            self.send_json({"subs": rows, "active": sum(1 for r in rows if r["status"] == "active"),
+                            "send_hour": subs.SEND_HOUR, "mail_mode": mailer.MODE})
+
+    def api_admin_subs_update(self, b):
+        if not self.need_admin():
+            return
+        action = b.get("action")
+        try:
+            sid = int(b.get("id"))
+        except (TypeError, ValueError):
+            return self.error("구독을 찾을 수 없습니다.", 404)
+        if action == "extend":
+            s = subs.set_status(sid, "active", extend_days=int(b.get("days") or 30))
+        elif action in ("pause", "resume"):
+            s = subs.set_status(sid, "paused" if action == "pause" else "active")
+        else:
+            return self.error("알 수 없는 작업입니다.")
+        if not s:
+            return self.error("구독을 찾을 수 없습니다.", 404)
+        self.send_json({"ok": True, "sub": {k: s[k] for k in ("id", "status", "ends_on")}})
+
+    def api_admin_subs_send_now(self, b):
+        """아침 시간을 기다리지 않고, 오늘 아직 못 받은 구독자에게 지금 보내기."""
+        if self.need_admin():
+            self.send_json({"ok": True, "sent": subs.send_due(chart_of_birth, PUBLIC_URL)})
+
+    def stop_page(self, q):
+        """구독 메일 하단 '그만 받기' 링크."""
+        s = subs.stop(q.get("t"))
+        msg = (f"{s['name']}님, 매일 아침 메일을 더 보내지 않을게요. 그동안 고마웠어요." if s
+               else "이미 그만 받기 처리되었거나 링크가 올바르지 않아요.")
+        body = (f'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+                f'<title>운결</title><body style="background:#0b0910;color:#efe8f5;font-family:sans-serif;text-align:center;padding:60px 20px">'
+                f'<p style="font-size:18px">{msg}</p><p><a style="color:#d9b26a" href="/">운결 첫 화면</a></p></body>').encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def api_admin_owner_reset(self, b):
         """사장님이 비밀번호를 잊었을 때: 맥북의 비밀 열쇠(ADMIN_API_KEY)로만 '새 비밀번호 정하기' 링크를 만든다.
@@ -1218,6 +1272,7 @@ def main():
             print("⚠️  PUBLIC_URL 이 https 가 아닙니다. 공개 서비스는 반드시 https 로 운영하세요.")
     billing.start_scheduler()
     promo.start_scheduler(publish_post, orders.PRODUCTS, stats=threads.insights if threads.configured() else None)
+    subs.start_scheduler(chart_of_birth, PUBLIC_URL)
     print(f"운결 사주 서버 실행: {PUBLIC_URL}  (AI: {' → '.join(llm.label(n) for n in llm.available()) or '규칙 기반'}, 결제: {billing.MODE}, 메일: {mailer.MODE})")
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 

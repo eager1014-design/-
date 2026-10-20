@@ -178,7 +178,11 @@ async function renderOrder(id) {
       </div>
     </div>
     <details class="card" style="margin-top:20px"><summary>사주 계산 결과 보기</summary><pre class="chart">${esc(chart_text)}</pre></details>
-    <div class="card" style="margin-top:20px">
+    ${CFG.products[o.product]?.subscription ? `<div class="card" style="margin-top:20px">
+      <h3>월 구독 신청</h3>
+      <p>${o.status === "pending" ? `입금을 확인하고 <b>입금 확인</b>을 누르면 30일 구독이 시작돼요. 매일 아침 ${esc(String(7))}시에 '오늘의 흐름' 메일이 자동으로 나가요 (이미 구독 중이면 30일 연장).`
+        : `구독이 시작됐어요. ${esc(o.note || "")} · 관리는 <a href="#/subs">구독</a> 메뉴에서.`}</p>
+    </div>` : `<div class="card" style="margin-top:20px">
       <div class="topline">
         <h3 style="margin:0">풀이 ${o.engine ? `<span class="muted small">(${esc(o.engine)})</span>` : ""}</h3>
         <div class="row">
@@ -198,7 +202,7 @@ async function renderOrder(id) {
       </div>` : `<p class="muted">아직 풀이가 없습니다. ${o.status === "pending" ? "입금을 확인한 뒤 " : ""}'풀이 만들기'를 눌러 주세요.</p>`}
       <p class="err" id="oerr"></p>
       ${o.content ? `<p class="muted small">고친 내용은 '저장'을 눌러야 PDF에 들어갑니다. 미리보기·보내기를 누르면 자동으로 저장돼요.</p>` : ""}
-    </div>`;
+    </div>`}`;
 
   app.querySelectorAll("[data-st]").forEach((b) => (b.onclick = async () => {
     await api("/api/admin/order/status", { id: o.id, status: b.dataset.st, note: $("#note").value });
@@ -238,6 +242,7 @@ async function renderOrder(id) {
     clearTimeout(renderOrder.poll);
     renderOrder.poll = setTimeout(() => { if (location.hash === `#/order?id=${o.id}`) renderOrder(o.id); }, 3000);
   }
+  if (CFG.products[o.product]?.subscription) return;  // 구독 신청은 풀이 버튼이 없음
   $("#maccancel")?.addEventListener("click", async () => {
     await api("/api/admin/jobs/update", { id: o.id, state: "error", error: "사장님이 취소" }); renderOrder(o.id);
   });
@@ -303,6 +308,37 @@ async function renderNew() {
       location.hash = `#/order?id=${r.order.id}`;
     } catch (x) { $("#nerr").textContent = x.message; }
   };
+}
+
+/* ------------------------------------------------------------ 구독 */
+async function renderSubs() {
+  const r = await api("/api/admin/subs");
+  const label = { active: "받는 중", expired: "기간 끝", stopped: "손님이 그만 받음", paused: "멈춤" };
+  app.innerHTML = `
+    <div class="topline"><h2 style="margin:0">매일 아침 구독 <span class="muted small">받는 중 ${r.active}명</span></h2>
+      <button class="btn ghost" id="sendnow">오늘 것 지금 보내기</button></div>
+    ${r.mail_mode !== "smtp" ? `<p class="note">⚠️ 메일 설정(SMTP)이 없어서 아침 메일이 실제로 나가지 않아요. Gmail 앱 비밀번호를 넣어야 구독이 동작합니다.</p>` : ""}
+    <p class="muted small">매일 아침 ${r.send_hour}시 이후에 자동 발송 · 손님이 신청 → 신청 목록에서 '입금 확인' → 30일 시작/연장 · 끝나기 3일 전부터 메일에 연장 안내</p>
+    <div class="card" style="padding:8px 12px">
+      ${r.subs.length ? `<table><thead><tr><th>상태</th><th>이름</th><th>기간</th><th class="hide-sm">보낸 메일</th><th></th></tr></thead><tbody>
+        ${r.subs.map((s) => `<tr><td><span class="st ${s.status === "active" ? "st-writing" : "st-sent"}">${esc(label[s.status] || s.status)}</span></td>
+          <td><b>${esc(s.name)}</b><br><span class="muted small">${esc(s.email)}</span></td>
+          <td class="small">${esc(s.starts_on)} ~<br><b>${esc(s.ends_on)}</b></td>
+          <td class="hide-sm small">${s.sent_count || 0}통${s.last_sent ? `<br><span class="muted">${esc(s.last_sent)}</span>` : ""}</td>
+          <td class="small"><button class="btn ghost" style="padding:4px 10px;font-size:13px" data-sub="${s.id}" data-act="extend">+30일</button>
+            ${s.status === "active" ? `<button class="btn ghost" style="padding:4px 10px;font-size:13px" data-sub="${s.id}" data-act="pause">멈춤</button>`
+              : s.status === "paused" ? `<button class="btn ghost" style="padding:4px 10px;font-size:13px" data-sub="${s.id}" data-act="resume">다시</button>` : ""}</td></tr>`).join("")}
+      </tbody></table>` : `<p class="muted" style="padding:16px">아직 구독자가 없어요.</p>`}
+    </div>`;
+  $("#sendnow").onclick = async () => {
+    if (!confirm("오늘 아직 못 받은 구독자에게 지금 '오늘의 흐름'을 보낼까요? (AI 호출: 구독자 1명당 1회)")) return;
+    const x = await api("/api/admin/subs/send-now", {}); toast(`${x.sent}명에게 보냈어요`); renderSubs();
+  };
+  app.querySelectorAll("[data-sub]").forEach((b) => (b.onclick = async () => {
+    if (b.dataset.act === "extend" && !confirm("30일 연장할까요? (입금 확인한 경우)")) return;
+    await api("/api/admin/subs/update", { id: +b.dataset.sub, action: b.dataset.act });
+    toast("바꿨어요"); renderSubs();
+  }));
 }
 
 /* ------------------------------------------------------------ 홍보 센터 */
@@ -430,6 +466,7 @@ async function route() {
     if (h === "#/order") await renderOrder(q.id);
     else if (h === "#/new") await renderNew();
     else if (h === "#/promo") await renderPromo();
+    else if (h === "#/subs") await renderSubs();
     else await renderList(q.status);
     $("#logout").hidden = false;
   } catch (x) {

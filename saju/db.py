@@ -101,6 +101,23 @@ CREATE TABLE IF NOT EXISTS promo_posts (
   posted_at TEXT
 );
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS subs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL,
+  name TEXT NOT NULL,
+  birth TEXT NOT NULL,             -- JSON
+  situation TEXT NOT NULL,         -- JSON
+  status TEXT NOT NULL,            -- active | expired | stopped(손님이 그만 받기) | paused(사장님이 멈춤)
+  starts_on TEXT NOT NULL,
+  ends_on TEXT NOT NULL,           -- 이 날까지 발송
+  last_sent TEXT,                  -- 마지막 발송 날짜
+  sent_count INTEGER DEFAULT 0,
+  token TEXT UNIQUE NOT NULL,      -- 그만 받기 링크용
+  last_order INTEGER,
+  renew_noticed TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 """
 
 

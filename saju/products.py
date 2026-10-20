@@ -102,6 +102,11 @@ _CATALOG = [
                   ("나에게 있는 특별한 별 (신살)", "원국의 신살을 하나씩 장점 중심으로, 겁주지 않게", 1300),
                   ("평생 지침", "이 사주가 행복해지는 원칙 5가지와 지금 바로 할 행동. 마지막에 따뜻한 정리", 1300)],
      "data": ["months", "daeun"]},
+    # 월 구독: 매일 아침 7시 '오늘의 흐름' 메일 (subs.py). 풀이 PDF가 아니라 장(chapters)이 없음
+    {"key": "daily", "label": "매일 아침, 오늘의 흐름 (월 구독)", "price": 9900, "tier": "구독", "pages": 0, "partner": None,
+     "subscription": True, "days": 30,
+     "desc": "매일 아침 7시, 내 사주로 본 오늘의 기운과 할 일·조심할 것을 메일로. 하루하루의 방향을 잡아줘요",
+     "chapters": [], "data": []},
     # 예전 신청 호환용 (신청서에는 안 보임)
     {"key": "yearly", "label": "올해 운세", "price": 3900, "tier": "가볍게", "pages": 4, "partner": None, "hidden": True,
      "desc": "올해의 큰 흐름과 달마다 할 일", "chapters": [], "data": []},
@@ -117,14 +122,19 @@ for _p in _CATALOG:
     _p["price"] = int(os.environ.get(f"PRICE_{_p['key'].upper()}", _p["price"]))
     scale = LENGTH_SCALE.get(_p["key"], 1)
     _p["chapters"] = [(t, ins, int(c * scale) // 100 * 100) for t, ins, c in _p["chapters"]]
-    if _p["chapters"]:
+    if _p["chapters"] and not _p.get("subscription"):
         # 손님에게 보여주는 쪽수는 실제 분량으로 계산 (표지 1 + 목차 1 + 본문)
         body = sum(c for _, _, c in _p["chapters"])
         _p["pages"] = 1 + (1 if len(_p["chapters"]) >= 5 else 0) + round(body / CHARS_PER_PAGE)
     PRODUCTS[_p["key"]] = _p
 
 
+TIER_ORDER = ["가볍게", "깊게", "프리미엄", "구독"]
+
+
 def public():
-    """신청서에 보여줄 상품 (가격 낮은 순)."""
-    return {k: {kk: p[kk] for kk in ("label", "price", "tier", "pages", "partner", "desc")}
-            for k, p in sorted(PRODUCTS.items(), key=lambda kv: kv[1]["price"]) if not p.get("hidden")}
+    """신청서에 보여줄 상품 (묶음 순서 → 가격 낮은 순)."""
+    order = lambda kv: (TIER_ORDER.index(kv[1]["tier"]) if kv[1]["tier"] in TIER_ORDER else 9, kv[1]["price"])
+    return {k: dict({kk: p[kk] for kk in ("label", "price", "tier", "pages", "partner", "desc")},
+                    subscription=bool(p.get("subscription")))
+            for k, p in sorted(PRODUCTS.items(), key=order) if not p.get("hidden")}
