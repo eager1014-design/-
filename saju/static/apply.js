@@ -108,7 +108,7 @@ function showDone(r) {
   }
   $(".done-box").insertAdjacentHTML("beforeend", `<div class="done-actions">
       <a class="btn ghost" href="/">처음으로</a>
-      <a class="btn" href="/#form">다른 풀이도 보기</a></div>`);
+      <a class="btn" href="/#quick">다른 풀이도 보기</a></div>`);
   window.scrollTo(0, 0);
 }
 
@@ -119,7 +119,9 @@ async function init() {
   window.CONCERNS = cfg.concerns;
   initQuick();
   // 긴 신청서는 처음부터 보이지 않는다: 무료 바로 보기 → 고민 → 간단 신청 흐름으로. 상품 링크(?p=)로 온 손님만 바로 보여줌
-  if (!new URLSearchParams(location.search).get("p") && location.hash !== "#form") $("#form").hidden = true;
+  // 긴 신청서는 따로 보이지 않는다. 상품 링크(?p=)로 와도 '생년월일 → 고민 → 간단 신청' 흐름으로, 그 상품을 골라둔 채로
+  $("#form").hidden = true;
+  WANT = new URLSearchParams(location.search).get("p") || "";
   $("#more-products").onclick = () => $("#form").classList.add("all");
   refreshDiscount();
   bindToc($("#products"));
@@ -307,9 +309,9 @@ if ($("#gate") && REF) {  // 친구가 보낸 링크로 온 손님
 if ($("#gate")) {
   $("#enter-sound").onclick = () => enter(true);
   $("#enter-quiet").onclick = () => enter(false);
-  if (location.search.includes("p=") || location.hash === "#form") {  // 상품 링크·'다른 풀이도 보기'로 온 손님은 입장 화면 없이 신청서로
+  if (location.search.includes("p=") || location.hash === "#form" || location.hash === "#quick") {  // 상품 링크·'다른 풀이도 보기'는 입장 화면 없이 바로 보기로
     enter(false);
-    if (location.hash === "#form") setTimeout(() => $("#form")?.scrollIntoView(), 400);
+    setTimeout(() => $("#quick")?.scrollIntoView(), 400);
   }
 }
 
@@ -421,6 +423,7 @@ function showQuick(r, birth) {
 }
 
 let QUICK = null;
+let WANT = "";  // 상품 링크(?p=)로 온 손님이 원한 상품
 
 async function runConcern(ask) {
   const btn = ask.querySelector("#qc-go"), err = ask.querySelector("#qc-err");
@@ -490,14 +493,14 @@ async function runConcern(ask) {
   }
   // 마지막: 정확한 풀이는 PDF로 → 간단 신청서
   cp(`${dory("여기까지가 맛보기다. 정확하고 깊은 풀이는… 네 이름으로 PDF에 담아 보내주마.")}`);
-  checkout(c.rec[0] || "full");
+  checkout(WANT && window.PRODUCTS[WANT] ? WANT : (c.rec[0] || "full"));
 }
 
 /* 간단 신청: 위에서 넣은 생년월일·고민을 그대로 쓰고, 이름·이메일만 받는다. 맞는 풀이를 먼저 골라둔다. */
 function checkout(key) {
   const form = $("#form");
   form.hidden = false;
-  const rec = QUICK?.concern?.rec || [];
+  const rec = [...(QUICK?.concern?.rec || []), WANT, key].filter(Boolean);
   $("#quick-result").appendChild(form);
   form.classList.add("compact");
   document.querySelectorAll("#products .product").forEach((l) => {

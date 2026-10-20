@@ -86,12 +86,31 @@ def _font_para(text, style):
     return Paragraph(_esc(text), style)
 
 
+def _key_box(text):
+    """장 첫 문단을 '이 장의 핵심' 상자로."""
+    t = Table([[Paragraph('<font name="Gothic-B" size="8" color="#c0283a">이 장의 핵심</font>', ST["small"])],
+               [Paragraph(_inline(text), ParagraphStyle("kb", parent=ST["body"], fontName="Myeongjo", fontSize=11.5, leading=20,
+                                                         textColor=GOLD2, spaceAfter=0))]],
+              colWidths=[W - 44 * mm - 2])
+    t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), NIGHT2), ("BOX", (0, 0), (-1, -1), 0.8, GOLD),
+                           ("LINEBEFORE", (0, 0), (0, -1), 3, RED), ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                           ("RIGHTPADDING", (0, 0), (-1, -1), 12), ("TOPPADDING", (0, 0), (-1, 0), 9), ("BOTTOMPADDING", (0, -1), (-1, -1), 11)]))
+    return [t, Spacer(1, 8 * mm)]
+
+
 def markdown_flowables(text):
+    """장(##)마다 새 쪽 + 큰 장 번호 + '이 장의 핵심' 상자, 그 뒤 본문."""
     out, para, n = [], [], 0
+    want_key = [False]  # 장 제목 바로 다음 첫 문단은 핵심 상자로
 
     def flush():
         if para:
-            out.append(Paragraph(_inline(" ".join(para)), ST["body"]))
+            joined = " ".join(para)
+            if want_key[0]:
+                out.extend(_key_box(joined))
+                want_key[0] = False
+            else:
+                out.append(Paragraph(_inline(joined), ST["body"]))
             para.clear()
 
     for raw in (text or "").split("\n"):
@@ -101,11 +120,16 @@ def markdown_flowables(text):
             flush()
         elif m and len(m.group(1)) <= 2:
             flush()
+            if n:
+                out.append(PageBreak())
             n += 1
-            out.append(KeepTogether([Paragraph(f"CHAPTER {n:02d}", ST["chap"]), _font_para(m.group(2), ST["h2"]),
-                                     HRFlowable(width="18%", thickness=1.2, color=RED, spaceBefore=2, spaceAfter=10, hAlign="LEFT")]))
+            out += [Spacer(1, 6 * mm), Paragraph(f"{n:02d}", ParagraphStyle("cn", fontName="Song", fontSize=48, leading=52, textColor=RED)),
+                    Paragraph("CHAPTER", ST["chap"]), _font_para(m.group(2), ParagraphStyle("h2b", parent=ST["h2"], fontSize=24, leading=32)),
+                    HRFlowable(width="100%", thickness=0.8, color=GOLD, spaceBefore=6, spaceAfter=14)]
+            want_key[0] = True
         elif m:
             flush()
+            want_key[0] = False
             out.append(Paragraph(_inline(m.group(2)), ST["h3"]))
         elif re.match(r"^-{3,}$", line.strip()):
             flush()
@@ -115,6 +139,7 @@ def markdown_flowables(text):
             out.append(Paragraph(_inline(line.lstrip()[1:].strip()), ST["quote"]))
         elif (b := re.match(r"^\s*(?:[-*]|(\d+)\.)\s+(.*)", line)):
             flush()
+            want_key[0] = False
             item = re.sub(r"^\[( |x)\]\s*", lambda t: "☑ " if t.group(1).strip() else "☐ ", b.group(2), flags=re.I)
             out.append(Paragraph(_inline(item), ST["bullet"], bulletText=f"{b.group(1)}." if b.group(1) else "◆"))
         else:
@@ -227,7 +252,8 @@ def _page(canvas, doc):
     canvas.drawString(20 * mm, H - 11.5 * mm, "운 결")
     canvas.setFillColor(INK3)
     canvas.setFont("Gothic", 7.5)
-    canvas.drawRightString(W - 20 * mm, H - 11.5 * mm, f"{doc.order['name']}님의 {doc.order['product_label'].split(' (')[0]}")
+    canvas.drawRightString(W - 20 * mm, H - 11.5 * mm,
+                           f"{doc.order['name']}님의 {doc.order['product_label'].split(' (')[0]}  ·  No. {doc.order['code']}")
     canvas.setFillColor(GOLD)
     canvas.setFont("Myeongjo", 9)
     canvas.drawCentredString(W / 2, 11 * mm, f"— {doc.page} —")
@@ -243,6 +269,20 @@ def _closing_bg(canvas, doc):
         dw = W - 40 * mm
         dh = dw * ih / iw
         canvas.drawImage(img, 20 * mm, H - 22 * mm - dh, dw, dh)
+
+
+def _signature(order):
+    """맺는 쪽 서명: 날짜 · 운결 도령 · 도장."""
+    seal = Table([[Paragraph('<font name="Song" size="15" color="#ffffff">운결</font>', ParagraphStyle("sl", alignment=TA_CENTER, leading=18))]],
+                 colWidths=[17 * mm], rowHeights=[17 * mm])
+    seal.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), RED), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                              ("BOX", (0, 0), (-1, -1), 1, GOLD)]))
+    words = Paragraph(f'<font name="Myeongjo" size="10" color="#8a7f96">{date.today():%Y년 %m월 %d일}</font><br/>'
+                      f'<font name="Song" size="16" color="#f6e7c4">운결 도령 씀</font>', ParagraphStyle("sg", alignment=TA_CENTER, leading=22))
+    t = Table([[words, seal]], colWidths=[50 * mm, 20 * mm])
+    t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE")]))
+    t.hAlign = "CENTER"
+    return t
 
 
 class _Doc(BaseDocTemplate):
@@ -297,6 +337,7 @@ def build(order, chart):
                         + (f'<br/><font color="#d9b26a">{_esc(url)}/?p=daily</font>' if url.startswith("http") else ""), ST["center"]),
               Spacer(1, 10 * mm),
               Paragraph("궁금한 점은 풀이를 받은 메일에 답장으로 물어봐라.", ST["center"]),
+              Spacer(1, 10 * mm), _signature(order),
               Spacer(1, 8 * mm), Paragraph(_esc(K.DISCLAIMER), ParagraphStyle("dc", parent=ST["small"], alignment=TA_CENTER))]
     doc.build(story)
     return buf.getvalue()
