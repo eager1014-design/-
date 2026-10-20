@@ -430,7 +430,7 @@ async function runConcern(ask) {
   const story = ask.querySelector("#qc-story").value;
   err.textContent = "";
   if (!ask.querySelector("#qc-ok").checked) { err.textContent = "동의해야 풀어줄 수 있다."; return; }
-  btn.disabled = true; btn.textContent = "들여다보는 중… (10초쯤)";
+  btn.disabled = true; btn.textContent = "들여다보는 중… (길면 15초)";
   let c;
   try {
     c = await api("/api/quick/concern", { birth: QUICK.birth, concern, story, consent: true });

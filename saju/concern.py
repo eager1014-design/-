@@ -22,7 +22,7 @@ import quick
 from saju_engine import current_luck
 
 DAILY = int(os.environ.get("QUICK_AI_LIMIT", "300"))
-WAIT = int(os.environ.get("QUICK_AI_WAIT", "25"))  # 화면에서 기다려 줄 최대 초
+WAIT = int(os.environ.get("QUICK_AI_WAIT", "15"))  # 화면에서 기다려 줄 최대 초
 _cache, _lock = {}, threading.Lock()  # token → (만든 시각, 깊은 풀이)
 
 PRODUCT_FOR = {"career": "career", "money": "career", "change": "career", "study": "career",
