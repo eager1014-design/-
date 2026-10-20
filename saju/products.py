@@ -8,6 +8,7 @@
 분량 기준: A4 한 쪽 ≈ 1,500자. 'pages'(손님에게 보이는 쪽수)는 장 분량으로 자동 계산.
 """
 import os
+import re
 from datetime import date
 
 
@@ -131,11 +132,24 @@ for _p in _CATALOG:
 
 
 TIER_ORDER = ["가볍게", "깊게", "프리미엄", "구독"]
+FRIEND_DISCOUNT = int(os.environ.get("FRIEND_DISCOUNT", "9900"))  # 평생 종합: 친구가 내 링크로 사주를 보면 깎아주는 금액
+
+
+def toc(p):
+    """손님에게 보여줄 PDF 목차 (장 제목 + 무엇을 다루는지 한 줄). 풀이 내용 자체는 보여주지 않는다."""
+    out = []
+    for title, ins, chars in p["chapters"]:
+        d = re.sub(r"\([^)]*\)", "", ins)          # 괄호 속 전문 용어 빼기
+        d = re.split(r"[.]|\s—\s", d)[0].strip()    # 첫 문장만
+        d = d.replace("'", "").replace("사용자", "나").replace("이 사람", "나").replace("불릿", "요약")
+        out.append({"t": title, "d": d[:60] + ("…" if len(d) > 60 else ""), "chars": chars})
+    return out
 
 
 def public():
     """신청서에 보여줄 상품 (묶음 순서 → 가격 낮은 순)."""
     order = lambda kv: (TIER_ORDER.index(kv[1]["tier"]) if kv[1]["tier"] in TIER_ORDER else 9, kv[1]["price"])
     return {k: dict({kk: p[kk] for kk in ("label", "price", "tier", "pages", "partner", "desc")},
-                    subscription=bool(p.get("subscription")), no_free=bool(p.get("no_free") or p.get("subscription")))
+                    subscription=bool(p.get("subscription")), no_free=bool(p.get("no_free") or p.get("subscription")),
+                    toc=toc(p), friend_discount=FRIEND_DISCOUNT if k == "life" else 0)
             for k, p in sorted(PRODUCTS.items(), key=order) if not p.get("hidden")}

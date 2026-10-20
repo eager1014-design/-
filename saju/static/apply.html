@@ -234,6 +234,20 @@
     box-shadow: 0 0 18px rgba(192,40,58,.35); }
   .sharepanel .done-actions { margin-top: 12px; }
 
+  /* PDF 목차 미리보기 */
+  details.toc { margin: 8px 0 4px; font-size: 13px; color: var(--ink-2); text-align: left; }
+  details.toc summary { cursor: pointer; color: var(--gold); font-weight: 700; padding: 6px 0; list-style: none; }
+  details.toc summary::-webkit-details-marker { display: none; }
+  details.toc ol { margin: 6px 0 8px; padding-left: 22px; }
+  details.toc li { margin: 6px 0; line-height: 1.5; }
+  details.toc li::marker { color: var(--accent-2); font-weight: 700; }
+  details.toc li b { display: block; color: #f6e7c4; font: 400 15px "Song Myung", serif; }
+  details.toc li span { display: block; color: var(--ink-3); }
+  details.toc li em { display: block; font-style: normal; color: var(--ink-3); filter: blur(2.5px); user-select: none; font-size: 12px; }
+  .tocnote { margin: 6px 0 0; padding: 10px; border-radius: 8px; background: rgba(217,178,106,.07); color: var(--ink-2); line-height: 1.6; }
+  #products details.toc { margin: -4px 4px 4px 44px; }
+  .lock.paid { border-color: rgba(217,178,106,.55); }
+
   /* 입장 화면 · 소리 버튼 */
   #gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; text-align: center; padding: 24px;
     background: radial-gradient(ellipse at 50% 40%, #1c1424, #07060a 70%); transition: opacity 1s; }

@@ -97,7 +97,7 @@ def get(oid):
 
 
 def listing(status=None):
-    sql = ("SELECT id,code,product,amount,name,email,status,source,channel,created_at,paid_at,sent_at,free_kind,ref_from,"
+    sql = ("SELECT id,code,product,amount,name,email,status,source,channel,created_at,paid_at,sent_at,free_kind,ref_from,discount,"
            "(SELECT COUNT(*) FROM orders o2 WHERE o2.email=orders.email AND o2.status!='canceled' AND o2.id<=orders.id) visit FROM orders")
     rows = db.all_(sql + (" WHERE status=?" if status else "") + " ORDER BY id DESC LIMIT 300", *([status] if status else []))
     for r in rows:

@@ -95,7 +95,18 @@ def main():
     ok(len(r["locked"]) >= 2 and not _re.search(r"\d", "".join(x["masked"] for x in r["locked"])), "잠긴 칸: 진짜 결과(숫자) 안 보냄")
     st, u = guest("/api/quick/unlock", {"birth": B, "id": "love"})
     ok(st == 200 and "인연" in u["text"], "친구에게 보내면 '인연이 들어오는 때' 열림")
-    ok(guest("/api/quick/unlock", {"birth": B, "id": "turn"})[0] == 403, "다른 잠긴 칸은 결제해야 열림")
+    ok(guest("/api/quick/unlock", {"birth": B, "id": "months"})[0] == 200, "친구에게 보내면 '좋은 달·조심할 달'도 열림")
+    ok(guest("/api/quick/unlock", {"birth": B, "id": "turn"})[0] == 403, "평생 종합 칸은 결제해야만")
+    # 평생 종합 친구 할인: 내 링크(inv)로 온 친구가 자기 사주를 보면 9,900원 할인 (1인 1회)
+    ok(not guest("/api/invite/status?vid=ME12345678")[1]["ready"], "친구가 오기 전엔 할인 없음")
+    guest("/api/quick", {"birth": dict(B, year=1999), "inv": "ME12345678", "vid": "FR87654321"})
+    ok(guest("/api/invite/status?vid=ME12345678")[1]["ready"], "친구가 내 링크로 사주를 보면 할인 준비")
+    st, r = guest("/api/apply", {"product": "life", "name": "할인손님", "email": "disc@test.com", "birth": B, "situation": SIT,
+                                 "agree": True, "agree_ai": True, "vid": "ME12345678"})
+    ok(r["discount"] == 9900 and r["amount"] == 34900 - 9900, f"평생 종합 친구 할인 적용 ({r['amount']:,}원)")
+    st, r = guest("/api/apply", {"product": "life", "name": "할인손님", "email": "disc@test.com", "birth": B, "situation": SIT,
+                                 "agree": True, "agree_ai": True, "vid": "ME12345678"})
+    ok(r["discount"] == 0 and r["amount"] == 34900, "할인은 한 번만")
     # 보안
     ok(guest("/api/admin/orders")[0] == 401, "비로그인 → 관리 화면 차단")
     ok(client({"X-Admin-Key": "wrong-key-0123456789abcdefgh"})("/api/admin/orders")[0] == 401, "틀린 기계 열쇠 차단")
@@ -104,7 +115,7 @@ def main():
     # 관리 화면
     boss("/api/signup", {"email": "boss@test.com", "name": "사장", "password": "boss-pass-123", "agree": True, "agree_ai": True})
     st, r = boss("/api/admin/orders")
-    ok(st == 200 and len(r["orders"]) == 5, "사장님 목록 보기")
+    ok(st == 200 and len(r["orders"]) >= 5, "사장님 목록 보기")
     ny = next(o for o in r["orders"] if o["product"] == "newyear")
     ok(ny["status"] == "paid" and ny["amount"] == 0, "무료 신청은 바로 '입금 확인' 상태")
     ok(ny["channel"] == "threads", "신청 채널 기록 (스레드에서)")

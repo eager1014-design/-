@@ -123,7 +123,7 @@ def recommend(chart, luck):
 
 # ---------------------------------------------------------------- 잠긴 부분 (결제하면 PDF에서, 친구에게 보내면 하나 열림)
 # 진짜 결과는 잠겨 있는 동안 화면에 보내지 않는다 (가린 글씨는 모양만 비슷한 가짜 글자).
-UNLOCK_BY_SHARE = "love"  # 친구에게 링크를 보내면 열어주는 칸
+PAID_ONLY = {"turn"}  # 평생 종합 사주의 칸: 친구에게 보내도 안 열림, 결제해야 PDF로 (사장님 결정 2026-10-20)
 
 
 def _months_text(ms):
@@ -196,13 +196,13 @@ def reading(birth, chart_of_birth):
         "recs": recommend(chart, luck),
         "locked": [{"id": x["id"], "title": x["title"], "masked": _mask(x["text"]), "product": x["product"],
                     "label": products.PRODUCTS[x["product"]]["label"], "price": products.PRODUCTS[x["product"]]["price"],
-                    "share_unlock": x["id"] == UNLOCK_BY_SHARE} for x in locked_sections(chart, luck)],
+                    "share_unlock": x["id"] not in PAID_ONLY} for x in locked_sections(chart, luck)],
     }
 
 
 def unlock(birth, chart_of_birth, section):
-    """친구에게 링크를 보낸 뒤 여는 칸 하나 (UNLOCK_BY_SHARE 만)."""
-    if section != UNLOCK_BY_SHARE:
+    """친구에게 링크를 보낸 뒤 화면의 잠긴 칸을 연다 (평생 종합 칸은 제외)."""
+    if section in PAID_ONLY:
         return None
     chart = chart_of_birth(birth)
     return next((x["text"] for x in locked_sections(chart, current_luck(chart)) if x["id"] == section), None)

@@ -12,9 +12,50 @@ function onProduct() {
   $("#story-label").textContent = p === "counsel" ? "궁금한 질문 하나" : "지금 상황과 고민";
   const sub = p && window.PRODUCTS[p].subscription;
   const nofree = p && window.PRODUCTS[p].no_free;
-  $("#submit").textContent = sub ? `월 ${won(window.PRODUCTS[p].price)} 구독 신청` : nofree ? `${won(window.PRODUCTS[p].price)} 신청하기`
+  const lifeDisc = p === "life" && DISCOUNT.ready ? DISCOUNT.amount : 0;
+  $("#submit").textContent = sub ? `월 ${won(window.PRODUCTS[p].price)} 구독 신청`
+    : lifeDisc ? `${won(window.PRODUCTS[p].price - lifeDisc)} 신청하기 (친구 할인 -${won(lifeDisc)})`
+    : nofree ? `${won(window.PRODUCTS[p].price)} 신청하기`
     : window.FREE_FIRST ? "신청하기 · 처음이면 무료"
     : p ? `${won(window.PRODUCTS[p].price)} 신청하기` : "신청하기";
+}
+
+/* 방문자번호(이 폰에만 저장, 개인정보 아님)와, 친구가 보낸 평생 종합 할인 링크(?inv=) */
+const VID = (() => {
+  try {
+    let v = localStorage.getItem("ungyeol_vid");
+    if (!v) { v = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("") + "x1"; localStorage.setItem("ungyeol_vid", v); }
+    return v;
+  } catch (e) { return ""; }
+})();
+const INV = new URLSearchParams(location.search).get("inv") || "";
+let DISCOUNT = { ready: false, amount: 0 };
+
+async function refreshDiscount() {
+  if (!VID) return;
+  try { DISCOUNT = await api(`/api/invite/status?vid=${VID}`); } catch (e) { return; }
+  const life = window.PRODUCTS?.life;
+  if (!life) return;
+  const price = DISCOUNT.ready ? life.price - DISCOUNT.amount : life.price;
+  document.querySelectorAll('.lockbtn[data-key="life"] .lp').forEach((el) => (el.innerHTML = DISCOUNT.ready
+    ? `<s style="opacity:.6">${won(life.price)}</s> ${won(price)}` : won(price)));
+  const note = $("#life-disc");
+  if (note && DISCOUNT.ready) note.innerHTML = `<b style="color:var(--gold)">친구가 왔다. ${won(DISCOUNT.amount)} 할인이 준비됐다 ✓</b>`;
+  if (document.querySelector('input[name="product"]:checked')?.value === "life") onProduct();
+}
+
+/* PDF 목차 미리보기: 풀이 내용은 안 보여주고, 무엇이 얼마나 깊게 들어가는지만 */
+function tocToggle(key) {
+  const p = window.PRODUCTS?.[key];
+  if (!p || !p.toc?.length) return "";
+  const chars = p.toc.reduce((a, t) => a + t.chars, 0);
+  return `<details class="toc"><summary>📖 PDF에 들어가는 것 보기 · ${p.toc.length}개 장 · 약 ${p.pages}쪽</summary>
+    <ol>${p.toc.map((t, i) => `<li><b>${esc(t.t)}</b><span>${esc(t.d)}</span>${i >= 2 ? `<em>네 사주로 쓴 ${Math.round(t.chars / 100) * 100}자 분량 ███</em>` : ""}</li>`).join("")}</ol>
+    <p class="tocnote">표지(네 이름·사주 네 기둥) · 여는 말 · 차례 · 본문 ${p.toc.length}장 · 맺는 말. 약 ${(Math.round(chars / 1000)).toLocaleString("ko-KR")}천 자를 오직 네 생년월일과 고민으로 쓴다.<br>
+    ${p.no_free ? "결제하면" : "결제(또는 첫 무료 신청)하면"} 1~2일 안에 이메일로 PDF가 간다.</p></details>`;
+}
+function bindToc(root) {
+  root.querySelectorAll("details.toc").forEach((d) => d.addEventListener("toggle", () => d.open && Sound.gong(false)));
 }
 
 /* 친구 초대 코드: 링크(?ref=)로 들어오면 기억해 두었다가 신청할 때 함께 보낸다 */
@@ -76,6 +117,8 @@ async function init() {
   window.PRODUCTS = cfg.products;
   window.FREE_FIRST = cfg.free_first;
   initQuick();
+  refreshDiscount();
+  bindToc($("#products"));
   if (cfg.products.daily) {
     const price = cfg.products.daily.price;
     $("#sub-price").textContent = `월 ${won(price)}`;
@@ -95,7 +138,7 @@ async function init() {
     lastTier = p.tier;
     return `${head}<label class="product"><input type="radio" name="product" value="${k}">
       <span><b>${esc(p.label)}</b> <span class="pages">${p.subscription ? "매일 아침 메일" : `PDF 약 ${p.pages}쪽`}</span>${p.no_free && !p.subscription ? ' <span class="pages">무료 제외</span>' : ""}<br><span class="muted small">${esc(p.desc)}</span></span>
-      <span class="p">${won(p.price)}${p.subscription ? '<br><span class="muted small">/ 월</span>' : ""}</span></label>`;
+      <span class="p">${won(p.price)}${p.subscription ? '<br><span class="muted small">/ 월</span>' : ""}</span></label>${tocToggle(k)}`;
   }).join("");
   $("#concern").innerHTML = Object.entries(cfg.concerns).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
   $("#me-birth").innerHTML = birthFields("me");
@@ -113,7 +156,7 @@ async function init() {
     const body = {
       product, name: $("#name").value.trim(), email: $("#email").value.trim(), birth: readBirth("me"),
       situation: { concern: $("#concern").value, job: $("#job").value, story: $("#story").value, goal: $("#goal").value },
-      agree: $("#agree").checked, agree_ai: $("#agree_ai").checked, marketing: $("#marketing").checked, ref: REF,
+      agree: $("#agree").checked, agree_ai: $("#agree_ai").checked, marketing: $("#marketing").checked, ref: REF, vid: VID,
       src: new URLSearchParams(location.search).get("src") || "",  // 어느 홍보 채널에서 왔는지 (?src=threads)
     };
     if (window.PRODUCTS[product].partner) body.partner = { name: $("#p-name").value, relation: $("#p-rel").value, birth: readBirth("p") };
@@ -358,36 +401,43 @@ function showQuick(r, birth) {
   if (r.stars.length) quickPanel(`<p class="kicker">너에게 있는 별</p>${r.stars.map((s) => say(s, "small")).join("")}`);
   quickPanel(`<p class="kicker">올해 ${r.year.year}년 · ${esc(r.year.ko)}</p>${say(r.year.text)}
     <p class="kicker" style="margin-top:22px">오늘 ${esc(r.today.date)} · ${esc(r.today.ko)}일</p>${say(r.today.text)}`, "fortune");
-  // 잠긴 칸: 더 깊은 결과는 결제하면 PDF로, '인연이 들어오는 때'는 친구에게 보내면 지금 열림
+  // 잠긴 칸: 깊은 결과는 결제하면 PDF로. 친구에게 보내면 화면의 잠긴 칸이 열린다 (평생 종합은 돈으로만, 대신 친구 할인)
   const priceTag = (x) => window.FREE_FIRST && !window.PRODUCTS[x.product]?.no_free ? `처음이면 무료` : won(x.price);
   r.locked.forEach((x) => {
-    const p = quickPanel(`<div class="lock" id="lock-${x.id}">
+    const life = x.product === "life";
+    const p = quickPanel(`<div class="lock ${life ? "paid" : ""}" id="lock-${x.id}">
       <p class="kicker">🔒 ${esc(x.title)}</p>
       <p class="blurred">${esc(x.masked)}</p>
-      ${x.share_unlock ? `<p class="small muted">친구에게 이 사이트를 보내면 <b style="color:var(--gold)">지금 바로</b> 열어주마.</p>` : ""}
-      <button class="btn ghost lockbtn" data-key="${x.product}">${esc(x.label)}에서 전부 보기 · ${priceTag(x)}</button>
-    </div>`, "locked");
+      ${life ? `<p class="small" style="color:var(--ink-2)">이건 쉽게 열어주지 않는다. <b style="color:var(--gold)">평생 종합 사주</b>에서만, 정확하게.</p>
+        <p class="small muted" id="life-disc">친구가 네 링크로 와서 자기 사주를 보면 <b style="color:var(--gold)">${won(window.PRODUCTS.life.friend_discount)} 깎아주마.</b></p>`
+        : `<p class="small muted">친구에게 이 사이트를 보내면 <b style="color:var(--gold)">지금 바로</b> 열어주마.</p>`}
+      ${tocToggle(x.product)}
+      <button class="btn ghost lockbtn" data-key="${x.product}">${esc(x.label)}에서 전부 보기 · <span class="lp">${priceTag(x)}</span></button>
+    </div>`, "lockpanel");
     p.querySelector(".lockbtn").onclick = () => pickProduct(x.product, birth);
+    bindToc(p);
   });
-  // 친구에게 보내기 → '인연이 들어오는 때' 열기
-  const shareUrl = `${location.origin}/?src=share`;
-  const sp = quickPanel(`<p class="kicker">친구에게 보내라</p>${say("친구에게 이 사이트를 보내면… 잠긴 것 하나를 지금 열어주마.")}
+  refreshDiscount();
+  // 친구에게 보내기 → 잠긴 칸(평생 종합 제외) 열기 + 평생 종합 할인 링크
+  const shareUrl = `${location.origin}/?inv=${VID}`;
+  const sp = quickPanel(`<p class="kicker">친구에게 보내라</p>${say("친구에게 이 사이트를 보내면… 잠긴 것들을 지금 열어주마.")}
+    <p class="small muted">친구가 이 링크로 자기 사주를 보면, 평생 종합 사주는 ${won(window.PRODUCTS.life.friend_discount)} 할인. 친구도 첫 풀이는 무료다.</p>
     <div class="done-actions">
       ${navigator.share ? '<button class="btn" id="q-share">친구에게 보내기</button>' : ""}
-      <button class="btn ghost" id="q-copy">링크 복사</button></div>
-    <p class="muted small">친구도 첫 풀이가 무료다.</p>`, "sharepanel");
+      <button class="btn ghost" id="q-copy">링크 복사</button></div>`, "sharepanel");
   const doUnlock = async () => {
-    try {
-      const u = await api("/api/quick/unlock", { birth, id: "love" });
-      const box = $("#lock-love");
-      if (box) {
+    for (const x of r.locked.filter((l) => l.share_unlock)) {
+      try {
+        const u = await api("/api/quick/unlock", { birth, id: x.id });
+        const box = $(`#lock-${x.id}`);
+        if (!box) continue;
         box.querySelector(".blurred").textContent = u.text;
         box.classList.add("open");
-        box.querySelector(".kicker").textContent = "🔓 인연이 들어오는 때";
-        box.scrollIntoView({ behavior: "smooth", block: "center" });
-        Sound.gong(true);
-      }
-    } catch (e) { /* 열기 실패는 조용히 */ }
+        box.querySelector(".kicker").textContent = "🔓 " + x.title;
+      } catch (e) { /* 열기 실패는 조용히 */ }
+    }
+    $(".lock.open")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    Sound.gong(true);
   };
   sp.querySelector("#q-share")?.addEventListener("click", async () => {
     try { await navigator.share({ title: "운결 · 너의 인생이 보인다", text: "태어난 날만 넣으면 사주를 보여줘. 첫 풀이는 무료래.", url: shareUrl }); doUnlock(); }
@@ -399,7 +449,7 @@ function showQuick(r, birth) {
     try {
       await Promise.race([navigator.clipboard.writeText(shareUrl), new Promise((_, no) => setTimeout(no, 1500))]);
       btn.textContent = "복사했어요 ✓ 친구에게 붙여넣어 보내세요";
-    } catch (e) {  // 복사가 안 되면 링크를 보여주고 길게 눌러 복사하게
+    } catch (e) {
       btn.insertAdjacentHTML("afterend", `<div class="linkline">${esc(shareUrl)}</div>`);
       btn.textContent = "아래 링크를 길게 눌러 복사하세요";
     }
@@ -442,7 +492,7 @@ function initQuick() {
     const birth = readBirth("q");
     btn.disabled = true; btn.textContent = "들여다보는 중…";
     try {
-      showQuick(await api("/api/quick", { birth }), birth);
+      showQuick(await api("/api/quick", { birth, inv: INV, vid: VID }), birth);
       Sound.gong(true);
     } catch (x) { err.textContent = x.message; }
     finally { btn.disabled = false; btn.textContent = "다시 보기"; }

@@ -36,6 +36,7 @@ import longform
 import orders
 import products
 import promo
+import invite
 import quick
 import referral
 import retention
@@ -377,6 +378,7 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", "/api/apply"): self.api_apply,
             ("POST", "/api/quick"): self.api_quick,
             ("POST", "/api/quick/unlock"): self.api_quick_unlock,
+            ("GET", "/api/invite/status"): self.api_invite_status,
             ("GET", "/api/admin/orders"): self.api_admin_orders,
             ("GET", "/api/admin/order"): self.api_admin_order,
             ("POST", "/api/admin/order/create"): self.api_admin_create,
@@ -690,7 +692,12 @@ class Handler(BaseHTTPRequestHandler):
             birth = parse_birth(b.get("birth") or {})
         except ValueError as e:
             return self.error(str(e))
+        if b.get("inv"):  # 친구가 보낸 링크로 와서 자기 사주를 봤다 → 링크 주인에게 평생 종합 할인
+            invite.record(str(b.get("inv")), str(b.get("vid") or ""), birth)
         self.send_json(quick.reading(birth, chart_of_birth))
+
+    def api_invite_status(self, q):
+        self.send_json(invite.status(q.get("vid")))
 
     def api_quick_unlock(self, b):
         """친구에게 링크를 보낸 손님에게 잠긴 칸 하나를 열어준다."""
@@ -757,12 +764,20 @@ class Handler(BaseHTTPRequestHandler):
         first_ok = orders.FREE_FIRST and not orders.used_free(name, email, birth)
         free = False if is_sub else ("first" if first_ok else ("ref" if referral.use_credit(email) else False))
         before = retention.visits(email)  # 예전에 온 적 있는 손님인가
+        vid = str(b.get("vid") or "")
+        disc = 0
+        if product == "life" and invite.status(vid, email)["ready"]:
+            disc = products.FRIEND_DISCOUNT
         o = orders.create(*form, source="apply", ip=self.client_ip(), free=free, marketing=bool(b.get("marketing")),
                           channel=src if re.match(r"^[a-z0-9_-]+$", src) else None)
+        if disc:  # 친구 할인 적용 (1인 1회)
+            db.run("UPDATE orders SET amount=amount-?, discount=? WHERE id=?", disc, disc, o["id"])
+            invite.use(vid, email, o["id"])
+            o = orders.get(o["id"])
         prod = orders.PRODUCTS[o["product"]]
         bank = orders.BANK_ACCOUNT or "(입금 계좌는 곧 메일로 안내해 드립니다)"
         my_link = f"{PUBLIC_URL}/?ref={referral.code_for(email)}"
-        invite = (f"\n\n────────\n친구에게 이 링크를 보내 주세요. 친구도 첫 풀이가 무료이고,\n"
+        invite_note = (f"\n\n────────\n친구에게 이 링크를 보내 주세요. 친구도 첫 풀이가 무료이고,\n"
                   f"친구가 신청하면 {o['name']}님께 무료 풀이 한 번이 더 생겨요.\n{my_link}")
         # 친구 초대로 온 손님이면, 링크를 보낸 사람에게 무료 1회
         ref_owner = referral.reward(b.get("ref"), email, is_new) if b.get("ref") else None
@@ -776,13 +791,13 @@ class Handler(BaseHTTPRequestHandler):
             mailer.send(o["email"], f"[운결] 무료 풀이 신청이 접수되었습니다 ({o['code']})",
                         f"{o['name']}님, 운결에 사주 풀이를 신청해 주셔서 감사합니다.\n\n"
                         f"신청번호: {o['code']}\n상품: {prod['label']} ({why})\n\n"
-                        "입금하실 필요 없어요. 풀이를 정성껏 작성해 1~2일 안에 이 메일 주소로 PDF로 보내드립니다." + invite)
+                        "입금하실 필요 없어요. 풀이를 정성껏 작성해 1~2일 안에 이 메일 주소로 PDF로 보내드립니다." + invite_note)
         else:
             mailer.send(o["email"], f"[운결] {prod['label']} 신청이 접수되었습니다 ({o['code']})",
                         f"{o['name']}님, 운결에 사주 풀이를 신청해 주셔서 감사합니다.\n\n"
                         f"신청번호: {o['code']}\n상품: {prod['label']}\n금액: {o['amount']:,}원\n입금 계좌: {bank}\n"
                         f"입금자명: {o['name']}\n\n입금이 확인되면 풀이를 정성껏 작성해 이 메일 주소로 PDF로 보내드립니다.\n"
-                        "보통 입금 확인 후 1~2일 안에 받아보실 수 있어요." + invite)
+                        "보통 입금 확인 후 1~2일 안에 받아보실 수 있어요." + invite_note)
         price = {"first": "무료(첫 1회)", "ref": "무료(친구 초대)"}.get(free, f"{o['amount']:,}원")
         if free:
             auto_generate(o)  # 무료 신청은 바로 풀이 쓰기 시작
@@ -791,7 +806,7 @@ class Handler(BaseHTTPRequestHandler):
                         f"새 신청이 들어왔습니다.\n\n{o['name']} ({o['email']})\n{prod['label']} {price}\n"
                         f"관리 화면: {PUBLIC_URL}/admin")
         self.send_json({"ok": True, "code": o["code"], "amount": o["amount"], "product": prod["label"], "free": free, "key": o["product"],
-                        "returning": before, "free_kind": free or None, "my_link": my_link,
+                        "returning": before, "free_kind": free or None, "my_link": my_link, "discount": disc,
                         "credits": referral.credits(email), "referred": bool(ref_owner),
                         "name": o["name"], "bank": orders.BANK_ACCOUNT})
 
