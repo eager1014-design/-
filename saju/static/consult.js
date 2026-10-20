@@ -17,14 +17,26 @@ const INV = (() => {  // 친구가 보낸 링크(?inv=)로 왔으면 기억
 /* 도령 목소리: 첫 화면에서 소리를 켜고 왔으면, 장면마다 static/voice/<id>.mp3 를 튼다 (파일이 없으면 조용히 넘어감) */
 const VOICE = {
   on: (() => { try { return sessionStorage.getItem("ungyeol_sound") === "1"; } catch (e) { return false; } })(),
-  cur: null,
+  cur: null, last: null, pending: null,
   play(id) {
-    if (!this.on || !id) return;
+    if (!id) return;
+    this.last = id;
+    if (!this.on) return;
     if (this.cur) this.cur.pause();
     const a = (this.cur = new Audio(`/voice/${id}.mp3`));
-    a.play().catch(() => {});
+    // 휴대폰은 화면을 한 번 누르기 전엔 소리를 막는다 → 막히면 기억해 뒀다가 처음 누를 때 튼다
+    a.play().then(() => (this.pending = null)).catch((e) => { if (e.name === "NotAllowedError") this.pending = id; });
+  },
+  set(on) {
+    this.on = on;
+    try { sessionStorage.setItem("ungyeol_sound", on ? "1" : "0"); } catch (e) { /* 괜찮음 */ }
+    const b = $("#snd");
+    b.textContent = on ? "🔊" : "🔇"; b.setAttribute("aria-label", on ? "목소리 끄기" : "목소리 켜기");
+    if (!on && this.cur) this.cur.pause();
+    if (on) this.play(this.last);
   },
 };
+addEventListener("pointerdown", () => { if (VOICE.pending) { const id = VOICE.pending; VOICE.pending = null; VOICE.play(id); } }, true);
 
 const S = { topic: null, birth: null, answers: {}, partner: null, story: "" };
 let CFG = null;
@@ -349,3 +361,7 @@ $("#back-chat").onclick = () => turnPage("셋째 장 · 도령의 상담실", ()
   $("#page-pdf").hidden = true; $(".room-head").hidden = false; $("#chat").hidden = false;
   return $("#chat");
 });
+
+$("#snd").hidden = false;
+VOICE.set(VOICE.on);
+$("#snd").onclick = (e) => { e.stopPropagation(); VOICE.set(!VOICE.on); };
