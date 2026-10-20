@@ -198,9 +198,32 @@ function typeLine(el) {
   return el.querySelectorAll(".c");
 }
 
+function decorate() {
+  // 움직임 효과용 겹 (빛, 화면 깨짐)
+  document.querySelectorAll(".fx-lamp, .fx-candle, .fx-moon, .fx-burn").forEach((f) => f.insertAdjacentHTML("beforeend", '<div class="glow"></div>'));
+  document.querySelectorAll(".fx-glitch").forEach((f) => f.insertAdjacentHTML("beforeend", '<div class="gl r"></div><div class="gl b"></div>'));
+  if (CALM) return;
+  // 깊이감: 스크롤할 때 그림이 화면보다 조금 느리게 움직인다
+  const pars = [...document.querySelectorAll(".par")];
+  let ticking = false;
+  const move = () => {
+    const vh = innerHeight;
+    pars.forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.bottom < -100 || r.top > vh + 100) return;
+      const k = (r.top + r.height / 2 - vh / 2) / vh;  // 화면 가운데 0, 위 -, 아래 +
+      el.style.transform = `translateY(${(k * -28).toFixed(1)}px)`;
+    });
+    ticking = false;
+  };
+  addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(move); } }, { passive: true });
+  move();
+}
+
 function startToon() {
   const panels = document.querySelectorAll(".panel");
   if (!panels.length) return;
+  decorate();
   const queue = new Map();
   panels.forEach((p) => queue.set(p, [...p.querySelectorAll("[data-type]")].map(typeLine)));
   const io = new IntersectionObserver((entries) => {
