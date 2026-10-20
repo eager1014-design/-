@@ -1,4 +1,4 @@
-"""여러 AI(Claude·제미나이·챗GPT)를 순서대로 시도하는 연결 모듈.
+"""여러 AI(코덱스=챗GPT 구독·Claude·제미나이·챗GPT API)를 순서대로 시도하는 연결 모듈.
 
 AI_PROVIDERS 에 적힌 순서대로 시도하고, 키가 없거나 오류가 나면 다음 AI로 넘어간다.
 모두 실패하면 (None, None) 을 돌려주고, 호출한 쪽에서 규칙 기반 풀이로 대체한다.
@@ -6,6 +6,7 @@ AI_PROVIDERS 에 적힌 순서대로 시도하고, 키가 없거나 오류가 �
 """
 import json
 import os
+import subprocess
 import threading
 import urllib.error
 import urllib.request
@@ -77,7 +78,30 @@ def _openai(system, messages, max_tokens):
     return "".join(parts)
 
 
+CODEX = os.environ.get("CODEX_BIN", os.path.expanduser("~/.local/bin/codex"))
+
+
+def _codex(system, messages, max_tokens):
+    """사장님 챗GPT 구독(코덱스 CLI)으로 쓰기 — 추가 비용 없음. 코덱스가 설치·로그인된 맥북에서만 동작."""
+
+    import tempfile
+    convo = "\n\n".join(("[이전 답변]\n" if m["role"] == "assistant" else "") + m["content"] for m in messages)
+    prompt = (f"{system}\n\n---\n{convo}\n\n---\n위 요청에 대한 최종 답변 본문만 출력하세요. "
+              "파일을 만들거나 명령을 실행하지 말고, 설명·인사말 없이 답변만.")
+    with tempfile.TemporaryDirectory() as tmp:
+        out = os.path.join(tmp, "answer.txt")
+        args = [CODEX, "exec", "--skip-git-repo-check", "--ephemeral", "-s", "read-only", "-o", out]
+        if os.environ.get("CODEX_MODEL"):
+            args += ["-m", os.environ["CODEX_MODEL"]]
+        r = subprocess.run(args + ["-"], input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=tmp)
+        if r.returncode != 0 or not os.path.exists(out):
+            raise RuntimeError(f"코덱스 실패: {(r.stderr or r.stdout)[-300:]}")
+        return open(out, encoding="utf-8").read()
+
+
 PROVIDERS = {
+    "codex": {"call": _codex, "ready": lambda: os.path.exists(CODEX),
+              "model": lambda: os.environ.get("CODEX_MODEL", "챗GPT구독")},
     "claude": {"call": _claude, "key": "ANTHROPIC_API_KEY",
                "model": lambda: os.environ.get("CLAUDE_MODEL", "claude-sonnet-5-5")},
     "gemini": {"call": _gemini, "key": "GEMINI_API_KEY",
@@ -94,7 +118,7 @@ def order():
 
 def available():
     """키가 설정된 AI 이름을 시도 순서대로. 예: ['gemini', 'openai']"""
-    return [n for n in order() if os.environ.get(PROVIDERS[n]["key"])]
+    return [n for n in order() if (PROVIDERS[n]["ready"]() if "ready" in PROVIDERS[n] else os.environ.get(PROVIDERS[n]["key"]))]
 
 
 def label(name):
@@ -138,6 +162,6 @@ def generate(system, messages, max_tokens=3000):
             if text and text.strip():
                 return text.strip(), label(name)
             print(f"[llm] {name}: 빈 답변 → 다음 AI 시도")
-        except (urllib.error.URLError, TimeoutError, ValueError, RuntimeError, OSError) as e:
+        except (urllib.error.URLError, TimeoutError, ValueError, RuntimeError, OSError, subprocess.TimeoutExpired) as e:
             print(f"[llm] {name} 실패 → 다음 AI 시도: {e}")
     return None, None

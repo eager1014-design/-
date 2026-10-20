@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>운결 · 사주 풀이 신청</title>
+<meta name="description" content="생년월일과 지금의 고민을 보내주시면, 사주를 바탕으로 한 맞춤 풀이를 PDF로 보내드립니다.">
+<meta property="og:title" content="운결 · 나를 이해하는 사주 풀이">
+<meta property="og:description" content="지금 고민에 맞춘 사주 풀이를 PDF로 받아보세요.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<style>
+  .apply main { max-width: 640px; }
+  .products { display: grid; gap: 10px; }
+  .product { display: flex; gap: 12px; align-items: flex-start; margin: 0; padding: 14px 16px; border: 1px solid var(--line);
+    border-radius: 12px; background: var(--bg); cursor: pointer; font-weight: 400; color: var(--ink); }
+  .product input { width: auto; margin-top: 6px; accent-color: var(--accent); }
+  .product b { font-size: 16px; }
+  .product .p { margin-left: auto; font: 700 16px "Noto Serif KR", serif; white-space: nowrap; }
+  .product:has(input:checked) { border-color: var(--accent); outline: 2px solid var(--accent); background: var(--paper); }
+  .birth { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; }
+  .birth2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .birth > *, .birth2 > * { min-width: 0; }
+  .product > span:nth-child(2) { min-width: 0; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  legend { font: 700 18px "Noto Serif KR", serif; margin: 26px 0 4px; padding: 0; }
+  details { margin-top: 6px; font-size: 13px; color: var(--ink-3); }
+  details summary { cursor: pointer; }
+  .tier { font: 700 13px "Noto Sans KR", sans-serif; color: var(--gold); margin: 14px 0 2px; letter-spacing: .05em; }
+  .tier:first-child { margin-top: 0; }
+  .pages { display: inline-block; font-size: 12px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 99px; padding: 0 7px; margin-left: 4px; }
+  .done-box { text-align: center; }
+  .bankline { font: 700 20px "Noto Serif KR", serif; padding: 14px; border: 1px dashed var(--gold); border-radius: 12px; margin: 14px 0; user-select: all; }
+</style>
+</head>
+<body class="apply">
+<header class="topbar">
+  <span class="brand"><span class="seal">運</span>운결</span>
+</header>
+<main id="app">
+  <div class="hero">
+    <span class="eyebrow">사주로 보는 커리어·관계 코칭</span>
+    <h1>지금 고민,<br>사주로 풀어드려요</h1>
+    <p class="lead">생년월일과 지금의 고민을 보내주시면,<br>타고난 기운을 바탕으로 한 맞춤 풀이를 <b>PDF로</b> 보내드립니다.</p>
+  </div>
+  <form id="form" class="card" novalidate>
+    <fieldset>
+      <legend>1. 받고 싶은 풀이</legend>
+      <div class="products" id="products"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>2. 내 정보</legend>
+      <label for="name">이름 <span class="muted small">(입금자 이름과 같게)</span></label>
+      <input id="name" autocomplete="name" maxlength="20" required>
+      <label for="email">풀이를 받을 이메일</label>
+      <input id="email" type="email" autocomplete="email" maxlength="120" required>
+      <div id="me-birth"></div>
+    </fieldset>
+
+    <fieldset id="partner-box" hidden></fieldset>
+
+    <fieldset>
+      <legend>3. 지금의 고민</legend>
+      <label for="concern">가장 궁금한 분야</label>
+      <select id="concern"></select>
+      <label for="job">하는 일 / 요즘 상태 <span class="muted small">(선택)</span></label>
+      <input id="job" maxlength="100" placeholder="예) 마케팅 3년차 직장인, 이직 준비 중">
+      <label for="story" id="story-label">지금 상황과 고민</label>
+      <textarea id="story" maxlength="2000" placeholder="예) 회사에서 인정받고 싶은데 회의 때 말을 삼키게 돼요. 올해 이직해도 될지 궁금해요."></textarea>
+      <label for="goal">바라는 결과 <span class="muted small">(선택)</span></label>
+      <input id="goal" maxlength="200" placeholder="예) 내게 맞는 일의 방향을 알고 싶어요">
+    </fieldset>
+
+    <fieldset>
+      <legend>4. 동의</legend>
+      <label class="check"><input type="checkbox" id="agree"> <span>[필수] 개인정보 수집·이용에 동의합니다.</span></label>
+      <details><summary>자세히 보기</summary>
+        수집 항목: 이름, 이메일, 생년월일·태어난 시간·성별, 고민 내용(궁합은 상대방 생년월일 포함)<br>
+        이용 목적: 사주 풀이 작성과 결과 발송, 입금 확인 및 문의 응대<br>
+        보관 기간: 풀이 발송 후 1년 뒤 파기 (입금 기록은 관련 법에 따라 5년 보관)<br>
+        동의하지 않으실 수 있으나, 이 경우 풀이를 제공할 수 없습니다.
+      </details>
+      <label class="check"><input type="checkbox" id="agree_ai"> <span>[필수] 풀이 작성을 위한 개인정보 국외 이전(AI 처리)에 동의합니다.</span></label>
+      <details><summary>자세히 보기</summary>
+        풀이 초안 작성에 AI(구글 Gemini 등, 미국 소재)를 사용하며, 이때 생년월일·고민 내용이 전송됩니다.
+        이메일은 전송하지 않습니다. 작성된 초안은 운결이 직접 검토·수정해 보내드립니다.
+      </details>
+    </fieldset>
+
+    <div class="spacer"></div>
+    <button class="btn block lg" id="submit" type="submit">신청하기</button>
+    <p class="err" id="err" role="alert"></p>
+    <p class="muted small">신청 후 안내되는 계좌로 입금해 주시면, 입금 확인 후 1~2일 안에 이메일로 보내드립니다.</p>
+  </form>
+</main>
+<footer class="foot">
+  <p>운결은 명리학을 바탕으로 자기 이해와 방향 설정을 돕는 서비스이며, 의료·법률·투자 자문을 대신하지 않습니다.</p>
+  <p>마음이 많이 힘드시다면 자살예방상담전화 109 · 정신건강위기상담 1577-0199</p>
+</footer>
+<script src="/form.js"></script>
+<script src="/apply.js"></script>
+</body>
+</html>

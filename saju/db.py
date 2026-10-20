@@ -63,6 +63,44 @@ CREATE TABLE IF NOT EXISTS payments (
   raw TEXT,
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT UNIQUE NOT NULL,     -- 손님에게 알려주는 신청번호
+  product TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  birth TEXT NOT NULL,           -- JSON (server.parse_birth 결과)
+  partner TEXT,                  -- 궁합일 때 상대 JSON: {name, relation, birth}
+  situation TEXT NOT NULL,       -- JSON: job, concern, story, goal
+  status TEXT NOT NULL,
+  content TEXT,                  -- 풀이(마크다운). 사장님이 고친 최종본
+  engine TEXT,
+  note TEXT,                     -- 사장님 메모
+  source TEXT NOT NULL,          -- apply(신청서) | manual(사장님 직접 입력)
+  channel TEXT,                  -- 들어온 홍보 채널: threads | instagram | daangn | (없으면 직접)
+  ip TEXT,
+  consent_at TEXT,
+  created_at TEXT NOT NULL,
+  paid_at TEXT,
+  sent_at TEXT,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status, created_at);
+CREATE TABLE IF NOT EXISTS promo_posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  channel TEXT NOT NULL,          -- threads | instagram | daangn
+  theme TEXT,
+  text TEXT NOT NULL,
+  status TEXT NOT NULL,           -- draft | scheduled(예약) | posted | discarded
+  engine TEXT,
+  post_id TEXT,                   -- 스레드 게시물 번호
+  permalink TEXT,
+  error TEXT,
+  created_at TEXT NOT NULL,
+  posted_at TEXT
+);
+CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 """
 
 
@@ -86,6 +124,20 @@ def _migrate(c):
         c.execute("ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0")
     if "ai_consent_at" not in cols:
         c.execute("ALTER TABLE users ADD COLUMN ai_consent_at TEXT")  # 개인정보 국외 이전(AI) 동의 시각
+    if "channel" not in {r[1] for r in c.execute("PRAGMA table_info(orders)")}:
+        c.execute("ALTER TABLE orders ADD COLUMN channel TEXT")  # 손님이 들어온 홍보 채널(?src=)
+    if "scheduled_at" not in {r[1] for r in c.execute("PRAGMA table_info(promo_posts)")}:
+        c.execute("ALTER TABLE promo_posts ADD COLUMN scheduled_at TEXT")  # 예약 게시 시각
+    pcols = {r[1] for r in c.execute("PRAGMA table_info(promo_posts)")}
+    for col in ("views", "likes", "replies", "reposts"):  # 스레드 성적 (하루 몇 번 갱신)
+        if col not in pcols:
+            c.execute(f"ALTER TABLE promo_posts ADD COLUMN {col} INTEGER")
+    if "stats_at" not in pcols:
+        c.execute("ALTER TABLE promo_posts ADD COLUMN stats_at TEXT")
+    ocols = {r[1] for r in c.execute("PRAGMA table_info(orders)")}
+    if "gen_state" not in ocols:
+        c.execute("ALTER TABLE orders ADD COLUMN gen_state TEXT")      # 긴 풀이 생성: running | done | error
+        c.execute("ALTER TABLE orders ADD COLUMN gen_progress TEXT")   # 예) 3/8
     c.commit()
 
 

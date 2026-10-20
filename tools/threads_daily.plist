@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 매일 아침 7:30 스레드 글 후보 만들기 (tools/threads_daily.py). 맥북이 잠자고 있었으면 깨어난 뒤 실행됨.
+     설치:  cp tools/threads_daily.plist ~/Library/LaunchAgents/com.ungyeol.threads-daily.plist
+            launchctl load ~/Library/LaunchAgents/com.ungyeol.threads-daily.plist
+     끄기:  launchctl unload ~/Library/LaunchAgents/com.ungyeol.threads-daily.plist -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.ungyeol.threads-daily</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/mac/ai/tools/threads_daily.py</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>30</integer></dict>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/Users/mac/.local/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+  <key>StandardOutPath</key><string>/Users/mac/ai/.tmp/threads_daily.out</string>
+  <key>StandardErrorPath</key><string>/Users/mac/ai/.tmp/threads_daily.out</string>
+</dict>
+</plist>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>운결 · 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<style>
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tabs button { font: 500 14px "Noto Sans KR", sans-serif; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink-2); cursor: pointer; }
+  .tabs button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--ink-3); font-weight: 500; font-size: 13px; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--bg); }
+  .st { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; color: #fff; white-space: nowrap; }
+  .st-pending { background: var(--earth); } .st-paid { background: var(--water); } .st-writing { background: var(--wood); }
+  .st-sent { background: var(--ink-3); } .st-canceled { background: var(--line); color: var(--ink-2); }
+  .info { display: grid; grid-template-columns: 100px 1fr; gap: 4px 12px; font-size: 14px; }
+  .info dt { color: var(--ink-3); } .info dd { margin: 0; white-space: pre-wrap; }
+  .editor { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .editor textarea { min-height: 560px; font-size: 14px; }
+  .preview { border: 1px solid var(--line); border-radius: 10px; padding: 4px 16px; max-height: 600px; overflow: auto; background: var(--bg); font-size: 15px; }
+  .preview h2 { font-size: 19px; margin-top: 18px; } .preview h3 { font-size: 16px; }
+  pre.chart { white-space: pre-wrap; font-size: 12px; background: var(--bg); padding: 12px; border-radius: 10px; }
+  .grid2 > .card { margin-top: 0; }
+  .drafts { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .drafts .card { margin: 0; display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+  .drafts textarea { min-height: 220px; font-size: 14px; flex: 1; }
+  .count { font-size: 12px; color: var(--ink-3); text-align: right; } .count.over { color: var(--accent); font-weight: 700; }
+  .linkbox { font-size: 13px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; user-select: all; word-break: break-all; }
+  .topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .note { font-size: 13px; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--gold) 15%, var(--paper)); }
+  @media (max-width: 760px) { .editor { grid-template-columns: 1fr; } .hide-sm { display: none; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a href="/admin" class="brand"><span class="seal">運</span>운결 관리</a>
+  <nav><a href="#/">신청 목록</a><a href="#/promo">홍보 센터</a><a href="/" target="_blank">신청서 보기</a><button id="logout" hidden>로그아웃</button></nav>
+</header>
+<main id="app"></main>
+<div id="toast" hidden></div>
+<script src="/form.js"></script>
+<script src="/admin.js"></script>
+</body>
+</html>

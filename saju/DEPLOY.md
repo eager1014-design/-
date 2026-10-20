@@ -41,8 +41,16 @@
 4. 자동으로 다시 배포됨. **Deployments** 탭에서 초록색 **Active** 가 되면 완료
 
 ### 6. 확인
-- 주소로 접속 → 첫 화면이 보이면 성공
-- **Deployments → View Logs** 에 `운결 사주 서버 실행: https://…  (AI: gemini:… → openai:…` 줄이 보여야 함
+- 주소로 접속 → 첫 화면(손님 신청서)이 보이면 성공
+- **Deployments → View Logs** 에 `운결 사주 서버 실행: https://…  (AI: gemini:…` 줄이 보여야 함
+
+### 7. 판매·홍보용 마무리 (2026-10-20~)
+1. `주소/app#/signup` 에서 **eager1014@gmail.com** 으로 가입 (이 이메일만 가입됨) → `주소/admin` 로그인
+2. Variables 의 `BANK_ACCOUNT=` 뒤에 입금 계좌 입력 (예: 카카오뱅크 3333-00-0000000 홍길동)
+3. 맥북 루트 `.env` 의 `SAJU_URL` 을 Railway 주소로 바꾸고, 아침 글쓰기 자동 실행 켜기 (`tools/threads_daily.plist` 안내)
+4. 스레드 연결 후 Variables 에 `THREADS_ACCESS_TOKEN=` 추가 (workflows/스레드_홍보.md)
+5. 메일을 실제로 보내려면 `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER=`, `SMTP_PASS=`(Gmail 앱 비밀번호) 추가
+- 서버의 AI는 제미나이(코덱스는 맥북에만 있음)
 
 ## 지인에게 보낼 것
 - 주소 + 초대 코드(`.tmp/railway_설정값.txt` 의 `INVITE_CODE`)

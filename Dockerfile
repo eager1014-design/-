@@ -1,5 +1,5 @@
 # 운결 사주 서비스 — 클라우드 서버(Railway 등) 배포용
-# 외부 패키지 없이 파이썬 표준 라이브러리만 사용한다.
+# 외부 패키지는 PDF용 reportlab 하나뿐 (saju/requirements.txt).
 FROM python:3.12-slim
 
 # TZ=KST-9: 한국 시간(UTC+9). '오늘의 운'·체험 종료 시각이 한국 날짜 기준으로 계산되게 함
@@ -10,6 +10,8 @@ ENV PYTHONUNBUFFERED=1 \
     TRUST_PROXY=1
 
 WORKDIR /app
+COPY saju/requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
 COPY saju/ /app/
 RUN mkdir -p /data
 

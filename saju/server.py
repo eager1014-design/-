@@ -7,6 +7,8 @@
   GEMINI_MODEL / OPENAI_MODEL / CLAUDE_MODEL           각 AI 모델 이름
   TOSS_CLIENT_KEY / TOSS_SECRET_KEY  토스페이먼츠 빌링(없으면 결제 시뮬레이션)
   PORT, SAJU_SECRET, PUBLIC_URL
+  ADMIN_EMAIL, BANK_ACCOUNT, PRICE_*  1인 상담 판매 (orders.py) / SMTP_*  메일 (mailer.py)
+  THREADS_ACCESS_TOKEN, THREADS_LINK_TEXT  스레드 자동 게시 (threads.py, promo.py)
 """
 import envload  # noqa: F401  (.env 를 다른 모듈보다 먼저 읽어야 함)
 import hashlib
@@ -21,7 +23,7 @@ import time
 from datetime import datetime, timedelta, date
 from http.cookies import SimpleCookie
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
 
 import billing
 import db
@@ -30,6 +32,11 @@ import knowledge as K
 import llm
 import lunar
 import mailer
+import longform
+import orders
+import products
+import promo
+import threads
 from saju_engine import compute_chart, current_luck, year_months, compatibility, CITIES
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -150,7 +157,7 @@ def consume_email_token(raw, purpose):
 
 def send_verify_mail(u):
     raw = issue_email_token(u["id"], "verify", VERIFY_TTL_H)
-    link = f"{PUBLIC_URL}/#/verify?token={raw}"
+    link = f"{PUBLIC_URL}/app#/verify?token={raw}"
     mailer.send(u["email"], "[운결] 이메일 주소를 인증해 주세요",
                 f"{u['name']}님, 운결에 가입해 주셔서 감사합니다.\n\n아래 링크를 눌러 이메일 인증을 완료해 주세요"
                 f"({VERIFY_TTL_H}시간 동안 유효).\n{link}\n\n본인이 가입하지 않았다면 이 메일을 무시해 주세요.")
@@ -269,7 +276,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def body(self):
         n = int(self.headers.get("Content-Length") or 0)
-        if n > 100_000:
+        if n > 300_000:  # 사장님이 고친 긴 풀이 저장까지 허용
             return {}
         try:
             return json.loads(self.rfile.read(n) or b"{}")
@@ -295,7 +302,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/billing/success":
             return self.billing_success(q)
         if path == "/billing/fail":
-            return self.redirect("/#/subscribe?fail=" + q.get("message", "결제가 취소되었습니다"))
+            return self.redirect("/app#/subscribe?fail=" + q.get("message", "결제가 취소되었습니다"))
         self.serve_static(path)
 
     def do_POST(self):
@@ -307,7 +314,12 @@ class Handler(BaseHTTPRequestHandler):
         self.error("not found", 404)
 
     def serve_static(self, path):
-        if path in ("/", "") or not os.path.splitext(path)[1]:
+        # 첫 화면 = 손님 신청서, /admin = 사장님 관리 화면, 그 외 확장자 없는 주소(/app 등) = 기존 사주 앱
+        if path in ("/", ""):
+            path = "/apply.html"
+        elif path.rstrip("/") == "/admin":
+            path = "/admin.html"
+        elif not os.path.splitext(path)[1]:
             path = "/index.html"
         full = os.path.normpath(os.path.join(STATIC, path.lstrip("/")))
         if not full.startswith(STATIC + os.sep) or not os.path.isfile(full):
@@ -347,6 +359,26 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", "/api/billing/cancel"): self.api_billing_cancel,
             ("POST", "/api/billing/resume"): self.api_billing_resume,
             ("POST", "/api/dev/expire-trial"): self.api_dev_expire,
+            ("GET", "/api/apply/config"): self.api_apply_config,
+            ("POST", "/api/apply"): self.api_apply,
+            ("GET", "/api/admin/orders"): self.api_admin_orders,
+            ("GET", "/api/admin/order"): self.api_admin_order,
+            ("POST", "/api/admin/order/create"): self.api_admin_create,
+            ("POST", "/api/admin/order/status"): self.api_admin_status,
+            ("POST", "/api/admin/order/generate"): self.api_admin_generate,
+            ("POST", "/api/admin/order/save"): self.api_admin_save,
+            ("GET", "/api/admin/order/pdf"): self.api_admin_pdf,
+            ("POST", "/api/admin/order/send"): self.api_admin_send,
+            ("GET", "/api/admin/promo"): self.api_admin_promo,
+            ("POST", "/api/admin/promo/generate"): self.api_admin_promo_generate,
+            ("POST", "/api/admin/promo/save"): self.api_admin_promo_save,
+            ("POST", "/api/admin/promo/post"): self.api_admin_promo_post,
+            ("POST", "/api/admin/promo/discard"): self.api_admin_promo_discard,
+            ("POST", "/api/admin/promo/refs"): self.api_admin_promo_refs,
+            ("POST", "/api/admin/promo/unschedule"): self.api_admin_promo_unschedule,
+            ("POST", "/api/admin/promo/auto"): self.api_admin_promo_auto,
+            ("GET", "/api/admin/promo/brief"): self.api_admin_promo_brief,
+            ("POST", "/api/admin/promo/import"): self.api_admin_promo_import,
         }
         fn = routes.get((method, path))
         if not fn:
@@ -363,6 +395,17 @@ class Handler(BaseHTTPRequestHandler):
         u = self.user()
         if not u:
             self.error("로그인이 필요합니다.", 401)
+        return u
+
+    def need_admin(self):
+        # 맥북의 자동 글쓰기 프로그램은 로그인 대신 비밀 키(ADMIN_API_KEY)로 들어온다
+        key = os.environ.get("ADMIN_API_KEY", "")
+        if len(key) >= 24 and hmac.compare_digest(self.headers.get("X-Admin-Key", ""), key):
+            return {"email": "api", "name": "자동 글쓰기"}
+        u = self.user()
+        if not orders.is_admin(u):
+            self.error("사장님 계정으로 로그인해야 열 수 있습니다.", 401 if not u else 403)
+            return None
         return u
 
     def need_access(self):
@@ -396,6 +439,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.error("이용약관 및 개인정보 처리방침에 동의해 주세요.")
         if not b.get("agree_ai"):
             return self.error("AI 풀이를 위한 개인정보 국외 이전에 동의해 주세요. 동의하지 않으면 서비스를 제공할 수 없습니다.")
+        # 사장님 1인 운영: 사장님 이메일(ADMIN_EMAIL)이 정해져 있으면 그 계정만 가입 가능 (초대 코드가 맞으면 예외)
+        invited = bool(INVITE_CODE) and hmac.compare_digest((b.get("invite") or "").strip().upper(), INVITE_CODE.upper())
+        if orders.ADMIN_EMAILS and email not in orders.ADMIN_EMAILS and not invited:
+            return self.error("지금은 회원가입을 받지 않습니다. 사주 풀이 신청은 첫 화면의 신청서를 이용해 주세요.")
         if INVITE_CODE and not hmac.compare_digest((b.get("invite") or "").strip().upper(), INVITE_CODE.upper()):
             return self.error("초대 코드가 올바르지 않습니다. 지금은 초대받은 분만 가입할 수 있어요.")
         if too_many("signup:" + self.client_ip(), 10, 3600):
@@ -604,6 +651,316 @@ class Handler(BaseHTTPRequestHandler):
                res["engine"], key, n)
         self.send_json(dict(res, score=comp["score"], partner_name=pname, relation=relation, created_at=n, cached=False))
 
+    # -- 손님 신청서 (공개)
+    def api_apply_config(self, q):
+        self.send_json({"products": products.public(), "bank": bool(orders.BANK_ACCOUNT), "cities": list(CITIES.keys()),
+                        "concerns": {k: v["label"] for k, v in K.CONCERNS.items()}})
+
+    def read_order_form(self, b):
+        """신청서·직접 입력 공통 검사. (product, name, email, birth, partner, situation) — 잘못되면 ValueError."""
+        product = b.get("product")
+        if product not in orders.PRODUCTS or orders.PRODUCTS[product].get("hidden"):
+            raise ValueError("상품을 선택해 주세요.")
+        name = (b.get("name") or "").strip()[:20]
+        email = (b.get("email") or "").strip().lower()[:120]
+        if not name:
+            raise ValueError("이름을 입력해 주세요. 입금자 이름과 같게 적어 주세요.")
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            raise ValueError("풀이를 받을 이메일을 정확히 입력해 주세요.")
+        birth = parse_birth(b.get("birth") or {})
+        partner = None
+        need = orders.PRODUCTS[product]["partner"]  # None | required | optional | pet
+        p = b.get("partner") or {}
+        given = bool(str((p.get("birth") or {}).get("year") or "").strip())
+        if need in ("required", "pet") or (need == "optional" and given):
+            who = "반려동물 정보: " if need == "pet" else "상대방 정보: "
+            try:
+                pbirth = parse_birth(p.get("birth") or {}, min_year=1900)
+            except ValueError as e:
+                raise ValueError(who + str(e))
+            default_name = "우리 아이" if need == "pet" else "상대"
+            partner = {"name": (p.get("name") or "").strip()[:20] or default_name,
+                       "relation": (p.get("relation") or "").strip()[:20] or ("반려동물" if need == "pet" else ""),
+                       "birth": pbirth, "kind": "pet" if need == "pet" else "person"}
+        sit = b.get("situation") or {}
+        sit = {k: str(sit.get(k, "")).strip()[:2000] for k in ("job", "concern", "story", "goal")}
+        if sit["concern"] not in K.CONCERNS:
+            sit["concern"] = ""
+        if len(sit["story"]) < 10:
+            raise ValueError("지금 상황이나 궁금한 점을 10자 이상 적어 주세요. 구체적일수록 풀이가 정확해집니다."
+                             if product != "counsel" else "질문을 10자 이상 적어 주세요.")
+        return product, name, email, birth, partner, sit
+
+    def api_apply(self, b):
+        if not b.get("agree") or not b.get("agree_ai"):
+            return self.error("개인정보 수집·이용과 AI 풀이를 위한 국외 이전에 모두 동의해 주세요.")
+        if too_many("apply:" + self.client_ip(), 10, 3600):
+            return self.error("신청이 너무 많습니다. 잠시 후 다시 시도해 주세요.", 429)
+        try:
+            form = self.read_order_form(b)
+        except ValueError as e:
+            return self.error(str(e))
+        src = str(b.get("src") or "").strip().lower()[:20]
+        o = orders.create(*form, source="apply", ip=self.client_ip(),
+                          channel=src if re.match(r"^[a-z0-9_-]+$", src) else None)
+        prod = orders.PRODUCTS[o["product"]]
+        bank = orders.BANK_ACCOUNT or "(입금 계좌는 곧 메일로 안내해 드립니다)"
+        mailer.send(o["email"], f"[운결] {prod['label']} 신청이 접수되었습니다 ({o['code']})",
+                    f"{o['name']}님, 운결에 사주 풀이를 신청해 주셔서 감사합니다.\n\n"
+                    f"신청번호: {o['code']}\n상품: {prod['label']}\n금액: {o['amount']:,}원\n입금 계좌: {bank}\n"
+                    f"입금자명: {o['name']}\n\n입금이 확인되면 풀이를 정성껏 작성해 이 메일 주소로 PDF로 보내드립니다.\n"
+                    "보통 입금 확인 후 1~2일 안에 받아보실 수 있어요.")
+        for admin_email in orders.ADMIN_EMAILS:
+            mailer.send(admin_email, f"[운결] 새 신청 {o['code']} — {o['name']} / {prod['label']} {o['amount']:,}원",
+                        f"새 신청이 들어왔습니다.\n\n{o['name']} ({o['email']})\n{prod['label']} {o['amount']:,}원\n"
+                        f"관리 화면: {PUBLIC_URL}/admin")
+        self.send_json({"ok": True, "code": o["code"], "amount": o["amount"], "product": prod["label"],
+                        "name": o["name"], "bank": orders.BANK_ACCOUNT})
+
+    # -- 사장님 관리 화면
+    def api_admin_orders(self, q):
+        if self.need_admin():
+            self.send_json({"orders": orders.listing(q.get("status") or None), "status": orders.STATUS,
+                            "products": orders.PRODUCTS, "ai": [llm.label(n) for n in llm.available()],
+                            "mail_mode": mailer.MODE, "bank": orders.BANK_ACCOUNT,
+                            "concerns": {k: v["label"] for k, v in K.CONCERNS.items()}, "cities": list(CITIES.keys())})
+
+    def order_or_404(self, oid):
+        try:
+            o = orders.get(int(oid))
+        except (TypeError, ValueError):
+            o = None
+        if not o:
+            self.error("신청을 찾을 수 없습니다.", 404)
+        return o
+
+    def api_admin_order(self, q):
+        if not self.need_admin():
+            return
+        o = self.order_or_404(q.get("id"))
+        if o:
+            chart = chart_of_birth(o["birth"])
+            self.send_json({"order": o, "chart_text": interpret.chart_summary(chart, current_luck(chart))})
+
+    def api_admin_create(self, b):
+        """카톡·DM 등으로 따로 받은 손님을 사장님이 직접 입력. 바로 '입금 확인' 상태로 만든다."""
+        if not self.need_admin():
+            return
+        try:
+            form = self.read_order_form(b)
+        except ValueError as e:
+            return self.error(str(e))
+        o = orders.create(*form, source="manual", status="paid" if b.get("paid", True) else "pending")
+        self.send_json({"ok": True, "order": o})
+
+    def api_admin_status(self, b):
+        if not self.need_admin():
+            return
+        o = self.order_or_404(b.get("id"))
+        if not o:
+            return
+        if b.get("status") not in orders.STATUS:
+            return self.error("알 수 없는 상태입니다.")
+        orders.set_status(o["id"], b["status"])
+        if "note" in b:
+            orders.save_note(o["id"], str(b.get("note") or "")[:2000])
+        self.send_json({"ok": True, "order": orders.get(o["id"])})
+
+    def api_admin_generate(self, b):
+        """신청서 정보로 긴 풀이 생성 (장마다 AI 호출 → 상품에 따라 2~13회). 뒤에서 돌리고 화면은 진행 상황을 확인한다."""
+        if not self.need_admin():
+            return
+        o = self.order_or_404(b.get("id"))
+        if not o:
+            return
+        if o.get("gen_state") == "running":
+            return self.error("이미 풀이를 만드는 중입니다. 잠시만 기다려 주세요.", 409)
+        if o["content"] and not b.get("overwrite"):
+            return self.error("이미 작성된 풀이가 있습니다. 새로 만들면 지금 글이 사라집니다.", 409, need_overwrite=True)
+        total = len(orders.PRODUCTS.get(o["product"], {}).get("chapters", [])) or 1
+        orders.set_gen(o["id"], "running", f"0/{total}")
+
+        def job():
+            try:
+                chart = chart_of_birth(o["birth"])
+                partner = chart_of_birth(o["partner"]["birth"]) if o.get("partner") else None
+                res = longform.generate(o, chart, partner,
+                                        progress=lambda d, t: orders.set_gen(o["id"], "running", f"{d}/{t}"))
+                orders.save_content(o["id"], res["markdown"], res["engine"])
+                if o["status"] in ("pending", "paid"):
+                    orders.set_status(o["id"], "writing")
+                orders.set_gen(o["id"], "done", f"{total}/{total}")
+            except Exception as e:  # noqa
+                import traceback
+                traceback.print_exc()
+                orders.set_gen(o["id"], "error", str(e)[:200])
+
+        threading.Thread(target=job, daemon=True).start()
+        self.send_json({"ok": True, "started": True, "order": orders.get(o["id"])})
+
+    def api_admin_save(self, b):
+        if not self.need_admin():
+            return
+        o = self.order_or_404(b.get("id"))
+        if not o:
+            return
+        orders.save_content(o["id"], str(b.get("content") or "")[:60_000])
+        self.send_json({"ok": True, "order": orders.get(o["id"])})
+
+    def order_pdf(self, o):
+        import pdf_report  # reportlab 이 없는 환경에서도 나머지 기능은 돌아가게 필요할 때만 불러옴
+        name = f"운결_{o['name']}_{o['product_label'].split(' (')[0].replace(' ', '')}.pdf"
+        return name, pdf_report.build(o, chart_of_birth(o["birth"]))
+
+    def api_admin_pdf(self, q):
+        """보내기 전 미리보기: 브라우저 새 탭에서 PDF 열기."""
+        if not self.need_admin():
+            return
+        o = self.order_or_404(q.get("id"))
+        if not o:
+            return
+        if not o["content"]:
+            return self.error("풀이를 먼저 만들어 주세요.")
+        name, data = self.order_pdf(o)
+        self.send_response(200)
+        self.send_header("Content-Type", "application/pdf")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Content-Disposition", "inline; filename*=UTF-8''" + quote(name))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def api_admin_send(self, b):
+        """풀이 PDF를 손님 이메일로 보내고 '발송 완료'로 바꾼다."""
+        if not self.need_admin():
+            return
+        o = self.order_or_404(b.get("id"))
+        if not o:
+            return
+        if not o["content"] or len(o["content"].strip()) < 50:
+            return self.error("보낼 풀이가 없습니다. 풀이를 만들고 저장한 뒤 보내 주세요.")
+        if o["status"] == "sent" and not b.get("resend"):
+            return self.error("이미 보낸 신청입니다. 다시 보낼까요?", 409, need_resend=True)
+        name, data = self.order_pdf(o)
+        label = o["product_label"].split(" (")[0]
+        ok_ = mailer.send(o["email"], f"[운결] {o['name']}님께 보내드리는 {label}",
+                          f"{o['name']}님, 안녕하세요. 운결입니다.\n\n"
+                          f"신청해 주신 {label} 결과를 정성껏 작성해 PDF로 첨부해 드립니다.\n"
+                          "천천히 읽어 보시고, 궁금한 점이 있으면 이 메일에 답장 주세요.\n\n"
+                          "사주는 정해진 운명이 아니라 타고난 기운의 지도예요. 오늘의 선택에 작은 힌트가 되길 바랍니다.\n\n"
+                          f"운결 드림\n{PUBLIC_URL}", attachments=[(name, data, "application/pdf")])
+        if not ok_:
+            return self.error("메일 발송에 실패했습니다. 메일 설정(SMTP)과 손님 이메일 주소를 확인해 주세요.", 502)
+        orders.set_status(o["id"], "sent")
+        self.send_json({"ok": True, "mail_mode": mailer.MODE, "order": orders.get(o["id"])})
+
+    # -- 홍보 센터
+    def api_admin_promo(self, q):
+        if not self.need_admin():
+            return
+        th = {"configured": threads.configured(), "username": None, "error": None}
+        if th["configured"] and q.get("check") == "1":
+            try:
+                th["username"] = threads.me().get("username")
+            except threads.ThreadsError as e:
+                th["error"] = str(e)
+        self.send_json({"channels": promo.CHANNELS, "themes": promo.THEMES, "products": products.public(), "drafts": promo.listing("draft"),
+                        "scheduled": sorted(promo.listing("scheduled"), key=lambda x: x["scheduled_at"] or ""),
+                        "auto": {"on": promo.auto_drafts_on(), "hour": promo.DRAFT_HOUR, "times": promo.POST_TIMES},
+                        "posted": promo.listing("posted")[:30], "stats": promo.channel_stats(), "threads": th,
+                        "links": {k: promo.link_for(PUBLIC_URL, k) for k in promo.CHANNELS},
+                        "ai": [llm.label(n) for n in llm.available()], "refs": promo.kv_get("promo_refs", "")})
+
+    def api_admin_promo_refs(self, b):
+        """잘 되는 다른 계정 글을 붙여넣어 두면, 글 후보를 만들 때 구조를 참고한다."""
+        if self.need_admin():
+            promo.kv_set("promo_refs", str(b.get("refs") or "")[:8000])
+            self.send_json({"ok": True})
+
+    def promo_or_404(self, pid):
+        try:
+            p = promo.get(int(pid))
+        except (TypeError, ValueError):
+            p = None
+        if not p:
+            self.error("글을 찾을 수 없습니다.", 404)
+        return p
+
+    def api_admin_promo_generate(self, b):
+        """채널별 글 후보 만들기. AI가 켜져 있으면 유료 호출 1회(후보 여러 개)."""
+        if not self.need_admin():
+            return
+        ch = b.get("channel")
+        if ch not in promo.CHANNELS:
+            return self.error("채널을 골라 주세요.")
+        n = max(1, min(int(b.get("n") or 5), 8))
+        self.send_json({"ok": True, "drafts": promo.generate_drafts(ch, n, orders.PRODUCTS, b.get("theme"))})
+
+    def api_admin_promo_save(self, b):
+        if not self.need_admin():
+            return
+        p = self.promo_or_404(b.get("id"))
+        if p:
+            promo.update(p["id"], text=str(b.get("text") or "")[:promo.CHANNELS[p["channel"]]["limit"]])
+            self.send_json({"ok": True})
+
+    def api_admin_promo_discard(self, b):
+        if not self.need_admin():
+            return
+        p = self.promo_or_404(b.get("id"))
+        if p:
+            promo.update(p["id"], status="discarded")
+            self.send_json({"ok": True})
+
+    def api_admin_promo_post(self, b):
+        """승인. 스레드는 바로 게시(+신청서 링크 댓글), 인스타·당근은 '올렸음'으로 표시만."""
+        if not self.need_admin():
+            return
+        p = self.promo_or_404(b.get("id"))
+        if not p:
+            return
+        text = str(b.get("text") or p["text"]).strip()
+        if not text:
+            return self.error("글이 비어 있습니다.")
+        if p["status"] == "posted":
+            return self.error("이미 올린 글입니다.", 409)
+        if p["channel"] == "threads" and b.get("schedule"):
+            if not threads.configured():
+                return self.error("스레드 연결 전에는 예약할 수 없어요. '복사'해서 직접 올려 주세요.")
+            return self.send_json({"ok": True, "post": promo.schedule(p["id"], text)})
+        try:
+            publish_post(dict(p, text=text))
+        except threads.ThreadsError as e:
+            promo.update(p["id"], text=text, error=str(e))
+            return self.error(str(e), 502)
+        self.send_json({"ok": True, "post": promo.get(p["id"])})
+
+    def api_admin_promo_unschedule(self, b):
+        if not self.need_admin():
+            return
+        p = self.promo_or_404(b.get("id"))
+        if p and p["status"] == "scheduled":
+            promo.update(p["id"], status="draft", scheduled_at=None)
+        self.send_json({"ok": True})
+
+    def api_admin_promo_brief(self, q):
+        if self.need_admin():
+            self.send_json(promo.brief_data(orders.PRODUCTS))
+
+    def api_admin_promo_import(self, b):
+        if not self.need_admin():
+            return
+        items = b.get("posts") if isinstance(b.get("posts"), list) else []
+        saved = promo.import_drafts([i for i in items if isinstance(i, dict)], str(b.get("engine") or "external"))
+        print(f"[스레드] 밖에서 쓴 글 후보 {len(saved)}개 받음 ({b.get('engine')})")
+        self.send_json({"ok": True, "count": len(saved)})
+
+    def api_admin_promo_auto(self, b):
+        """매일 아침 스레드 글 후보 자동 생성 켜기/끄기 (켜면 하루 AI 호출 1회)."""
+        if self.need_admin():
+            promo.kv_set("auto_drafts", "1" if b.get("on") else "0")
+            self.send_json({"ok": True, "on": promo.auto_drafts_on()})
+
     # -- 이메일 인증 · 비밀번호 찾기
     def dev_link(self, link):
         """메일 모의 모드 + 내 컴퓨터(localhost)에서만 화면에 링크를 돌려준다(개발 편의).
@@ -641,7 +998,7 @@ class Handler(BaseHTTPRequestHandler):
                             u["id"], billing.iso(datetime.now() - timedelta(hours=1)))["c"]
             if recent < 3:
                 raw = issue_email_token(u["id"], "reset", RESET_TTL_H)
-                link = f"{PUBLIC_URL}/#/reset?token={raw}"
+                link = f"{PUBLIC_URL}/app#/reset?token={raw}"
                 mailer.send(u["email"], "[운결] 비밀번호 재설정 안내",
                             f"{u['name']}님, 비밀번호 재설정을 요청하셨습니다.\n\n아래 링크에서 새 비밀번호를 정해 주세요"
                             f"({RESET_TTL_H}시간 동안 유효, 한 번만 사용 가능).\n{link}\n\n"
@@ -701,16 +1058,16 @@ class Handler(BaseHTTPRequestHandler):
         ck, auth = q.get("customerKey"), q.get("authKey")
         pend = PENDING_BILLING.pop(ck, None)
         if not pend or time.time() - pend[2] > 3600:
-            return self.redirect("/#/subscribe?fail=결제 세션이 만료되었습니다. 다시 시도해 주세요.")
+            return self.redirect("/app#/subscribe?fail=결제 세션이 만료되었습니다. 다시 시도해 주세요.")
         user = db.one("SELECT * FROM users WHERE id=?", pend[0])
         ok, res = billing.issue_billing_key(auth, ck)
         if not ok:
-            return self.redirect("/#/subscribe?fail=" + res.get("message", "카드 등록 실패"))
+            return self.redirect("/app#/subscribe?fail=" + res.get("message", "카드 등록 실패"))
         card = res.get("card") or {}
         ok, info = billing.activate(user, pend[1], res["billingKey"], ck, f"{card.get('cardType','')} {card.get('number','')}".strip())
         if not ok:
-            return self.redirect("/#/subscribe?fail=" + str(info))
-        self.redirect("/#/account?welcome=1")
+            return self.redirect("/app#/subscribe?fail=" + str(info))
+        self.redirect("/app#/account?welcome=1")
 
     def api_billing_mock(self, b):
         """결제 키가 없는 개발 환경용: 카드 등록과 결제를 시뮬레이션."""
@@ -757,8 +1114,23 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json({"ok": True, "access": billing.access(db.one("SELECT * FROM users WHERE id=?", u["id"]))})
 
 
+def publish_post(p):
+    """홍보 글 게시. 스레드는 실제로 올리고(+첫 댓글 신청서 링크), 인스타·당근은 '올렸음' 기록만."""
+    post_id = permalink = None
+    if p["channel"] == "threads":
+        link = promo.link_for(PUBLIC_URL, "threads")
+        if (p["theme"] or "").startswith("product:"):  # 상품 시리즈 글이면 그 상품을 미리 골라둔 링크
+            link += "&p=" + p["theme"].split(":", 1)[1]
+        comment = os.environ.get("THREADS_LINK_TEXT", "내 사주 풀이 신청은 여기서 할 수 있어요 👉 {link}").replace("{link}", link)
+        post_id, permalink = threads.post(p["text"], comment)
+    promo.update(p["id"], text=p["text"], status="posted", post_id=post_id, permalink=permalink, error=None,
+                 posted_at=promo.now())
+
+
 def main():
     db.conn()
+    # 풀이를 만들던 중 서버가 꺼졌으면 '중단'으로 표시 (다시 만들기 버튼이 보이게)
+    db.run("UPDATE orders SET gen_state='error', gen_progress='서버가 다시 시작되어 중단됨' WHERE gen_state='running'")
     if not IS_LOCAL:
         if billing.MODE == "mock":
             print("⚠️  결제 키 없이 공개 주소로 실행 중: " + ("결제 시뮬레이션 허용(ALLOW_MOCK_BILLING=1)" if ALLOW_MOCK_BILLING else "구독 결제 불가"))
@@ -767,6 +1139,7 @@ def main():
         if not HTTPS:
             print("⚠️  PUBLIC_URL 이 https 가 아닙니다. 공개 서비스는 반드시 https 로 운영하세요.")
     billing.start_scheduler()
+    promo.start_scheduler(publish_post, orders.PRODUCTS, stats=threads.insights if threads.configured() else None)
     print(f"운결 사주 서버 실행: {PUBLIC_URL}  (AI: {' → '.join(llm.label(n) for n in llm.available()) or '규칙 기반'}, 결제: {billing.MODE}, 메일: {mailer.MODE})")
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 
