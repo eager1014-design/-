@@ -115,6 +115,36 @@ def main():
     st, r = guest("/api/apply", {"product": "life", "name": "할인손님", "email": "disc@test.com", "birth": B, "situation": SIT,
                                  "agree": True, "agree_ai": True, "vid": "ME12345678"})
     ok(r["discount"] == 0 and r["amount"] == 34900, "할인은 한 번만")
+    # 도령의 상담실: 묻고 답하면 네 사주로 상담 (잠그지 않음)
+    st, cc = guest("/api/consult/config")
+    ok(set(cc["topics"]) == {"counsel", "love", "pet", "reunion", "match", "career"}, "상담실: 주제 6가지")
+    body = {"topic": "love", "birth": B, "answers": {"state": "혼자다", "pattern": "시작이 어렵다"}, "story": "올해 인연이 올까요?"}
+    ok(guest("/api/consult", body)[0] == 400, "상담: 동의 없으면 거절")
+    st, cr = guest("/api/consult", dict(body, consent=True))
+    ok(st == 200 and len(cr["sections"]) == 4 and all(len(x["text"]) > 30 for x in cr["sections"])
+       and "█" not in json.dumps(cr, ensure_ascii=False) and "시작이 어렵다" in cr["sections"][0]["text"], "상담: 고른 답을 짚고, 네 칸 모두 열림")
+    ok(guest("/api/consult", {"topic": "match", "birth": B, "consent": True, "story": "잘 맞나요"})[0] == 400, "궁합 상담: 상대 생년월일 없으면 거절")
+    st, mr = guest("/api/consult", {"topic": "match", "birth": B, "consent": True, "story": "잘 맞나요", "answers": {"relation": "연인"},
+                                    "partner": {"name": "민수", "birth": dict(B, year=1992, gender="male")}})
+    ok(st == 200 and len(mr["sections"]) == 4, "궁합 상담 (두 사주)")
+    st, pr = guest("/api/consult", {"topic": "pet", "birth": B, "consent": True, "story": "콩이 성격이 궁금해요", "answers": {"kind": "강아지"},
+                                    "partner": {"name": "콩이", "birth": {"year": 2021, "month": 3, "day": 1, "calendar": "solar", "gender": "male"}}})
+    ok(st == 200 and "수의사" in json.dumps(pr, ensure_ascii=False), "반려동물 상담 (재미로 · 수의사 안내)")
+    ok(guest("/api/consult", dict(body, consent=True, topic="reunion"))[0] == 200, "재회 상담: 상대 생년월일 몰라도 됨")
+    # 친구에게 사이트를 보내면 가벼운 풀이 PDF 1개 무료 (친구가 실제로 와서 사주를 봐야)
+    ok(not guest("/api/invite/status?vid=GV12345678")[1]["pdf_ready"], "친구가 오기 전엔 무료 PDF 없음")
+    guest("/api/consult", dict(body, consent=True, birth=dict(B, year=2001), inv="GV12345678", vid="FF87654321"))
+    ok(guest("/api/invite/status?vid=GV12345678")[1]["pdf_ready"], "친구가 내 링크로 와서 상담받으면 무료 PDF 준비")
+    form = {"name": "선물손님", "email": "gift@test.com", "birth": dict(B, year=1988), "situation": SIT,
+            "agree": True, "agree_ai": True, "vid": "GV12345678"}
+    guest("/api/apply", dict(form, product="counsel"))  # 시험 서버는 FREE_FIRST=1 이라 첫 무료를 먼저 써둔다
+    st, r = guest("/api/apply", dict(form, product="full", use_invite=True))
+    ok(not r["free"] and r["amount"] > 0, "기본 리포트는 친구 무료 대상 아님 (가벼운 풀이만)")
+    st, r = guest("/api/apply", dict(form, product="love", use_invite=True))
+    ok(r["free"] == "invite" and r["amount"] == 0, "친구 보상: 연애운 PDF 무료")
+    ok(guest("/api/invite/status?vid=GV12345678")[1]["pdf_used"], "무료 PDF 받은 기록")
+    st, r = guest("/api/apply", dict(form, product="career", use_invite=True))
+    ok(not r["free"] and r["amount"] > 0, "친구 무료 PDF는 한 번만")
     # 보안
     ok(guest("/api/admin/orders")[0] == 401, "비로그인 → 관리 화면 차단")
     ok(client({"X-Admin-Key": "wrong-key-0123456789abcdefgh"})("/api/admin/orders")[0] == 401, "틀린 기계 열쇠 차단")

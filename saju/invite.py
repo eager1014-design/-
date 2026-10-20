@@ -1,4 +1,8 @@
-"""평생 종합 사주 친구 할인: 내 링크(/?inv=방문자번호)로 온 친구가 '무료 바로 보기'에서 자기 사주를 보면,
+"""친구 초대 보상 두 가지 (같은 친구 방문으로 둘 다):
+  ① 가벼운 풀이 PDF 1개 무료 (고민상담·연애·반려동물·재회·궁합·직업재물 중, 1인 1회) — invite_pdf
+  ② 평생 종합 사주 할인
+
+평생 종합 사주 친구 할인: 내 링크(/?inv=방문자번호)로 온 친구가 '무료 바로 보기'에서 자기 사주를 보면,
 나는 평생 종합 사주를 FRIEND_DISCOUNT(기본 9,900원) 깎아 받는다. 1인 1회.
 
 방문자번호(vid)는 손님 폰 브라우저에 저장되는 무작위 값 (개인정보 아님).
@@ -28,13 +32,22 @@ def record(inviter_vid, my_vid, birth):
 
 def status(vid, email=None):
     if not _ok(vid):
-        return {"friends": 0, "ready": False, "used": False, "amount": products.FRIEND_DISCOUNT}
+        return {"friends": 0, "ready": False, "used": False, "amount": products.FRIEND_DISCOUNT,
+                "pdf_ready": False, "pdf_used": False}
     friends = db.one("SELECT COUNT(*) c FROM invites WHERE vid=?", vid)["c"]
     used = bool(db.one("SELECT order_id FROM invite_used WHERE vid=?", vid)) or bool(
         email and db.one("SELECT order_id FROM invite_used WHERE email=?", email.lower()))
-    return {"friends": friends, "ready": friends > 0 and not used, "used": used, "amount": products.FRIEND_DISCOUNT}
+    pdf_used = bool(db.one("SELECT order_id FROM invite_pdf WHERE vid=?", vid)) or bool(
+        email and db.one("SELECT order_id FROM invite_pdf WHERE email=?", email.lower()))
+    return {"friends": friends, "ready": friends > 0 and not used, "used": used, "amount": products.FRIEND_DISCOUNT,
+            "pdf_ready": friends > 0 and not pdf_used, "pdf_used": pdf_used}
 
 
 def use(vid, email, order_id):
     db.run("INSERT OR IGNORE INTO invite_used(vid, email, order_id, at) VALUES (?,?,?,?)", vid, email.lower(), order_id,
+           datetime.now().isoformat(timespec="seconds"))
+
+
+def use_pdf(vid, email, order_id):
+    db.run("INSERT OR IGNORE INTO invite_pdf(vid, email, order_id, at) VALUES (?,?,?,?)", vid, email.lower(), order_id,
            datetime.now().isoformat(timespec="seconds"))

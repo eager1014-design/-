@@ -1,0 +1,313 @@
+  /* 운결 도령 — 항상 어두운 밤 분위기 */
+  body.apply {
+    --bg: #0b0910; --paper: #15121b; --ink: #efe8f5; --ink-2: #c3b8cf; --ink-3: #8a7f96; --line: #2c2535;
+    --accent: #c0283a; --accent-2: #de3f50; --gold: #d9b26a; --shadow: 0 10px 40px rgba(0,0,0,.5);
+    color-scheme: dark; background: var(--bg); color: var(--ink);
+  }
+  .apply .topbar { background: color-mix(in srgb, var(--bg) 80%, transparent); border-bottom-color: var(--line); }
+  .apply .brand { color: var(--ink); text-decoration: none; }
+  .sharebox { margin-top: 26px; padding: 16px; border: 1px dashed rgba(217,178,106,.5); border-radius: 10px; background: rgba(217,178,106,.05); }
+  .sharebox .line { margin: 0 0 6px; }
+  .linkline { margin: 10px 0 0; padding: 10px; border-radius: 8px; background: #0e0b13; border: 1px solid var(--line); font-size: 13px;
+    word-break: break-all; user-select: all; color: var(--gold); }
+  .done-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+  .done-actions .btn { font: 400 17px "Song Myung", serif; border-radius: 4px; }
+  .apply main { max-width: 640px; padding-top: 0; }
+  .serif2 { font-family: "Song Myung", "Noto Serif KR", serif; }
+
+  /* ---------- 웹툰 컷 ---------- */
+  .toon { position: relative; margin: 0 -16px; }
+  .skip { position: sticky; top: 58px; z-index: 5; text-align: right; padding: 8px 16px 0; height: 0; }
+  .skip a { font-size: 13px; color: var(--ink-2); background: rgba(11,9,16,.7); border: 1px solid var(--line); padding: 5px 12px; border-radius: 99px; text-decoration: none; }
+  .panel { position: relative; min-height: min(78vh, 760px); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px 16px; overflow: hidden; }
+  .panel.blank { min-height: min(70vh, 640px); }
+  .art { position: relative; width: 100%; max-width: 560px; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 4px;
+    box-shadow: 0 0 0 1px rgba(217,178,106,.18), 0 30px 80px rgba(0,0,0,.7); }
+  /* 한 장의 그림에서 부분만 크게: --z 확대 배율, --fx/--fy 가운데 올 지점(그림 안 위치 0~1) */
+  .art img { position: absolute; display: block; width: calc(var(--z, 1) * 100%); max-width: none; height: auto;
+    left: calc(50% - var(--fx, .5) * var(--z, 1) * 100%); top: 50%; transform: translateY(calc(var(--fy, .5) * -100%));
+    filter: saturate(1.05) contrast(1.05) brightness(.7); transition: filter 2.4s ease-out, opacity 1.2s; opacity: 0; }
+  .panel.show .art img { opacity: 1; filter: saturate(1.05) contrast(1.05) brightness(1); }
+  .art.moon { aspect-ratio: 1 / 1; max-width: 400px; border-radius: 50%; }
+  .art.moon img { --z: 2.8; --fx: .195; --fy: .175; }
+  .art.eyes { aspect-ratio: 16 / 7; }
+  .art.eyes img { --z: 3.4; --fx: .60; --fy: .135; }
+  .art.hand { aspect-ratio: 4 / 5; max-width: 400px; }
+  .art.hand img { --z: 2.6; --fx: .80; --fy: .43; }
+  .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(11,9,16,.85)); pointer-events: none; }
+  .art.moon::after { background: radial-gradient(circle, transparent 50%, rgba(11,9,16,.9)); }
+
+  .line { margin: 26px auto 0; max-width: 520px; text-align: center; font: 400 clamp(21px, 5.4vw, 28px)/1.6 "Song Myung", serif;
+    color: var(--ink); text-shadow: 0 2px 14px rgba(0,0,0,.9); min-height: 1.6em; }
+  .line.small { font-size: clamp(16px, 4vw, 19px); color: var(--ink-2); margin-top: 10px; }
+  .line .c { opacity: 0; transition: opacity .25s; }
+  .line .w { white-space: nowrap; }
+  .line .c.on { opacity: 1; }
+  .bubble { border: 1px solid rgba(217,178,106,.35); background: rgba(11,9,16,.72); padding: 14px 22px; border-radius: 2px; backdrop-filter: blur(3px); }
+
+  .reveal { position: relative; }
+  .reveal .art { max-width: 640px; aspect-ratio: 1100 / 1293; }
+  .reveal .art img { --z: 1; --fx: .5; --fy: .5; }
+  .reveal .big { position: absolute; left: 0; right: 0; bottom: 9%; text-align: center; padding: 0 12px;
+    font: 400 clamp(38px, 11vw, 64px)/1.15 "Song Myung", serif; color: #f6e7c4; letter-spacing: .04em;
+    text-shadow: 0 0 18px rgba(192,40,58,.9), 0 0 40px rgba(192,40,58,.5), 0 3px 4px #000; opacity: 0; transform: translateY(14px); transition: 1.4s 1s; }
+  .panel.show .big { opacity: 1; transform: none; }
+
+  .cta { text-align: center; }
+  .cta .btn { margin-top: 26px; font: 400 20px "Song Myung", serif; padding: 16px 34px; border-radius: 2px; letter-spacing: .08em;
+    background: linear-gradient(180deg, #c0283a, #8e1625); box-shadow: 0 0 0 1px rgba(217,178,106,.5), 0 0 30px rgba(192,40,58,.45); }
+  .cta .proof { margin-top: 16px; font-size: 13px; color: var(--ink-3); }
+
+  /* 연기 · 불씨 */
+  .smoke { position: absolute; inset: -20% -40%; pointer-events: none; opacity: .5;
+    background: radial-gradient(ellipse 40% 25% at 30% 70%, rgba(150,140,190,.18), transparent 70%),
+                radial-gradient(ellipse 35% 20% at 75% 40%, rgba(150,140,190,.14), transparent 70%);
+    animation: drift 18s ease-in-out infinite alternate; }
+  @keyframes drift { to { transform: translateX(12%) translateY(-4%); } }
+  .ember { position: fixed; bottom: -10px; width: 3px; height: 3px; border-radius: 50%; background: #ff5a4a; box-shadow: 0 0 8px #ff3b2f;
+    pointer-events: none; z-index: 1; animation: rise linear forwards; opacity: .8; }
+  @keyframes rise { to { transform: translate(var(--dx), -105vh); opacity: 0; } }
+
+  /* ---------- 신청서 (부적 같은 카드) ---------- */
+  #form { position: relative; z-index: 2; border-color: rgba(217,178,106,.3); background: linear-gradient(180deg, #17131e, #121018); }
+  #form::before { content: "運結"; position: absolute; top: 14px; right: 18px; font: 400 15px "Song Myung", serif; color: var(--accent);
+    border: 1px solid var(--accent); padding: 2px 6px; transform: rotate(6deg); opacity: .8; }
+  .form-head { text-align: center; margin-bottom: 6px; }
+  .form-head h2 { font: 400 26px "Song Myung", serif; margin: 6px 0 4px; }
+  .products { display: grid; gap: 10px; }
+  .product { display: flex; gap: 12px; align-items: flex-start; margin: 0; padding: 14px 16px; border: 1px solid var(--line);
+    border-radius: 10px; background: #100d15; cursor: pointer; font-weight: 400; color: var(--ink); }
+  .product input { width: auto; margin-top: 6px; accent-color: var(--accent); }
+  .product b { font-size: 16px; }
+  .product .p { margin-left: auto; font: 700 16px "Noto Serif KR", serif; white-space: nowrap; color: var(--gold); }
+  .product:has(input:checked) { border-color: var(--accent); outline: 1px solid var(--accent); background: #1c1220; box-shadow: 0 0 20px rgba(192,40,58,.2); }
+  .birth { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; }
+  .birth2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .birth > *, .birth2 > * { min-width: 0; }
+  .product > span:nth-child(2) { min-width: 0; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  legend { font: 400 21px "Song Myung", serif; margin: 30px 0 4px; padding: 0; color: var(--gold); }
+  legend small { font: 400 13px "Noto Sans KR", sans-serif; color: var(--ink-3); margin-left: 6px; }
+  details { margin-top: 6px; font-size: 13px; color: var(--ink-3); }
+  details summary { cursor: pointer; }
+  .tier { font: 700 13px "Noto Sans KR", sans-serif; color: var(--gold); margin: 14px 0 2px; letter-spacing: .05em; }
+  .tier:first-child { margin-top: 0; }
+  .pages { display: inline-block; font-size: 12px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 99px; padding: 0 7px; margin-left: 4px; }
+  .apply input, .apply select, .apply textarea { background: #0e0b13; border-color: var(--line); color: var(--ink); }
+  .apply .seg span { background: #0e0b13; }
+  #submit { font: 400 20px "Song Myung", serif; letter-spacing: .05em; border-radius: 4px; background: linear-gradient(180deg, #c0283a, #8e1625); }
+  .freebox { margin: 14px 0 0; padding: 10px 14px; border: 1px solid rgba(217,178,106,.45); border-radius: 8px; color: var(--gold);
+    background: rgba(217,178,106,.07); font-size: 15px; }
+  body.no-free .free-only { display: none; }
+  .done-box { text-align: center; }
+  .done-box .line { margin-top: 10px; }
+  .bankline { font: 700 20px "Noto Serif KR", serif; padding: 14px; border: 1px dashed var(--gold); border-radius: 10px; margin: 14px 0; user-select: all; color: var(--gold); }
+  .apply .foot { color: var(--ink-3); border-top-color: var(--line); }
+
+  /* 이야기 장면 */
+  .panel.story { min-height: min(62vh, 560px); }
+  .neon { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 22px; margin-bottom: 20px; }
+  .neon span { font: 400 clamp(26px, 8vw, 40px) "Song Myung", serif; padding: 4px 14px; border: 2px solid currentColor; border-radius: 6px; opacity: .15; }
+  .panel.show .neon span { animation: flick 3.6s infinite; }
+  .neon .n1 { color: #ff4f7a; } .neon .n2 { color: #4fd8ff; animation-delay: .7s !important; }
+  .neon .n3 { color: #ffb14f; animation-delay: 1.3s !important; } .neon .n4 { color: #c77dff; animation-delay: .3s !important; }
+  .neon span { text-shadow: 0 0 8px currentColor, 0 0 24px currentColor; box-shadow: 0 0 12px currentColor, inset 0 0 10px currentColor; }
+  @keyframes flick { 0%, 100% { opacity: .9; } 8% { opacity: .2; } 10% { opacity: .9; } 46% { opacity: .85; } 48% { opacity: .25; } 52% { opacity: .9; } }
+  .couple { width: 150px; fill: #2a2235; stroke: #4a3d5a; margin-bottom: 14px; opacity: 0; transition: opacity 1.4s; }
+  .couple path[fill="none"] { stroke: #ff4f7a; }
+  .panel.show .couple { opacity: 1; }
+  .verdict { font-size: clamp(25px, 7vw, 34px); color: #dfe8ff; text-shadow: 0 0 18px rgba(120,160,255,.5); letter-spacing: .02em; }
+  .line.red { color: var(--accent-2); font-size: clamp(28px, 8vw, 38px); text-shadow: 0 0 20px rgba(192,40,58,.8); }
+  .line.gold { color: #f6e7c4; font-size: clamp(26px, 7vw, 34px); text-shadow: 0 0 18px rgba(217,178,106,.6); }
+  .panel.rain::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .25;
+    background: repeating-linear-gradient(105deg, transparent 0 14px, rgba(160,170,220,.35) 14px 15px);
+    background-size: 100% 200%; animation: rainfall .6s linear infinite; }
+  @keyframes rainfall { to { background-position: 0 100%; } }
+
+  /* ---------- 웹툰 컷 + 움직임 효과 ---------- */
+  .panel.cut { min-height: auto; padding: 34px 0 26px; }
+  .par { width: 100%; will-change: transform; }
+  .frame { position: relative; width: 100%; overflow: hidden; background: #000;
+    box-shadow: 0 0 0 1px rgba(217,178,106,.22), 0 24px 60px rgba(0,0,0,.75); }
+  .frame img { display: block; width: 100%; height: auto; opacity: 0;
+    transform: translate(var(--x0, 0), var(--y0, 0)) scale(var(--s0, 1.1)); transform-origin: 50% 50%; }
+  .panel.show .frame img { opacity: 1; transition: opacity 1s;
+    animation: kb 11s cubic-bezier(.2,.6,.3,1) forwards; }
+  @keyframes kb { from { transform: translate(var(--x0, 0), var(--y0, 0)) scale(var(--s0, 1.1)); }
+                  to { transform: translate(var(--x1, 0), var(--y1, 0)) scale(var(--s1, 1)); } }
+  .frame::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.55)); }
+  /* 비 */
+  .fx-rain::before { content: ""; position: absolute; inset: -50% 0 0; z-index: 2; pointer-events: none; opacity: .32;
+    background: repeating-linear-gradient(103deg, transparent 0 11px, rgba(190,200,240,.45) 11px 12px); animation: rainfall .5s linear infinite; }
+  @keyframes rainfall { to { transform: translateY(18%); } }
+  /* 등불 · 촛불 깜빡임 */
+  .fx-lamp .glow, .fx-candle .glow, .fx-moon .glow, .fx-burn .glow { position: absolute; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: screen; }
+  .fx-lamp .glow { background: radial-gradient(ellipse 45% 40% at 20% 35%, rgba(255,150,60,.35), transparent 70%); animation: flicker 2.6s infinite; }
+  .fx-candle .glow { background: radial-gradient(circle at 92% 70%, rgba(255,170,80,.4), transparent 35%), radial-gradient(circle at 8% 60%, rgba(255,150,70,.3), transparent 30%); animation: flicker 1.7s infinite; }
+  .fx-moon .glow { background: radial-gradient(circle at 92% 25%, rgba(190,200,255,.45), transparent 30%); animation: breathe2 5s ease-in-out infinite; }
+  .fx-burn .glow { background: radial-gradient(ellipse 35% 55% at 70% 45%, rgba(255,90,40,.5), transparent 70%); animation: flicker 1.1s infinite; }
+  @keyframes flicker { 0%, 100% { opacity: .9; } 20% { opacity: .55; } 22% { opacity: 1; } 55% { opacity: .7; } 60% { opacity: .95; } }
+  @keyframes breathe2 { 50% { opacity: .5; } }
+  /* 흑백으로 식어감 */
+  .fx-gray img { filter: saturate(1); }
+  .panel.show .fx-gray img { filter: saturate(.15) brightness(.85); transition: filter 5s 1.5s, opacity 1s; }
+  /* 붉은 기운 */
+  .fx-red { box-shadow: 0 0 0 1px rgba(192,40,58,.5), 0 0 50px rgba(192,40,58,.35), 0 24px 60px rgba(0,0,0,.75); }
+  .panel.show .fx-red { animation: redpulse 3.2s ease-in-out infinite 1s; }
+  @keyframes redpulse { 50% { box-shadow: 0 0 0 1px rgba(192,40,58,.8), 0 0 80px rgba(192,40,58,.6), 0 24px 60px rgba(0,0,0,.75); } }
+  /* 판정의 순간: 흔들림 + 화면 깨짐 */
+  .panel.show .fx-shake { animation: shake .5s 2.2s both; }
+  @keyframes shake { 0%, 100% { transform: none; } 20% { transform: translate(-6px, 2px); } 40% { transform: translate(5px, -3px); }
+    60% { transform: translate(-4px, 1px); } 80% { transform: translate(3px, 2px); } }
+  .fx-glitch .gl { position: absolute; inset: 0; z-index: 3; pointer-events: none; background: var(--src) center / cover; opacity: 0; mix-blend-mode: screen; }
+  .panel.show .fx-glitch .gl.r { animation: glitch .7s 2.2s steps(4) both; filter: hue-rotate(-40deg) saturate(3); }
+  .panel.show .fx-glitch .gl.b { animation: glitch .7s 2.25s steps(4) reverse both; filter: hue-rotate(160deg) saturate(3); }
+  @keyframes glitch { 0% { opacity: .7; clip-path: inset(10% 0 70% 0); transform: translateX(-8px); }
+    33% { opacity: .7; clip-path: inset(55% 0 20% 0); transform: translateX(7px); } 66% { opacity: .6; clip-path: inset(30% 0 45% 0); transform: translateX(-4px); }
+    100% { opacity: 0; clip-path: inset(0); transform: none; } }
+  /* 드러남: 번쩍 */
+  .fx-flash::before { content: ""; position: absolute; inset: 0; z-index: 3; background: #fff; opacity: 0; pointer-events: none; }
+  .panel.show .fx-flash::before { animation: flash 1.4s .3s ease-out both; }
+  @keyframes flash { 0% { opacity: .85; } 100% { opacity: 0; } }
+  .panel.cut .line { padding: 0 16px; }
+
+  /* 무료 바로 보기 */
+  .quick .q-ask { min-height: auto; padding-bottom: 30px; }
+  .qcard { width: 100%; max-width: 480px; margin-top: 20px; padding: 18px 16px; border: 1px solid rgba(217,178,106,.35);
+    border-radius: 12px; background: linear-gradient(180deg, #17131e, #120f17); text-align: left; position: relative; z-index: 2; }
+  .qcard .btn { margin-top: 18px; font: 400 19px "Song Myung", serif; border-radius: 4px; background: linear-gradient(180deg, #c0283a, #8e1625); }
+  .panel.q { min-height: auto; padding: 26px 18px; }
+  .panel.q .line { max-width: 520px; }
+  .kicker { margin: 0 0 6px; font: 700 12px "Noto Sans KR", sans-serif; letter-spacing: .2em; color: var(--accent-2); opacity: 0; transition: opacity .8s; }
+  .panel.show .kicker { opacity: 1; }
+  .big2 { font-size: clamp(30px, 9vw, 44px) !important; }
+  .talk { display: flex; align-items: center; gap: 12px; max-width: 540px; }
+  .talk .ava { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; object-position: 30% 30%; flex: none;
+    box-shadow: 0 0 0 2px var(--gold), 0 0 20px rgba(192,40,58,.5); opacity: 0; transition: opacity .8s; }
+  .panel.show .talk .ava { opacity: 1; }
+  .talk .line { margin: 0; text-align: left; font-size: clamp(18px, 4.8vw, 23px); }
+  .talk.long { flex-direction: column; align-items: center; width: 100%; }
+  .talk.long .line { width: 100%; font: 400 17px/1.75 "Song Myung", serif; padding: 16px 18px; }
+  .kicker.nobreak { white-space: nowrap; }
+  .bars5 { width: 100%; max-width: 420px; margin: 8px 0 6px; }
+  .b5 { display: grid; grid-template-columns: 42px 1fr 22px; gap: 8px; align-items: center; margin: 7px 0; font-size: 14px; color: var(--ink-2); }
+  .b5 i { display: block; height: 10px; border-radius: 99px; width: 0; transition: width 1.4s ease-out; }
+  .panel.show .b5 i { width: var(--w); }
+  .b5 b { text-align: right; color: var(--ink); }
+  .fortune { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .recs { display: grid; gap: 10px; width: 100%; max-width: 520px; margin-top: 16px; }
+  .rec { display: grid; gap: 4px; text-align: left; padding: 14px 16px; border-radius: 10px; cursor: pointer; color: var(--ink);
+    border: 1px solid rgba(217,178,106,.4); background: linear-gradient(180deg, #1d1522, #120e17); font: 400 14px "Noto Sans KR", sans-serif;
+    opacity: 0; transform: translateY(10px); transition: .7s; }
+  .panel.show .rec { opacity: 1; transform: none; }
+  .panel.show .rec:nth-child(2) { transition-delay: .25s; } .panel.show .rec:nth-child(3) { transition-delay: .5s; }
+  .rec b { font: 400 18px "Song Myung", serif; color: #f6e7c4; }
+  .rec span { color: var(--ink-2); line-height: 1.5; }
+  .rec em { font-style: normal; color: var(--gold); font-weight: 700; }
+  .rec:active { transform: scale(.98); }
+  .linkbtn { margin-top: 14px; background: none; border: 0; color: var(--ink-2); text-decoration: underline; font-size: 14px; cursor: pointer; }
+
+  /* 잠긴 칸 */
+  .lock { width: 100%; max-width: 520px; padding: 16px; border: 1px solid rgba(192,40,58,.45); border-radius: 12px;
+    background: linear-gradient(180deg, #1a1119, #120e17); text-align: left; position: relative; overflow: hidden; }
+  .lock .blurred { margin: 6px 0 10px; font: 400 17px/1.7 "Song Myung", serif; color: var(--ink); filter: blur(5px); user-select: none;
+    letter-spacing: .02em; transition: filter 1.2s; }
+  .lock.open { border-color: var(--gold); box-shadow: 0 0 30px rgba(217,178,106,.3); }
+  .lock.open .blurred { filter: none; user-select: text; color: #f6e7c4; }
+  .lock.open .lockbtn { display: none; }
+  .lockbtn { width: 100%; margin-top: 6px; font: 700 15px "Noto Sans KR", sans-serif !important; color: #fff !important;
+    background: linear-gradient(180deg, #c0283a, #8e1625) !important; border: 1px solid rgba(217,178,106,.5) !important;
+    box-shadow: 0 0 18px rgba(192,40,58,.35); }
+  .sharepanel .done-actions { margin-top: 12px; }
+
+  /* PDF 목차 미리보기 */
+  details.toc { margin: 8px 0 4px; font-size: 13px; color: var(--ink-2); text-align: left; }
+  details.toc summary { cursor: pointer; color: var(--gold); font-weight: 700; padding: 6px 0; list-style: none; }
+  details.toc summary::-webkit-details-marker { display: none; }
+  details.toc ol { margin: 6px 0 8px; padding-left: 22px; }
+  details.toc li { margin: 6px 0; line-height: 1.5; }
+  details.toc li::marker { color: var(--accent-2); font-weight: 700; }
+  details.toc li b { display: block; color: #f6e7c4; font: 400 15px "Song Myung", serif; }
+  details.toc li span { display: block; color: var(--ink-3); }
+  details.toc li em { display: block; font-style: normal; color: var(--ink-3); filter: blur(2.5px); user-select: none; font-size: 12px; }
+  .tocnote { margin: 6px 0 0; padding: 10px; border-radius: 8px; background: rgba(217,178,106,.07); color: var(--ink-2); line-height: 1.6; }
+  #products details.toc { margin: -4px 4px 4px 44px; }
+  .lock.paid { border-color: rgba(217,178,106,.55); }
+
+  /* 고민 고르기 · 간단 신청 */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 16px 0 10px; max-width: 520px; }
+  .chip input { display: none; }
+  .chip span { display: inline-block; padding: 8px 14px; border-radius: 99px; border: 1px solid var(--line); background: #100d15;
+    color: var(--ink-2); font-size: 14px; cursor: pointer; }
+  .chip input:checked + span { border-color: var(--accent); color: #fff; background: #2a1219; box-shadow: 0 0 14px rgba(192,40,58,.35); }
+  .askpanel textarea { max-width: 520px; min-height: 70px; margin: 4px 0 8px; }
+  .askpanel .check { max-width: 520px; text-align: left; color: var(--ink-3); }
+  .askpanel .btn { max-width: 520px; margin-top: 10px; font: 400 19px "Song Myung", serif; border-radius: 4px; background: linear-gradient(180deg, #c0283a, #8e1625); }
+  .compact-only { display: none; }
+  #form.compact .compact-only { display: block; margin: 10px 0 0; font-size: 14px; color: var(--ink-2); }
+  #form.compact #me-birth, #form.compact #me-birth + *, #form.compact .concern-set { display: none; }
+  #form.compact #products .product:not(.rec-item), #form.compact #products .product:not(.rec-item) + details.toc,
+  #form.compact #products .tier { display: none; }
+  #form.compact.all #products .product, #form.compact.all #products details.toc, #form.compact.all #products .tier { display: flex; }
+  #form.compact.all #products details.toc, #form.compact.all #products .tier { display: block; }
+  #form.compact.need-story .concern-set { display: block; }
+  #more-products { display: none; }
+  #form.compact #more-products { display: inline-block; }
+
+  /* PDF 미리보기 */
+  .pdfprev { margin: 18px 0 6px; text-align: left; }
+  .pdfprev-t { margin: 0 0 8px; color: var(--gold); font-weight: 700; font-size: 15px; }
+  .pdfstrip { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+  .pdfstrip figure { flex: 0 0 62%; max-width: 230px; margin: 0; scroll-snap-align: start; }
+  .pdfstrip img { width: 100%; border-radius: 4px; box-shadow: 0 0 0 1px rgba(217,178,106,.35), 0 8px 24px rgba(0,0,0,.6); display: block; }
+  .pdfstrip figcaption { font-size: 12px; color: var(--ink-3); margin-top: 6px; text-align: center; }
+
+  /* 입장 화면 · 소리 버튼 */
+  #gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; text-align: center; padding: 24px;
+    background: radial-gradient(ellipse at 50% 40%, #1c1424, #07060a 70%); transition: opacity 1s; }
+  #gate.out { opacity: 0; pointer-events: none; }
+  .gate-small { font: 400 15px "Song Myung", serif; letter-spacing: .6em; color: var(--accent); margin: 0 0 18px; }
+  .gate-big { font: 400 clamp(44px, 13vw, 72px)/1.15 "Song Myung", serif; color: #f6e7c4; margin: 0;
+    text-shadow: 0 0 22px rgba(192,40,58,.85), 0 0 50px rgba(192,40,58,.4); animation: breathe 3.5s ease-in-out infinite; }
+  @keyframes breathe { 50% { text-shadow: 0 0 30px rgba(192,40,58,1), 0 0 70px rgba(192,40,58,.55); } }
+  .gate-sub { font: 400 17px/1.6 "Song Myung", serif; color: var(--ink-2); margin: 18px 0 30px; }
+  #gate .btn { font: 400 19px "Song Myung", serif; padding: 15px 30px; border-radius: 2px; background: linear-gradient(180deg, #c0283a, #8e1625);
+    box-shadow: 0 0 0 1px rgba(217,178,106,.5), 0 0 30px rgba(192,40,58,.45); margin-top: 8px; }
+  .gate-quiet { display: block; margin: 16px auto 0; background: none; border: 0; color: var(--ink-3); font-size: 14px; text-decoration: underline; cursor: pointer; }
+  body:not(.no-free) .no-free-only { display: none; }
+  #snd { position: fixed; right: 14px; bottom: 16px; z-index: 40; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+    background: rgba(11,9,16,.8); color: var(--ink); font-size: 18px; cursor: pointer; }
+  .sub-proof { margin-top: 18px; font-size: 14px; color: var(--gold); text-align: center; }
+  /* 선택 장면 */
+  .choose { padding: 50px 14px; text-align: center; }
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 600px; margin: 22px auto 10px; text-align: left; }
+  .opt { border: 1px solid var(--line); border-radius: 10px; padding: 14px 12px; background: #100d15; opacity: 0; transform: translateY(14px); transition: .9s; }
+  .panel.show .opt { opacity: 1; transform: none; }
+  .panel.show .opt.me { transition-delay: .5s; }
+  .opt h4 { margin: 0 0 6px; font: 400 17px "Song Myung", serif; }
+  .opt .price { margin: 0 0 8px; font: 700 18px "Noto Serif KR", serif; }
+  .opt .price small { font: 400 12px "Noto Sans KR", sans-serif; color: var(--ink-3); }
+  .opt ul { margin: 0; padding-left: 16px; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+  .opt li + li { margin-top: 4px; }
+  .vs.one { grid-template-columns: 1fr; max-width: 420px; }
+  .topics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 520px; margin-top: 16px; }
+  .topics a { display: block; padding: 14px 10px; border-radius: 10px; text-align: center; text-decoration: none; color: #f6e7c4;
+    border: 1px solid rgba(217,178,106,.45); background: linear-gradient(180deg, #1d1522, #120e17); font: 400 18px "Song Myung", serif; }
+  .topics a small { display: block; margin-top: 4px; font: 400 12px "Noto Sans KR", sans-serif; color: var(--ink-3); }
+  .topics a:active { transform: scale(.98); }
+  .opt.out { filter: grayscale(1) brightness(.75); }
+  .opt.out h4, .opt.out .price { color: var(--ink-3); text-decoration: line-through rgba(192,40,58,.7); }
+  .opt.me { border-color: var(--gold); background: linear-gradient(180deg, #1d1522, #120e17);
+    box-shadow: 0 0 0 1px rgba(217,178,106,.4), 0 0 34px rgba(192,40,58,.3); }
+  .opt.me h4, .opt.me .price { color: #f6e7c4; }
+  .opt.me b { color: var(--gold); }
+  .choose .btn { margin-top: 18px; font: 400 19px "Song Myung", serif; padding: 15px 26px; border-radius: 2px;
+    background: linear-gradient(180deg, #c0283a, #8e1625); box-shadow: 0 0 0 1px rgba(217,178,106,.5), 0 0 30px rgba(192,40,58,.45); }
+  .choose .proof { font-size: 13px; color: var(--ink-3); margin-top: 12px; }
+  @media (max-width: 380px) { .vs { grid-template-columns: 1fr; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .art img, .big, .line .c { transition: none !important; opacity: 1 !important; transform: none !important; }
+    .smoke, .ember { display: none; }
+  }

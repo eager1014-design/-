@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>운결 · 도령의 상담실</title>
+<meta name="description" content="연애, 재회, 궁합, 직업·재물, 반려동물, 고민 상담. 운결 도령이 묻고, 네 사주로 답한다.">
+<meta name="theme-color" content="#0b0910">
+<meta property="og:type" content="website">
+<meta property="og:title" content="운결 · 도령의 상담실">
+<meta property="og:description" content="네 이야기를 듣고, 네 사주로 답한다. 상담은 무료.">
+<meta property="og:image" content="__PUBLIC_URL__/img/dory.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Song+Myung&family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/toon.css">
+<style>
+  /* 상담실: 도령과 손님이 주고받는 대화 */
+  .room { max-width: 600px; margin: 0 auto; padding: 18px 16px 60px; }
+  .room-head { text-align: center; padding: 26px 0 10px; }
+  .room-head img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; object-position: 30% 30%;
+    box-shadow: 0 0 0 2px var(--gold), 0 0 30px rgba(192,40,58,.5); }
+  .room-head h1 { margin: 12px 0 4px; font: 400 28px "Song Myung", serif; color: #f6e7c4; }
+  .room-head p { margin: 0; color: var(--ink-3); font-size: 14px; }
+  .msg { display: flex; gap: 10px; margin: 16px 0; align-items: flex-start; animation: rise .5s ease-out both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  .msg .ava { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: 30% 30%; flex: none;
+    box-shadow: 0 0 0 1px var(--gold); }
+  .msg .say { padding: 12px 16px; border: 1px solid rgba(217,178,106,.35); background: #15111b; border-radius: 4px 14px 14px 14px;
+    font: 400 17px/1.75 "Song Myung", serif; color: var(--ink); white-space: pre-wrap; max-width: calc(100% - 50px); }
+  .msg .say h3 { margin: 0 0 4px; font: 700 12px "Noto Sans KR", sans-serif; letter-spacing: .18em; color: var(--accent-2); }
+  .msg.me { justify-content: flex-end; }
+  .msg.me .say { background: #2a1219; border-color: rgba(192,40,58,.5); border-radius: 14px 4px 14px 14px; font: 500 15px/1.6 "Noto Sans KR", sans-serif; }
+  .msg.wait .say { color: var(--ink-3); }
+  .dots::after { content: "…"; animation: dots 1.2s steps(3) infinite; display: inline-block; width: 1.2em; overflow: hidden; vertical-align: bottom; }
+  @keyframes dots { from { width: 0; } to { width: 1.2em; } }
+  .ans { margin: 4px 0 6px 50px; animation: rise .5s .15s ease-out both; }
+  .ans .chips { justify-content: flex-start; margin: 4px 0; }
+  .ans .chip { border: 0; padding: 0; background: none; }
+  .ans .chip span { font-size: 15px; padding: 9px 15px; }
+  .ans .chip:hover span { border-color: var(--gold); color: var(--ink); }
+  .ans .qcard { max-width: none; margin-top: 4px; }
+  .ans textarea { width: 100%; min-height: 90px; }
+  .ans .btn { font: 400 18px "Song Myung", serif; border-radius: 4px; background: linear-gradient(180deg, #c0283a, #8e1625); }
+  .ans .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .ans .check { color: var(--ink-3); text-align: left; }
+  .offer { margin: 18px 0 0 50px; padding: 16px; border: 1px solid rgba(217,178,106,.5); border-radius: 12px;
+    background: linear-gradient(180deg, #1d1522, #120e17); animation: rise .6s ease-out both; }
+  .offer h3 { margin: 0 0 6px; font: 400 20px "Song Myung", serif; color: #f6e7c4; }
+  .offer .way { margin-top: 12px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: #100d15; }
+  .offer .way b { color: var(--gold); }
+  .offer .way.gift { border-color: rgba(217,178,106,.6); }
+  .offer .btn { width: 100%; margin-top: 8px; }
+  .offer .ready { color: var(--gold); font-weight: 700; }
+  .offer input, .offer .check { margin-top: 6px; }
+  .offer .done { color: #f6e7c4; }
+  .deep { margin: 18px 0 0 50px; max-width: none; width: auto; animation: rise .6s ease-out both; }
+  .deep .kicker { opacity: 1; }
+  .deep .blurred { white-space: pre-wrap; }
+  @media (max-width: 420px) { .deep { margin-left: 0; } }
+  @media (max-width: 420px) { .ans, .offer { margin-left: 0; } }
+</style>
+</head>
+<body class="apply">
+<header class="topbar">
+  <a class="brand" href="/" aria-label="운결 처음 화면으로"><span class="seal">運</span>운결</a>
+</header>
+<main class="room" id="app">
+  <div class="room-head">
+    <img src="/img/toon/uneasy.jpg" alt="운결 도령">
+    <h1>도령의 상담실</h1>
+    <p>묻는 말에 답해라. 네 사주로 답해주마. 상담은 무료다.</p>
+  </div>
+  <div id="chat" aria-live="polite"></div>
+</main>
+<footer class="foot">
+  <p>운결은 명리학을 바탕으로 자기 이해와 방향 설정을 돕는 서비스이며, 의료·법률·투자 자문을 대신하지 않습니다. 등장인물은 AI로 만든 가상 캐릭터입니다.</p>
+  <p>마음이 많이 힘드시다면 자살예방상담전화 109 · 정신건강위기상담 1577-0199</p>
+</footer>
+<script src="/form.js"></script>
+<script src="/consult.js"></script>
+</body>
+</html>

@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS promo_posts (
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS invites (vid TEXT NOT NULL, friend_key TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY (vid, friend_key));  -- 평생 종합 친구 할인: 내 링크로 사주를 본 친구
 CREATE TABLE IF NOT EXISTS invite_used (vid TEXT PRIMARY KEY, email TEXT, order_id INTEGER, at TEXT NOT NULL);  -- 할인을 쓴 기록 (1인 1회)
+CREATE TABLE IF NOT EXISTS invite_pdf (vid TEXT PRIMARY KEY, email TEXT, order_id INTEGER, at TEXT);  -- 친구에게 보내서 받은 무료 PDF (1인 1회)
 CREATE TABLE IF NOT EXISTS ref_codes (code TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL);  -- 친구 초대 코드
 CREATE TABLE IF NOT EXISTS ref_credits (email TEXT PRIMARY KEY, credits INTEGER NOT NULL DEFAULT 0, earned INTEGER NOT NULL DEFAULT 0);  -- 초대로 받은 무료 횟수
 CREATE TABLE IF NOT EXISTS ad_optout (email TEXT PRIMARY KEY, at TEXT NOT NULL);  -- 광고 메일 수신거부
