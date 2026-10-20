@@ -123,6 +123,9 @@ def main():
     st, cr = guest("/api/consult", dict(body, consent=True))
     ok(st == 200 and len(cr["sections"]) == 4 and all(len(x["text"]) > 30 for x in cr["sections"])
        and "█" not in json.dumps(cr, ensure_ascii=False) and "시작이 어렵다" in cr["sections"][0]["text"], "상담: 고른 답을 짚고, 네 칸 모두 열림")
+    ok(len(cr["preview"]) == 2 and all(len(x["text"]) > 30 for x in cr["preview"])
+       and all(x["what"] and x["chars"] for x in cr["rest"]) and "번 보인다" in json.dumps(cr["rest"], ensure_ascii=False),
+       "상담: PDF 미리 읽기 (앞 2장은 내 사주로, 나머지 장은 무엇을·얼마나·내 사주에 보이는 것)")
     ok(guest("/api/consult", {"topic": "match", "birth": B, "consent": True, "story": "잘 맞나요"})[0] == 400, "궁합 상담: 상대 생년월일 없으면 거절")
     st, mr = guest("/api/consult", {"topic": "match", "birth": B, "consent": True, "story": "잘 맞나요", "answers": {"relation": "연인"},
                                     "partner": {"name": "민수", "birth": dict(B, year=1992, gender="male")}})

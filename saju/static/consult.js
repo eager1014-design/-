@@ -218,6 +218,20 @@ async function runConsult() {
   chat().appendChild(deep);
   down(deep);
   await wait(1200);
+  // PDF 미리 읽기: 받을 PDF의 앞 장을 이 사람 사주로 조금, 나머지는 제목만 (잠그지 않음)
+  if (r.preview?.length) {
+    const pv = document.createElement("div");
+    pv.className = "peek";
+    pv.innerHTML = `<p class="kicker">📄 PDF 미리 읽기 · ${esc(r.label)} · 약 ${r.pages}쪽</p>
+      ${r.preview.map((c, i) => `<div class="pch"><span class="pno2">${i + 1}장</span><b>${esc(c.t)}</b><p>${esc(c.text)}</p></div>`).join("")}
+      ${r.rest.map((x, i) => `<div class="pch more"><span class="pno2">${r.preview.length + i + 1}장</span><b>${esc(x.t)}</b>
+        <span class="pchars">약 ${(Math.round(x.chars / 100) * 100).toLocaleString("ko-KR")}자</span>
+        <p>${esc(x.what)}</p>${x.hint ? `<p class="hint">✦ ${esc(x.hint)}</p>` : ""}</div>`).join("")}
+      <p class="peeknote">전부 약 ${Math.round(r.total_chars / 1000)}천 자. 오직 네 생년월일과 네가 방금 한 말로 쓴다. 표지에 네 이름, 끝에 도령의 서명.</p>`;
+    chat().appendChild(pv);
+    down(pv);
+    await wait(1400);
+  }
   await dory("여기까지가 오늘의 상담이다. 달마다 언제 움직이고 언제 숨을 고를지, 무엇을 어떻게 할지는… 네 이름으로 PDF에 정확히 적어 보내주마.", "", "c05");
   const a = answerBox('<button class="nextbtn" id="to-pdf">넷째 장 · PDF로 받기 →</button>');
   a.querySelector("#to-pdf").onclick = () => turnPage("넷째 장 · 네 이름으로 쓴 PDF", () => {

@@ -14,7 +14,7 @@ import knowledge as K
 import llm
 import products
 import quick
-from saju_engine import compatibility, current_luck
+from saju_engine import compatibility, current_luck, year_months
 
 WAIT = int(concern.os.environ.get("CONSULT_AI_WAIT", "25"))  # 상담은 길어서 고민 맛보기보다 조금 더 기다린다
 
@@ -116,6 +116,75 @@ def _rules(topic, chart, luck, answers, story, partner, partner_chart):
 SECTIONS = [("core", "핵심"), ("why", "진짜 이유"), ("do", "이렇게 해라"), ("when", "때")]
 
 
+# PDF의 남은 장: 손님에게 '이 장에서 무엇을 알려주는지' 쉬운 말로 (돈을 써볼 만하다고 느끼게, 그러나 과장 없이)
+SELL = {
+    "질문에 대한 답": "네 질문에 대한 결론부터. 그렇게 보는 사주의 근거 2~3가지를 네 상황에 하나씩 이어서",
+    "앞으로 이렇게 해보세요": "앞으로 12개월 중 이 질문에 힘이 실리는 달, 그리고 바로 해볼 행동 3가지",
+    "나의 연애 기질": "네가 어떤 사람에게 끌리는지, 연애할 때 늘 나오는 강점과 버릇",
+    "연애가 꼬였던 이유": "네 사주의 부딪히는 자리와 쏠린 기운이 연애에서 어떤 장면으로 나왔는지",
+    "인연이 들어오는 시기": "인연의 기운이 들어오는 달을 '몇 년 몇 월, 왜'로. 조심할 달까지",
+    "좋은 인연을 만나는 법": "만남이 생기기 쉬운 곳과 상황, 너와 맞는 사람의 특징, 체크리스트",
+    "우리 아이의 타고난 기질": "아이가 타고난 성격을 따뜻하게 (재미로 보는 풀이)",
+    "좋아하는 것과 스트레스 포인트": "아이에게 맞는 놀이·산책·환경, 예민해지는 순간과 달래는 법",
+    "보호자와의 궁합": "너와 아이가 서로 채워주는 점, 맞춰줄 점",
+    "올해 함께 행복하게 보내는 법": "올해 함께 하면 좋은 것, 특별히 챙겨줄 시기",
+    "두 사람의 관계 구조": "두 사람이 어떤 모양의 관계인지 사주로",
+    "헤어짐은 어디서 왔나": "누구 탓이 아니라, 그때의 운에서 무엇이 부딪혔는지",
+    "다시 이어질 수 있는 시기": "앞으로 24개월 중 관계가 다시 움직이기 쉬운 달과 그 이유",
+    "재회를 위한 행동과 놓아줄 신호": "다가갈 때의 말과 타이밍, 하지 말아야 할 것, 그리고 정직하게 '놓아줄 신호'",
+    "한눈에 보는 두 사람": "두 사람의 관계를 한 문장으로",
+    "서로 끌리는 점": "두 사주가 서로를 채우는 자리, 실제 장면 예시와 함께",
+    "부딪히기 쉬운 장면": "말투·결정·돈·시간 중 어디서 부딪히는지 구체적으로",
+    "돈과 생활 방식": "돈 쓰는 법과 생활 리듬의 차이, 미리 정해두면 좋은 규칙",
+    "앞으로 2년, 두 사람의 흐름": "올해와 내년, 가까워지는 시기와 조심할 시기",
+    "잘 지내는 법": "누가 무엇을 하면 좋은지 행동 5가지",
+    "타고난 일 기질": "네가 일하는 방식, 맞는 일과 환경, 강점과 약점",
+    "돈을 버는 방식": "월급형·사업형·전문가형 중 너의 방식, 돈이 새는 버릇",
+    "지금의 일 운": "지금의 10년 흐름과 올해의 일 운을 네 고민에 이어서",
+    "이직·창업·승진의 시기": "앞으로 24개월 중 움직일 달과 버틸 달을 '몇 년 몇 월, 왜'로",
+    "돈과 커리어 실천법": "네 사주에 맞는 일 습관·돈 관리 습관, 이번 달 체크리스트",
+}
+
+
+def _facts(chart, luck):
+    """PDF에 들어갈 사실을 미리 '개수'로만 (정답인 달은 PDF에). quick.locked_sections 와 같은 계산."""
+    ym = year_months(chart, products.NY)
+    good = [m for m in ym if m["yongsin_hit"] and not m["clash"]]
+    care = [m for m in ym if m["clash"]]
+    love = next((x for x in quick.locked_sections(chart, luck) if x["id"] == "love"), {"text": ""})
+    return {"good": len(good), "care": len(care), "love": love["text"].count("월"), "ny": products.NY}
+
+
+def _hint(title, f):
+    """그 장에 대해 '네 사주에서 이미 보이는 것' 한 줄."""
+    if "인연" in title and "시기" in title:
+        return (f"네 사주에 앞으로 인연의 기운이 들어오는 달이 {f['love']}번 보인다. 그게 언제인지는 이 장에 적었다."
+                if f["love"] else "앞으로 1년 남짓의 인연 흐름이 보인다. 언제 움직일지 이 장에 적었다.")
+    if any(k in title for k in ("시기", "흐름", "앞으로 이렇게")):
+        return f"네 사주에 {f['ny']}년 힘이 붙는 달이 {f['good']}번, 부딪힘을 조심할 달이 {f['care']}번 보인다. 몇 월인지, 왜인지 이 장에 적었다."
+    if any(k in title for k in ("법", "행동", "실천")):
+        return "읽고 끝나지 않게, 네 사주에 맞춰 바로 해볼 것들로 마무리한다."
+    return ""
+
+
+def _preview_n(toc):
+    """PDF 미리 읽기로 보여줄 장 수: 앞의 2장 (장이 2개뿐이면 1장). 나머지는 제목만."""
+    return 1 if len(toc) <= 2 else 2
+
+
+def _rule_preview(chart, toc, n):
+    """AI가 없을 때 PDF 앞 장들의 첫머리를 사주 계산으로 (반말)."""
+    dm = quick.DM[chart["day_master"]["ko"]]
+    image = quick._clean(K.DAY_MASTER[chart["day_master"]["ko"]]["image"])
+    el = chart["elements_simple"]
+    lack = [e for e, v in el.items() if v == 0]
+    many = [e for e, v in el.items() if v >= 3]
+    note = quick.ELEMENT_LACK[lack[0]] if lack else (quick.ELEMENT_MANY[many[0]] if many else "")
+    lines = [f"너는 「{image}」의 사람이다. {dm['core']} 이 장은 네가 가진 '{dm['good'][1]}'에서 시작한다.",
+             (f"{note} " if note else "") + f"그리고 '{dm['shadow'][0]}' — 여기가 같은 일이 되풀이되는 자리다."]
+    return lines[:n]
+
+
 def reading(topic, birth, chart_of_birth, answers, story, partner=None):
     """partner: {"name", "birth"(parse_birth 결과)} 또는 None."""
     topic = topic if topic in TOPICS else "counsel"
@@ -125,6 +194,10 @@ def reading(topic, birth, chart_of_birth, answers, story, partner=None):
     luck = current_luck(chart)
     partner_chart = chart_of_birth(partner["birth"]) if partner and partner.get("birth") else None
     out, engine = None, "rules"
+    toc = products.toc(products.PRODUCTS[topic])
+    n = _preview_n(toc)
+    chap = "\n".join(f"{i + 1}. {c['t']} — {c['d']}" for i, c in enumerate(toc[:n]))
+    peek = None
     if llm.available() and concern._take():
         prompt = f"""[상담 주제] {TOPICS[topic]}
 
@@ -136,7 +209,7 @@ def reading(topic, birth, chart_of_birth, answers, story, partner=None):
 
 [손님이 직접 한 말] {story or '(따로 적지 않음)'}
 
-아래 네 칸을 그대로 써서 답하세요 (다른 말 없이). 전부 합쳐 900~1300자.
+아래 다섯 칸을 그대로 써서 답하세요 (다른 말 없이). 앞의 네 칸은 합쳐 900~1300자.
 [핵심]
 손님의 고민에 대한 도령의 답을 먼저 말한다. 손님이 고른 답과 한 말을 짚으며, 사주 근거 하나로. 3~4문장.
 [진짜 이유]
@@ -144,7 +217,10 @@ def reading(topic, birth, chart_of_birth, answers, story, partner=None):
 [이렇게 해라]
 이 사람에게만 맞는 구체적인 조언 2~3가지. 오늘 당장 할 수 있는 작은 행동 하나 포함.
 [때]
-제공된 운의 흐름에 근거해 앞으로 1년 중 움직이기 좋은 때와 조심할 때를 하나씩. 달마다의 자세한 흐름은 PDF에 담아주겠다는 말로 끝낸다."""
+제공된 운의 흐름에 근거해 앞으로 1년 중 움직이기 좋은 때와 조심할 때를 하나씩. 달마다의 자세한 흐름은 PDF에 담아주겠다는 말로 끝낸다.
+[PDF 맛보기]
+이 손님이 받을 PDF의 앞 {n}개 장을 미리 조금 읽어주는 것이다. 아래 장마다 그 장의 첫머리처럼 이 사람의 사주로 2문장씩, 한 줄에 하나. 형식 "장 번호. 내용":
+{chap}"""
         box = {}
         t = threading.Thread(target=lambda: box.update(r=llm.generate(SYSTEM, [{"role": "user", "content": prompt}], 1800)),
                              daemon=True)
@@ -153,14 +229,26 @@ def reading(topic, birth, chart_of_birth, answers, story, partner=None):
         text, eng = box.get("r") or (None, None)
         if t.is_alive():
             print(f"[상담] AI가 {WAIT}초 안에 답하지 않아 기본 문장으로")
-        m = re.search(r"\[핵심\]\s*(.+?)\s*\[진짜 이유\]\s*(.+?)\s*\[이렇게 해라\]\s*(.+?)\s*\[때\]\s*(.+)", text or "", re.S)
+        text, _, tail = (text or "").partition("[PDF 맛보기]")
+        m = re.search(r"\[핵심\]\s*(.+?)\s*\[진짜 이유\]\s*(.+?)\s*\[이렇게 해라\]\s*(.+?)\s*\[때\]\s*(.+)", text, re.S)
         if m:
             out = {k: m.group(i + 1).strip().strip('"') for i, (k, _) in enumerate(SECTIONS)}
             engine = eng
+            got = dict(re.findall(r"^\s*(\d)\.\s*(.+)$", tail, re.M))
+            if all(str(i + 1) in got for i in range(n)):
+                peek = [re.sub(r"^[^—:]{0,30}[—:]\s*", "", got[str(i + 1)]).strip() for i in range(n)]
         elif text:
             print(f"[상담] AI 답 모양이 달라 기본 문장으로: {text[:120]}")
     if not out:
         out = _rules(topic, chart, luck, answers, story, partner or {}, partner_chart)
+    if not peek:
+        peek = _rule_preview(chart, toc, n)
+    facts = _facts(chart, luck)
     return {"topic": topic, "label": TOPICS[topic], "image": quick._clean(K.DAY_MASTER[chart["day_master"]["ko"]]["image"]),
             "sections": [{"id": k, "title": t, "text": out[k]} for k, t in SECTIONS], "engine": engine,
-            "product": topic, "price": products.PRODUCTS[topic]["price"]}
+            "product": topic, "price": products.PRODUCTS[topic]["price"],
+            # PDF 미리 읽기: 앞 장들은 이 사람 사주로 조금, 나머지는 제목만
+            "preview": [{"t": c["t"], "text": peek[i]} for i, c in enumerate(toc[:n])],
+            "rest": [{"t": c["t"], "what": SELL.get(c["t"], c["d"]), "chars": c["chars"], "hint": _hint(c["t"], facts)}
+                     for c in toc[n:]],
+            "pages": products.PRODUCTS[topic]["pages"], "total_chars": sum(c["chars"] for c in toc)}

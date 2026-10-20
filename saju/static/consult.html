@@ -62,6 +62,19 @@
   .offer .done { color: #f6e7c4; }
   .deep { margin: 18px 0 0 50px; max-width: none; width: auto; animation: rise .6s ease-out both; }
   .deep .kicker { opacity: 1; }
+  .peek { margin: 16px 0 0 50px; padding: 16px; border-radius: 10px; border: 1px solid rgba(217,178,106,.45);
+    background: linear-gradient(180deg, #19141f, #110d15); animation: rise .6s ease-out both; }
+  .peek .kicker { opacity: 1; color: var(--gold); }
+  .pch { padding: 10px 0; border-top: 1px solid var(--line); }
+  .pch:first-of-type { border-top: 0; }
+  .pch .pno2 { font: 700 11px "Noto Sans KR", sans-serif; letter-spacing: .15em; color: var(--accent-2); margin-right: 8px; }
+  .pch b { font: 400 17px "Song Myung", serif; color: #f6e7c4; }
+  .pch p { margin: 6px 0 0; font: 400 16px/1.7 "Song Myung", serif; color: var(--ink); }
+  .pch.more p { color: var(--ink-2); font: 400 14px/1.6 "Noto Sans KR", sans-serif; }
+  .pch.more p.hint { color: var(--gold); }
+  .pchars { float: right; font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+  .peeknote { margin: 10px 0 0; padding: 10px; border-radius: 8px; background: rgba(217,178,106,.07); color: var(--ink-2); font-size: 13px; line-height: 1.6; }
+  @media (max-width: 420px) { .peek { margin-left: 0; } }
   .deep .blurred { white-space: pre-wrap; }
   @media (max-width: 420px) { .deep { margin-left: 0; } }
   @media (max-width: 420px) { .ans, .offer { margin-left: 0; } }
