@@ -41,7 +41,18 @@ async function init() {
   const cfg = await api("/api/apply/config");
   window.PRODUCTS = cfg.products;
   window.FREE_FIRST = cfg.free_first;
-  if (cfg.products.daily) $("#sub-price").textContent = `월 ${won(cfg.products.daily.price)}`;
+  if (cfg.products.daily) {
+    const price = cfg.products.daily.price;
+    $("#sub-price").textContent = `월 ${won(price)}`;
+    $("#sub-day").textContent = Math.round(price / 30).toLocaleString("ko-KR");
+    $("#pick-daily").textContent = `운결에게 맡기기 · 월 ${won(price)}`;
+  }
+  $("#pick-daily").onclick = (e) => {  // 구독을 골라둔 채로 신청서로
+    e.preventDefault();
+    const d = document.querySelector('input[name="product"][value="daily"]');
+    if (d) { d.checked = true; onProduct(); }
+    $("#form").scrollIntoView({ behavior: "smooth" });
+  };
   document.body.classList.toggle("no-free", !cfg.free_first);
   let lastTier = "";
   $("#products").innerHTML = Object.entries(cfg.products).map(([k, p]) => {

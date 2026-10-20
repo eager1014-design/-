@@ -152,6 +152,8 @@ def main():
     st, r = boss("/api/admin/subs/send-now", {})
     ok(st == 200 and r["sent"] == 1, "오늘의 흐름 지금 보내기")
     ok(boss("/api/admin/subs/send-now", {})[1]["sent"] == 0, "같은 날 두 번 안 보냄")
+    st, r = boss("/api/admin/subs/update", {"id": sub["id"], "action": "story", "story": "요즘 팀장이 바뀌어서 눈치가 보여요"})
+    ok(st == 200 and next(x for x in boss("/api/admin/subs")[1]["subs"] if x["id"] == sub["id"])["story"].startswith("요즘 팀장"), "답장 받은 상황 반영")
     st, r = boss("/api/admin/subs/update", {"id": sub["id"], "action": "extend"})
     ok(r["sub"]["ends_on"] > sub["ends_on"], "+30일 연장")
     tok = __import__("sqlite3").connect(os.environ.get("SAJU_TEST_DB", ".tmp/sales_test.db")).execute(

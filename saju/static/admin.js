@@ -327,10 +327,12 @@ async function renderSubs() {
     <div class="card" style="padding:8px 12px">
       ${r.subs.length ? `<table><thead><tr><th>상태</th><th>이름</th><th>기간</th><th class="hide-sm">보낸 메일</th><th></th></tr></thead><tbody>
         ${r.subs.map((s) => `<tr><td><span class="st ${s.status === "active" ? "st-writing" : "st-sent"}">${esc(label[s.status] || s.status)}</span></td>
-          <td><b>${esc(s.name)}</b><br><span class="muted small">${esc(s.email)}</span></td>
+          <td><b>${esc(s.name)}</b><br><span class="muted small">${esc(s.email)}</span>
+            <br><span class="small" title="${esc(s.story)}">💬 ${esc((s.story || "").slice(0, 40))}${(s.story || "").length > 40 ? "…" : ""}</span></td>
           <td class="small">${esc(s.starts_on)} ~<br><b>${esc(s.ends_on)}</b></td>
           <td class="hide-sm small">${s.sent_count || 0}통${s.last_sent ? `<br><span class="muted">${esc(s.last_sent)}</span>` : ""}</td>
-          <td class="small"><button class="btn ghost" style="padding:4px 10px;font-size:13px" data-sub="${s.id}" data-act="extend">+30일</button>
+          <td class="small"><button class="btn ghost" style="padding:4px 10px;font-size:13px" data-sub="${s.id}" data-act="story" data-story="${esc(s.story)}">상황 고치기</button>
+            <button class="btn ghost" style="padding:4px 10px;font-size:13px" data-sub="${s.id}" data-act="extend">+30일</button>
             ${s.status === "active" ? `<button class="btn ghost" style="padding:4px 10px;font-size:13px" data-sub="${s.id}" data-act="pause">멈춤</button>`
               : s.status === "paused" ? `<button class="btn ghost" style="padding:4px 10px;font-size:13px" data-sub="${s.id}" data-act="resume">다시</button>` : ""}</td></tr>`).join("")}
       </tbody></table>` : `<p class="muted" style="padding:16px">아직 구독자가 없어요.</p>`}
@@ -341,7 +343,12 @@ async function renderSubs() {
   };
   app.querySelectorAll("[data-sub]").forEach((b) => (b.onclick = async () => {
     if (b.dataset.act === "extend" && !confirm("30일 연장할까요? (입금 확인한 경우)")) return;
-    await api("/api/admin/subs/update", { id: +b.dataset.sub, action: b.dataset.act });
+    let story;
+    if (b.dataset.act === "story") {
+      story = prompt("구독자가 답장으로 알려준 요즘 상황 (다음 날 아침 풀이부터 반영돼요)", b.dataset.story || "");
+      if (story === null) return;
+    }
+    await api("/api/admin/subs/update", { id: +b.dataset.sub, action: b.dataset.act, story });
     toast("바꿨어요"); renderSubs();
   }));
 }

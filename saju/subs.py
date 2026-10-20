@@ -55,7 +55,9 @@ def get(sid):
 
 
 def listing():
-    rows = db.all_("SELECT id,email,name,status,starts_on,ends_on,last_sent,sent_count,created_at FROM subs ORDER BY status='active' DESC, ends_on DESC")
+    rows = db.all_("SELECT id,email,name,status,starts_on,ends_on,last_sent,sent_count,created_at,situation FROM subs ORDER BY status='active' DESC, ends_on DESC")
+    for r in rows:
+        r["story"] = json.loads(r.pop("situation") or "{}").get("story", "")
     return rows
 
 
@@ -78,6 +80,16 @@ def set_status(sid, status, extend_days=0):
     return get(sid)
 
 
+def set_story(sid, story):
+    """구독자가 답장으로 알려준 요즘 상황을 반영 (다음 날 풀이부터)."""
+    s = get(sid)
+    if not s:
+        return None
+    sit = dict(s["situation"], story=str(story)[:2000])
+    db.run("UPDATE subs SET situation=?, updated_at=? WHERE id=?", json.dumps(sit, ensure_ascii=False), now(), sid)
+    return get(sid)
+
+
 def _plain(md):
     """메일용: 마크다운 → 읽기 좋은 글."""
     t = re.sub(r"^#{1,4}\s*(.+)$", r"【\1】", md, flags=re.M)
@@ -97,7 +109,8 @@ def daily_mail(s, chart_of_birth, public_url):
         price = orders.PRODUCTS["daily"]["price"]
         body += (f"────────\n구독이 {left}일 남았어요. 계속 받으시려면 {price:,}원을 입금해 주세요.\n"
                  f"입금 계좌: {bank} (입금자명: {s['name']})\n\n")
-    body += f"운결 · 사주로 보는 커리어·관계 코칭\n그만 받기: {public_url}/stop?t={s['token']}"
+    body += ("요즘 무슨 일이 있는지, 이 메일에 답장으로 알려줘. 다음 날 아침 풀이부터 담아주마.\n\n"
+             f"운결 · 사주로 보는 커리어·관계 코칭\n그만 받기: {public_url}/stop?t={s['token']}")
     return f"[운결] {s['name']}님의 {date.today():%m월 %d일} 오늘의 흐름", body, res["engine"]
 
 

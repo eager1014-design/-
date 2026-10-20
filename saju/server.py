@@ -873,6 +873,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.error("구독을 찾을 수 없습니다.", 404)
         if action == "extend":
             s = subs.set_status(sid, "active", extend_days=int(b.get("days") or 30))
+        elif action == "story":
+            s = subs.set_story(sid, b.get("story") or "")
         elif action in ("pause", "resume"):
             s = subs.set_status(sid, "paused" if action == "pause" else "active")
         else:

@@ -198,6 +198,27 @@
   #snd { position: fixed; right: 14px; bottom: 16px; z-index: 40; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
     background: rgba(11,9,16,.8); color: var(--ink); font-size: 18px; cursor: pointer; }
   .sub-proof { margin-top: 18px; font-size: 14px; color: var(--gold); text-align: center; }
+  /* 선택 장면 */
+  .choose { padding: 50px 14px; text-align: center; }
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 600px; margin: 22px auto 10px; text-align: left; }
+  .opt { border: 1px solid var(--line); border-radius: 10px; padding: 14px 12px; background: #100d15; opacity: 0; transform: translateY(14px); transition: .9s; }
+  .panel.show .opt { opacity: 1; transform: none; }
+  .panel.show .opt.me { transition-delay: .5s; }
+  .opt h4 { margin: 0 0 6px; font: 400 17px "Song Myung", serif; }
+  .opt .price { margin: 0 0 8px; font: 700 18px "Noto Serif KR", serif; }
+  .opt .price small { font: 400 12px "Noto Sans KR", sans-serif; color: var(--ink-3); }
+  .opt ul { margin: 0; padding-left: 16px; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+  .opt li + li { margin-top: 4px; }
+  .opt.out { filter: grayscale(1) brightness(.75); }
+  .opt.out h4, .opt.out .price { color: var(--ink-3); text-decoration: line-through rgba(192,40,58,.7); }
+  .opt.me { border-color: var(--gold); background: linear-gradient(180deg, #1d1522, #120e17);
+    box-shadow: 0 0 0 1px rgba(217,178,106,.4), 0 0 34px rgba(192,40,58,.3); }
+  .opt.me h4, .opt.me .price { color: #f6e7c4; }
+  .opt.me b { color: var(--gold); }
+  .choose .btn { margin-top: 18px; font: 400 19px "Song Myung", serif; padding: 15px 26px; border-radius: 2px;
+    background: linear-gradient(180deg, #c0283a, #8e1625); box-shadow: 0 0 0 1px rgba(217,178,106,.5), 0 0 30px rgba(192,40,58,.45); }
+  .choose .proof { font-size: 13px; color: var(--ink-3); margin-top: 12px; }
+  @media (max-width: 380px) { .vs { grid-template-columns: 1fr; } }
 
   @media (prefers-reduced-motion: reduce) {
     .art img, .big, .line .c { transition: none !important; opacity: 1 !important; transform: none !important; }
@@ -295,7 +316,28 @@
       <p class="line" data-type>그리고… 원한다면, 매일 아침.</p>
       <p class="line bubble" data-type>너의 하루가 어디로 흐르는지 알려주마.</p>
       <p class="line small" data-type>오늘은 밀어붙일 날인지, 아니면 숨을 고를 날인지.</p>
-      <p class="proof sub-proof">매일 아침 7시, 내 사주로 본 오늘의 흐름을 메일로 · <b id="sub-price">월 구독</b></p>
+    </div>
+
+    <!-- 선택: 밖의 5만 원 vs 운결 구독 -->
+    <div class="panel blank choose" data-voice="n13">
+      <p class="line red" data-type>선택해라.</p>
+      <div class="vs">
+        <div class="opt out">
+          <h4>밖에서, 너를 모르는 사람</h4>
+          <p class="price">오만 원 <small>· 단 한 번</small></p>
+          <ul><li>처음 본 얼굴, 생년월일 몇 글자</li><li>15분이면 끝</li><li>그날 이후엔 다시 묻기 어렵다</li></ul>
+        </div>
+        <div class="opt me">
+          <h4>나, 운결</h4>
+          <p class="price"><b id="sub-price">월 9,900원</b> <small>· 하루 <span id="sub-day">330</span>원</small></p>
+          <ul><li>네 사주와, 네가 털어놓은 이야기를 안다</li><li><b>매일 아침 7시</b>, 오늘 너의 하루의 방향</li>
+            <li><b>답장으로 요즘 일을 알려주면</b>, 다음 날 풀이에 담는다</li><li>언제든 그만둘 수 있다</li></ul>
+        </div>
+      </div>
+      <p class="line small" data-type>너를 모르는 사람에게 인생의 방향을 맡길 것이냐,</p>
+      <p class="line" data-type>너를 아는 나에게 맡길 것이냐.</p>
+      <a class="btn" href="?p=daily#form" id="pick-daily">운결에게 맡기기 · 월 9,900원</a>
+      <p class="proof">한 번만 보고 싶다면, 아래 신청서에서 원하는 풀이를 골라도 된다.</p>
     </div>
 
     <div class="panel blank cta" data-voice="n12">
