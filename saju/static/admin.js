@@ -45,7 +45,7 @@ function renderLogin(msg) {
         <div class="spacer"></div><button class="btn block">로그인</button>
         <p class="err" id="lerr"></p>
       </form>
-      <p class="muted small">계정이 없으면 <a href="/app#/signup">여기서 사장님 이메일로 가입</a>한 뒤 다시 오세요.</p>
+      <p class="muted small">처음이세요? <a href="#/signup">사장님 계정 만들기</a> · 비밀번호를 잊으셨으면 신입(Claude)에게 '비밀번호 재설정 링크'를 부탁하세요.</p>
     </div>`;
   $("#lf").onsubmit = async (e) => {
     e.preventDefault();
@@ -53,6 +53,54 @@ function renderLogin(msg) {
       await api("/api/login", { email: $("#le").value.trim(), password: $("#lp").value });
       route();
     } catch (x) { $("#lerr").textContent = x.message; }
+  };
+}
+
+/* ------------------------------------------------------------ 사장님 가입 · 비밀번호 새로 정하기 */
+function renderSignup() {
+  app.innerHTML = `
+    <div class="narrow card">
+      <h2>사장님 계정 만들기</h2>
+      <p class="muted small">사장님 이메일(서버 설정 ADMIN_EMAIL)만 가입됩니다. 비밀번호는 꼭 메모해 두세요.</p>
+      <form id="sf">
+        <label for="se">이메일</label><input id="se" type="email" autocomplete="username">
+        <label for="sn">이름</label><input id="sn" maxlength="30" value="사장님">
+        <label for="sp">비밀번호 (8자 이상)</label><input id="sp" type="password" autocomplete="new-password">
+        <label for="sp2">비밀번호 한 번 더</label><input id="sp2" type="password" autocomplete="new-password">
+        <div class="spacer"></div><button class="btn block">가입하고 들어가기</button>
+        <p class="err" id="serr"></p>
+      </form>
+      <p class="muted small"><a href="#/">← 로그인으로</a></p>
+    </div>`;
+  $("#sf").onsubmit = async (e) => {
+    e.preventDefault();
+    if ($("#sp").value !== $("#sp2").value) return ($("#serr").textContent = "비밀번호가 서로 달라요.");
+    try {
+      await api("/api/signup", { email: $("#se").value.trim(), name: $("#sn").value.trim() || "사장님", password: $("#sp").value,
+        agree: true, agree_ai: true });
+      location.hash = "#/"; route();
+    } catch (x) { $("#serr").textContent = x.message; }
+  };
+}
+
+function renderReset(token) {
+  app.innerHTML = `
+    <div class="narrow card">
+      <h2>새 비밀번호 정하기</h2>
+      <form id="rf">
+        <label for="rp">새 비밀번호 (8자 이상)</label><input id="rp" type="password" autocomplete="new-password">
+        <label for="rp2">한 번 더</label><input id="rp2" type="password" autocomplete="new-password">
+        <div class="spacer"></div><button class="btn block">바꾸고 들어가기</button>
+        <p class="err" id="rerr"></p>
+      </form>
+    </div>`;
+  $("#rf").onsubmit = async (e) => {
+    e.preventDefault();
+    if ($("#rp").value !== $("#rp2").value) return ($("#rerr").textContent = "비밀번호가 서로 달라요.");
+    try {
+      await api("/api/password/reset", { token, password: $("#rp").value });
+      toast("비밀번호를 바꿨어요"); location.hash = "#/"; route();
+    } catch (x) { $("#rerr").textContent = x.message; }
   };
 }
 
@@ -73,7 +121,7 @@ async function renderList(status) {
         <thead><tr><th>상태</th><th>이름</th><th>상품</th><th class="hide-sm">금액</th><th class="hide-sm">신청번호</th><th>신청 시각</th></tr></thead>
         <tbody>${r.orders.map((o) => `<tr data-id="${o.id}">
           <td>${stBadge(o)}</td><td><b>${esc(o.name)}</b><br><span class="muted small">${esc(o.email)}</span></td>
-          <td>${esc(o.product_label)}</td><td class="hide-sm">${won(o.amount)}</td><td class="hide-sm">${esc(o.code)}</td>
+          <td>${esc(o.product_label)}</td><td class="hide-sm">${o.amount ? won(o.amount) : '<span class="badge">무료</span>'}</td><td class="hide-sm">${esc(o.code)}</td>
           <td class="small">${fmt(o.created_at)}<br><span class="muted">${o.source === "manual" ? "직접 입력" : o.channel ? (CH_LABEL[o.channel] || esc(o.channel)) + "에서" : "직접 방문"}</span></td></tr>`).join("")}</tbody>
       </table>` : `<p class="muted" style="padding:16px">아직 신청이 없습니다.</p>`}
     </div>`;
@@ -111,7 +159,7 @@ async function renderOrder(id) {
         <dl class="info">
           <dt>신청번호</dt><dd>${esc(o.code)}</dd>
           <dt>이메일</dt><dd>${esc(o.email)}</dd>
-          <dt>금액</dt><dd>${won(o.amount)}</dd>
+          <dt>금액</dt><dd>${o.amount ? won(o.amount) : "무료 (첫 1회)"}</dd>
           <dt>생년월일</dt><dd>${esc(birthText(o.birth))}</dd>
           ${p ? `<dt>${p.kind === "pet" ? "우리 아이" : "상대방"}</dt><dd>${esc(p.name)} (${esc(p.relation)}) · ${esc(birthText(p.birth, p.kind === "pet"))}</dd>` : ""}
           <dt>신청</dt><dd>${fmt(o.created_at)}${o.paid_at ? ` · 입금확인 ${fmt(o.paid_at)}` : ""}${o.sent_at ? ` · 발송 ${fmt(o.sent_at)}` : ""}</dd>
@@ -376,6 +424,8 @@ async function renderPromo(check) {
 async function route() {
   const [h, qs] = (location.hash || "#/").split("?");
   const q = Object.fromEntries(new URLSearchParams(qs || ""));
+  if (h === "#/signup") return renderSignup();
+  if (h === "#/reset") return renderReset(q.token);
   try {
     if (h === "#/order") await renderOrder(q.id);
     else if (h === "#/new") await renderNew();

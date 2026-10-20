@@ -39,12 +39,31 @@ def is_admin(user):
     return bool(user) and user["email"].lower() in ADMIN_EMAILS
 
 
-def create(product, name, email, birth, partner, situation, source, ip=None, status="pending", channel=None):
+# 첫 풀이 1회 무료 (손님 끌어들이기). 끄려면 saju/.env 에 FREE_FIRST=0
+FREE_FIRST = os.environ.get("FREE_FIRST", "1") != "0"
+
+
+def free_eligible(name, email, birth):
+    """처음 온 손님인가: 같은 이메일, 또는 같은 이름+생년월일로 (취소 안 된) 신청이 없어야 함. 1인 1회."""
+    if not FREE_FIRST:
+        return False
+    if db.one("SELECT id FROM orders WHERE email=? AND status!='canceled' LIMIT 1", email):
+        return False
+    for r in db.all_("SELECT birth FROM orders WHERE name=? AND status!='canceled'", name):
+        b = json.loads(r["birth"])
+        if (b.get("solar"), b.get("gender")) == (birth.get("solar"), birth.get("gender")):
+            return False
+    return True
+
+
+def create(product, name, email, birth, partner, situation, source, ip=None, status="pending", channel=None, free=False):
     code = new_code()
+    if free:
+        status = "paid"  # 무료는 입금 확인이 필요 없음
     n = now()
     oid = db.run("""INSERT INTO orders(code,product,amount,name,email,birth,partner,situation,status,source,ip,consent_at,
                     created_at,updated_at,paid_at,channel) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                 code, product, PRODUCTS[product]["price"], name, email, json.dumps(birth, ensure_ascii=False),
+                 code, product, 0 if free else PRODUCTS[product]["price"], name, email, json.dumps(birth, ensure_ascii=False),
                  json.dumps(partner, ensure_ascii=False) if partner else None, json.dumps(situation, ensure_ascii=False),
                  status, source, ip, n if source == "apply" else None, n, n, n if status == "paid" else None, channel)
     return get(oid)

@@ -158,7 +158,7 @@ def consume_email_token(raw, purpose):
 
 def send_verify_mail(u):
     raw = issue_email_token(u["id"], "verify", VERIFY_TTL_H)
-    link = f"{PUBLIC_URL}/app#/verify?token={raw}"
+    link = f"{PUBLIC_URL}/admin#/verify?token={raw}"  # 1인 운영에서는 거의 안 씀 (예전 구독 앱 흐름 유지)
     mailer.send(u["email"], "[운결] 이메일 주소를 인증해 주세요",
                 f"{u['name']}님, 운결에 가입해 주셔서 감사합니다.\n\n아래 링크를 눌러 이메일 인증을 완료해 주세요"
                 f"({VERIFY_TTL_H}시간 동안 유효).\n{link}\n\n본인이 가입하지 않았다면 이 메일을 무시해 주세요.")
@@ -315,17 +315,20 @@ class Handler(BaseHTTPRequestHandler):
         self.error("not found", 404)
 
     def serve_static(self, path):
-        # 첫 화면 = 손님 신청서, /admin = 사장님 관리 화면, 그 외 확장자 없는 주소(/app 등) = 기존 사주 앱
+        # 첫 화면 = 손님 신청서, /admin = 사장님 관리 화면(가입·비밀번호 재설정 포함).
+        # 예전 구독 앱(/app, index.html)은 판매 방식이 바뀌어 닫음 → 첫 화면으로 보냄
         if path in ("/", ""):
             path = "/apply.html"
         elif path.rstrip("/") == "/admin":
             path = "/admin.html"
-        elif not os.path.splitext(path)[1]:
-            path = "/index.html"
+        elif not os.path.splitext(path)[1] or path in ("/index.html", "/app.js"):
+            return self.redirect("/")
         full = os.path.normpath(os.path.join(STATIC, path.lstrip("/")))
         if not full.startswith(STATIC + os.sep) or not os.path.isfile(full):
             return self.error("not found", 404)
         data = open(full, "rb").read()
+        if path == "/apply.html":  # 링크 미리보기(스레드·카톡)에 쓸 그림 주소는 실제 사이트 주소로
+            data = data.replace(b"__PUBLIC_URL__", PUBLIC_URL.encode())
         self.send_response(200)
         ctype = mimetypes.guess_type(full)[0] or "application/octet-stream"
         if ctype.startswith("text/") or ctype.endswith("javascript"):
@@ -657,7 +660,8 @@ class Handler(BaseHTTPRequestHandler):
 
     # -- 손님 신청서 (공개)
     def api_apply_config(self, q):
-        self.send_json({"products": products.public(), "bank": bool(orders.BANK_ACCOUNT), "cities": list(CITIES.keys()),
+        self.send_json({"products": products.public(), "bank": bool(orders.BANK_ACCOUNT), "free_first": orders.FREE_FIRST,
+                        "cities": list(CITIES.keys()),
                         "concerns": {k: v["label"] for k, v in K.CONCERNS.items()}})
 
     def read_order_form(self, b):
@@ -705,20 +709,29 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as e:
             return self.error(str(e))
         src = str(b.get("src") or "").strip().lower()[:20]
-        o = orders.create(*form, source="apply", ip=self.client_ip(),
+        product, name, email, birth = form[:4]
+        free = orders.free_eligible(name, email, birth)
+        o = orders.create(*form, source="apply", ip=self.client_ip(), free=free,
                           channel=src if re.match(r"^[a-z0-9_-]+$", src) else None)
         prod = orders.PRODUCTS[o["product"]]
         bank = orders.BANK_ACCOUNT or "(입금 계좌는 곧 메일로 안내해 드립니다)"
-        mailer.send(o["email"], f"[운결] {prod['label']} 신청이 접수되었습니다 ({o['code']})",
-                    f"{o['name']}님, 운결에 사주 풀이를 신청해 주셔서 감사합니다.\n\n"
-                    f"신청번호: {o['code']}\n상품: {prod['label']}\n금액: {o['amount']:,}원\n입금 계좌: {bank}\n"
-                    f"입금자명: {o['name']}\n\n입금이 확인되면 풀이를 정성껏 작성해 이 메일 주소로 PDF로 보내드립니다.\n"
-                    "보통 입금 확인 후 1~2일 안에 받아보실 수 있어요.")
+        if free:
+            mailer.send(o["email"], f"[운결] 첫 풀이 무료 신청이 접수되었습니다 ({o['code']})",
+                        f"{o['name']}님, 운결에 사주 풀이를 신청해 주셔서 감사합니다.\n\n"
+                        f"신청번호: {o['code']}\n상품: {prod['label']} (첫 1회 무료)\n\n"
+                        "입금하실 필요 없어요. 풀이를 정성껏 작성해 1~2일 안에 이 메일 주소로 PDF로 보내드립니다.")
+        else:
+            mailer.send(o["email"], f"[운결] {prod['label']} 신청이 접수되었습니다 ({o['code']})",
+                        f"{o['name']}님, 운결에 사주 풀이를 신청해 주셔서 감사합니다.\n\n"
+                        f"신청번호: {o['code']}\n상품: {prod['label']}\n금액: {o['amount']:,}원\n입금 계좌: {bank}\n"
+                        f"입금자명: {o['name']}\n\n입금이 확인되면 풀이를 정성껏 작성해 이 메일 주소로 PDF로 보내드립니다.\n"
+                        "보통 입금 확인 후 1~2일 안에 받아보실 수 있어요.")
+        price = "무료(첫 1회)" if free else f"{o['amount']:,}원"
         for admin_email in orders.ADMIN_EMAILS:
-            mailer.send(admin_email, f"[운결] 새 신청 {o['code']} — {o['name']} / {prod['label']} {o['amount']:,}원",
-                        f"새 신청이 들어왔습니다.\n\n{o['name']} ({o['email']})\n{prod['label']} {o['amount']:,}원\n"
+            mailer.send(admin_email, f"[운결] 새 신청 {o['code']} — {o['name']} / {prod['label']} {price}",
+                        f"새 신청이 들어왔습니다.\n\n{o['name']} ({o['email']})\n{prod['label']} {price}\n"
                         f"관리 화면: {PUBLIC_URL}/admin")
-        self.send_json({"ok": True, "code": o["code"], "amount": o["amount"], "product": prod["label"],
+        self.send_json({"ok": True, "code": o["code"], "amount": o["amount"], "product": prod["label"], "free": free,
                         "name": o["name"], "bank": orders.BANK_ACCOUNT})
 
     # -- 사장님 관리 화면
@@ -819,7 +832,7 @@ class Handler(BaseHTTPRequestHandler):
         clear_attempts("login:" + email)  # 로그인 잠김도 풀기
         raw = issue_email_token(u["id"], "reset", RESET_TTL_H)
         print(f"[비상] 사장님 비밀번호 재설정 링크 발급 ({email})")
-        self.send_json({"ok": True, "link": f"{PUBLIC_URL}/app#/reset?token={raw}", "valid_hours": RESET_TTL_H})
+        self.send_json({"ok": True, "link": f"{PUBLIC_URL}/admin#/reset?token={raw}", "valid_hours": RESET_TTL_H})
 
     # -- 맥북 일꾼(tools/saju_worker.py): 맥북의 챗GPT 구독으로 풀이를 써서 올려 준다
     def api_admin_jobs(self, q):
@@ -1055,7 +1068,7 @@ class Handler(BaseHTTPRequestHandler):
                             u["id"], billing.iso(datetime.now() - timedelta(hours=1)))["c"]
             if recent < 3:
                 raw = issue_email_token(u["id"], "reset", RESET_TTL_H)
-                link = f"{PUBLIC_URL}/app#/reset?token={raw}"
+                link = f"{PUBLIC_URL}/admin#/reset?token={raw}"
                 mailer.send(u["email"], "[운결] 비밀번호 재설정 안내",
                             f"{u['name']}님, 비밀번호 재설정을 요청하셨습니다.\n\n아래 링크에서 새 비밀번호를 정해 주세요"
                             f"({RESET_TTL_H}시간 동안 유효, 한 번만 사용 가능).\n{link}\n\n"

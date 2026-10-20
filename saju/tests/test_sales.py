@@ -66,12 +66,19 @@ def main():
     guest, boss, machine = client(), client(), client({"X-Admin-Key": KEY})
     # 신청서
     st, body = guest("/", raw=True)
-    ok(st == 200 and "풀이 신청".encode() in body, "첫 화면 = 신청서")
+    ok(st == 200 and b'id="form"' in body and "너의 인생이".encode() in body, "첫 화면 = 웹툰 + 신청서")
+    ok(guest("/app", raw=True)[0] in (200, 302) and b"app.js" not in guest("/app", raw=True)[1], "예전 구독 앱(/app)은 닫힘")
     st, c = guest("/api/apply/config")
     ok(st == 200 and len(c["products"]) == 9 and c["bank"], f"상품 {len(c['products'])}개 + 계좌")
     ok(apply(guest, "full", "동의없음", agree_ai=False)[0] == 400, "AI 동의 없으면 거절")
     st, r = apply(guest, "newyear", "김손님", src="threads")
     ok(st == 200 and r["code"].startswith("UG"), "신청 완료 + 신청번호")
+    ok(r["free"] and r["amount"] == 0, "첫 신청은 무료")
+    st, r = apply(guest, "love", "김손님")
+    ok(not r["free"] and r["amount"] > 0, "같은 이메일 두 번째는 유료")
+    st, r = guest("/api/apply", {"product": "love", "name": "김손님", "email": "other@test.com", "birth": B, "situation": SIT,
+                                 "agree": True, "agree_ai": True})
+    ok(not r["free"], "이메일 바꿔도 같은 이름+생년월일이면 유료")
     pet = {"name": "콩이", "relation": "강아지", "birth": dict(B, year=2021, hour="", gender="male")}
     ok(apply(guest, "pet", "견주", partner=pet)[0] == 200, "반려동물 신청")
     ok(apply(guest, "pet", "견주2")[1].get("error", "").startswith("반려동물"), "반려동물 정보 없으면 거절")
@@ -85,8 +92,9 @@ def main():
     # 관리 화면
     boss("/api/signup", {"email": "boss@test.com", "name": "사장", "password": "boss-pass-123", "agree": True, "agree_ai": True})
     st, r = boss("/api/admin/orders")
-    ok(st == 200 and len(r["orders"]) == 3, "사장님 목록 보기")
+    ok(st == 200 and len(r["orders"]) == 5, "사장님 목록 보기")
     ny = next(o for o in r["orders"] if o["product"] == "newyear")
+    ok(ny["status"] == "paid" and ny["amount"] == 0, "무료 신청은 바로 '입금 확인' 상태")
     ok(ny["channel"] == "threads", "신청 채널 기록 (스레드에서)")
     st, r = boss("/api/admin/order/status", {"id": ny["id"], "status": "paid"})
     ok(r["order"]["paid_at"], "입금 확인")

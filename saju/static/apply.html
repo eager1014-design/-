@@ -3,36 +3,121 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>운결 · 사주 풀이 신청</title>
-<meta name="description" content="생년월일과 지금의 고민을 보내주시면, 사주를 바탕으로 한 맞춤 풀이를 PDF로 보내드립니다.">
-<meta property="og:title" content="운결 · 나를 이해하는 사주 풀이">
-<meta property="og:description" content="지금 고민에 맞춘 사주 풀이를 PDF로 받아보세요.">
+<title>운결 · 너의 인생이 보인다</title>
+<meta name="description" content="태어난 날에 적힌 너의 이야기. 생년월일과 고민을 보내면, 운결 도령이 사주 풀이를 PDF로 보내준다.">
+<meta name="theme-color" content="#0b0910">
+<meta property="og:type" content="website">
+<meta property="og:title" content="운결 · 너의 인생이 보인다">
+<meta property="og:description" content="태어난 날에 다 적혀 있다. 운결 도령의 사주 풀이, PDF로 받아보기.">
+<meta property="og:image" content="__PUBLIC_URL__/img/dory.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Song+Myung&family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
 <style>
-  .apply main { max-width: 640px; }
+  /* 운결 도령 — 항상 어두운 밤 분위기 */
+  body.apply {
+    --bg: #0b0910; --paper: #15121b; --ink: #efe8f5; --ink-2: #c3b8cf; --ink-3: #8a7f96; --line: #2c2535;
+    --accent: #c0283a; --accent-2: #de3f50; --gold: #d9b26a; --shadow: 0 10px 40px rgba(0,0,0,.5);
+    color-scheme: dark; background: var(--bg); color: var(--ink);
+  }
+  .apply .topbar { background: color-mix(in srgb, var(--bg) 80%, transparent); border-bottom-color: var(--line); }
+  .apply .brand { color: var(--ink); }
+  .apply main { max-width: 640px; padding-top: 0; }
+  .serif2 { font-family: "Song Myung", "Noto Serif KR", serif; }
+
+  /* ---------- 웹툰 컷 ---------- */
+  .toon { position: relative; margin: 0 -16px; }
+  .skip { position: sticky; top: 58px; z-index: 5; text-align: right; padding: 8px 16px 0; height: 0; }
+  .skip a { font-size: 13px; color: var(--ink-2); background: rgba(11,9,16,.7); border: 1px solid var(--line); padding: 5px 12px; border-radius: 99px; text-decoration: none; }
+  .panel { position: relative; min-height: min(78vh, 760px); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px 16px; overflow: hidden; }
+  .panel.blank { min-height: min(70vh, 640px); }
+  .art { position: relative; width: 100%; max-width: 560px; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 4px;
+    box-shadow: 0 0 0 1px rgba(217,178,106,.18), 0 30px 80px rgba(0,0,0,.7); }
+  /* 한 장의 그림에서 부분만 크게: --z 확대 배율, --fx/--fy 가운데 올 지점(그림 안 위치 0~1) */
+  .art img { position: absolute; display: block; width: calc(var(--z, 1) * 100%); max-width: none; height: auto;
+    left: calc(50% - var(--fx, .5) * var(--z, 1) * 100%); top: 50%; transform: translateY(calc(var(--fy, .5) * -100%));
+    filter: saturate(1.05) contrast(1.05) brightness(.7); transition: filter 2.4s ease-out, opacity 1.2s; opacity: 0; }
+  .panel.show .art img { opacity: 1; filter: saturate(1.05) contrast(1.05) brightness(1); }
+  .art.moon { aspect-ratio: 1 / 1; max-width: 400px; border-radius: 50%; }
+  .art.moon img { --z: 2.8; --fx: .195; --fy: .175; }
+  .art.eyes { aspect-ratio: 16 / 7; }
+  .art.eyes img { --z: 3.4; --fx: .60; --fy: .135; }
+  .art.hand { aspect-ratio: 4 / 5; max-width: 400px; }
+  .art.hand img { --z: 2.6; --fx: .80; --fy: .43; }
+  .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(11,9,16,.85)); pointer-events: none; }
+  .art.moon::after { background: radial-gradient(circle, transparent 50%, rgba(11,9,16,.9)); }
+
+  .line { margin: 26px auto 0; max-width: 520px; text-align: center; font: 400 clamp(21px, 5.4vw, 28px)/1.6 "Song Myung", serif;
+    color: var(--ink); text-shadow: 0 2px 14px rgba(0,0,0,.9); min-height: 1.6em; }
+  .line.small { font-size: clamp(16px, 4vw, 19px); color: var(--ink-2); margin-top: 10px; }
+  .line .c { opacity: 0; transition: opacity .25s; }
+  .line .c.on { opacity: 1; }
+  .bubble { border: 1px solid rgba(217,178,106,.35); background: rgba(11,9,16,.72); padding: 14px 22px; border-radius: 2px; backdrop-filter: blur(3px); }
+
+  .reveal { position: relative; }
+  .reveal .art { max-width: 640px; aspect-ratio: 1100 / 1293; }
+  .reveal .art img { --z: 1; --fx: .5; --fy: .5; }
+  .reveal .big { position: absolute; left: 0; right: 0; bottom: 9%; text-align: center; padding: 0 12px;
+    font: 400 clamp(38px, 11vw, 64px)/1.15 "Song Myung", serif; color: #f6e7c4; letter-spacing: .04em;
+    text-shadow: 0 0 18px rgba(192,40,58,.9), 0 0 40px rgba(192,40,58,.5), 0 3px 4px #000; opacity: 0; transform: translateY(14px); transition: 1.4s 1s; }
+  .panel.show .big { opacity: 1; transform: none; }
+
+  .cta { text-align: center; }
+  .cta .btn { margin-top: 26px; font: 400 20px "Song Myung", serif; padding: 16px 34px; border-radius: 2px; letter-spacing: .08em;
+    background: linear-gradient(180deg, #c0283a, #8e1625); box-shadow: 0 0 0 1px rgba(217,178,106,.5), 0 0 30px rgba(192,40,58,.45); }
+  .cta .proof { margin-top: 16px; font-size: 13px; color: var(--ink-3); }
+
+  /* 연기 · 불씨 */
+  .smoke { position: absolute; inset: -20% -40%; pointer-events: none; opacity: .5;
+    background: radial-gradient(ellipse 40% 25% at 30% 70%, rgba(150,140,190,.18), transparent 70%),
+                radial-gradient(ellipse 35% 20% at 75% 40%, rgba(150,140,190,.14), transparent 70%);
+    animation: drift 18s ease-in-out infinite alternate; }
+  @keyframes drift { to { transform: translateX(12%) translateY(-4%); } }
+  .ember { position: fixed; bottom: -10px; width: 3px; height: 3px; border-radius: 50%; background: #ff5a4a; box-shadow: 0 0 8px #ff3b2f;
+    pointer-events: none; z-index: 1; animation: rise linear forwards; opacity: .8; }
+  @keyframes rise { to { transform: translate(var(--dx), -105vh); opacity: 0; } }
+
+  /* ---------- 신청서 (부적 같은 카드) ---------- */
+  #form { position: relative; z-index: 2; border-color: rgba(217,178,106,.3); background: linear-gradient(180deg, #17131e, #121018); }
+  #form::before { content: "運結"; position: absolute; top: 14px; right: 18px; font: 400 15px "Song Myung", serif; color: var(--accent);
+    border: 1px solid var(--accent); padding: 2px 6px; transform: rotate(6deg); opacity: .8; }
+  .form-head { text-align: center; margin-bottom: 6px; }
+  .form-head h2 { font: 400 26px "Song Myung", serif; margin: 6px 0 4px; }
   .products { display: grid; gap: 10px; }
   .product { display: flex; gap: 12px; align-items: flex-start; margin: 0; padding: 14px 16px; border: 1px solid var(--line);
-    border-radius: 12px; background: var(--bg); cursor: pointer; font-weight: 400; color: var(--ink); }
+    border-radius: 10px; background: #100d15; cursor: pointer; font-weight: 400; color: var(--ink); }
   .product input { width: auto; margin-top: 6px; accent-color: var(--accent); }
   .product b { font-size: 16px; }
-  .product .p { margin-left: auto; font: 700 16px "Noto Serif KR", serif; white-space: nowrap; }
-  .product:has(input:checked) { border-color: var(--accent); outline: 2px solid var(--accent); background: var(--paper); }
+  .product .p { margin-left: auto; font: 700 16px "Noto Serif KR", serif; white-space: nowrap; color: var(--gold); }
+  .product:has(input:checked) { border-color: var(--accent); outline: 1px solid var(--accent); background: #1c1220; box-shadow: 0 0 20px rgba(192,40,58,.2); }
   .birth { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; }
   .birth2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .birth > *, .birth2 > * { min-width: 0; }
   .product > span:nth-child(2) { min-width: 0; }
   fieldset { border: 0; padding: 0; margin: 0; }
-  legend { font: 700 18px "Noto Serif KR", serif; margin: 26px 0 4px; padding: 0; }
+  legend { font: 400 21px "Song Myung", serif; margin: 30px 0 4px; padding: 0; color: var(--gold); }
+  legend small { font: 400 13px "Noto Sans KR", sans-serif; color: var(--ink-3); margin-left: 6px; }
   details { margin-top: 6px; font-size: 13px; color: var(--ink-3); }
   details summary { cursor: pointer; }
   .tier { font: 700 13px "Noto Sans KR", sans-serif; color: var(--gold); margin: 14px 0 2px; letter-spacing: .05em; }
   .tier:first-child { margin-top: 0; }
   .pages { display: inline-block; font-size: 12px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 99px; padding: 0 7px; margin-left: 4px; }
+  .apply input, .apply select, .apply textarea { background: #0e0b13; border-color: var(--line); color: var(--ink); }
+  .apply .seg span { background: #0e0b13; }
+  #submit { font: 400 20px "Song Myung", serif; letter-spacing: .05em; border-radius: 4px; background: linear-gradient(180deg, #c0283a, #8e1625); }
+  .freebox { margin: 14px 0 0; padding: 10px 14px; border: 1px solid rgba(217,178,106,.45); border-radius: 8px; color: var(--gold);
+    background: rgba(217,178,106,.07); font-size: 15px; }
+  body.no-free .free-only { display: none; }
   .done-box { text-align: center; }
-  .bankline { font: 700 20px "Noto Serif KR", serif; padding: 14px; border: 1px dashed var(--gold); border-radius: 12px; margin: 14px 0; user-select: all; }
+  .done-box .line { margin-top: 10px; }
+  .bankline { font: 700 20px "Noto Serif KR", serif; padding: 14px; border: 1px dashed var(--gold); border-radius: 10px; margin: 14px 0; user-select: all; color: var(--gold); }
+  .apply .foot { color: var(--ink-3); border-top-color: var(--line); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .art img, .big, .line .c { transition: none !important; opacity: 1 !important; transform: none !important; }
+    .smoke, .ember { display: none; }
+  }
 </style>
 </head>
 <body class="apply">
@@ -40,19 +125,56 @@
   <span class="brand"><span class="seal">運</span>운결</span>
 </header>
 <main id="app">
-  <div class="hero">
-    <span class="eyebrow">사주로 보는 커리어·관계 코칭</span>
-    <h1>지금 고민,<br>사주로 풀어드려요</h1>
-    <p class="lead">생년월일과 지금의 고민을 보내주시면,<br>타고난 기운을 바탕으로 한 맞춤 풀이를 <b>PDF로</b> 보내드립니다.</p>
-  </div>
+  <section class="toon" aria-label="운결 도령의 이야기">
+    <div class="skip"><a href="#form">바로 신청하기 ↓</a></div>
+
+    <div class="panel blank">
+      <div class="smoke"></div>
+      <div class="art moon"><img src="/img/dory.jpg" alt=""></div>
+      <p class="line" data-type>…또 한 명이 찾아왔군.</p>
+    </div>
+
+    <div class="panel">
+      <div class="art eyes"><img src="/img/dory.jpg" alt=""></div>
+      <p class="line bubble" data-type>너, 요즘 마음이 편하지 않지?</p>
+      <p class="line small" data-type>잠들기 전에 같은 생각이 자꾸 맴돌고.</p>
+    </div>
+
+    <div class="panel">
+      <div class="smoke"></div>
+      <div class="art hand"><img src="/img/dory.jpg" alt=""></div>
+      <p class="line bubble" data-type>숨길 필요 없다.</p>
+      <p class="line small" data-type>네가 태어난 날에… 다 적혀 있으니까.</p>
+    </div>
+
+    <div class="panel reveal">
+      <div class="art"><img src="/img/dory.jpg" alt="운결 도령"></div>
+      <div class="big">너의 인생이<br>보인다.</div>
+    </div>
+
+    <div class="panel blank cta">
+      <div class="smoke"></div>
+      <p class="line" data-type>일, 사랑, 돈, 그리고 올해의 흐름까지.</p>
+      <p class="line" data-type>알고 싶다면… 태어난 날을 적어라.</p>
+      <p class="line small free-only" data-type>처음 온 자의 첫 풀이는… 내가 그냥 봐주지.</p>
+      <a class="btn" href="#form">운명 들여다보기</a>
+      <p class="proof"><b class="free-only" style="color:var(--gold)">첫 풀이 1회 무료 · </b>생년월일과 고민을 보내면, 맞춤 풀이를 PDF로 보내준다.</p>
+    </div>
+  </section>
+
   <form id="form" class="card" novalidate>
+    <div class="form-head">
+      <span class="muted small">운결 도령의 사주 풀이</span>
+      <h2>네 이야기를 들려다오</h2>
+      <p class="freebox free-only">✦ 처음이라면 <b>어떤 풀이든 1회 무료</b> ✦<br><span class="muted small">이메일·이름·생년월일 기준 1인 1회. 두 번째부터는 표시된 가격이에요.</span></p>
+    </div>
     <fieldset>
-      <legend>1. 받고 싶은 풀이</legend>
+      <legend>무엇을 들여다볼까 <small>받고 싶은 풀이</small></legend>
       <div class="products" id="products"></div>
     </fieldset>
 
     <fieldset>
-      <legend>2. 내 정보</legend>
+      <legend>너는 누구냐 <small>내 정보</small></legend>
       <label for="name">이름 <span class="muted small">(입금자 이름과 같게)</span></label>
       <input id="name" autocomplete="name" maxlength="20" required>
       <label for="email">풀이를 받을 이메일</label>
@@ -63,7 +185,7 @@
     <fieldset id="partner-box" hidden></fieldset>
 
     <fieldset>
-      <legend>3. 지금의 고민</legend>
+      <legend>무엇이 마음에 걸리느냐 <small>지금의 고민</small></legend>
       <label for="concern">가장 궁금한 분야</label>
       <select id="concern"></select>
       <label for="job">하는 일 / 요즘 상태 <span class="muted small">(선택)</span></label>
@@ -75,17 +197,17 @@
     </fieldset>
 
     <fieldset>
-      <legend>4. 동의</legend>
+      <legend>약속 <small>동의</small></legend>
       <label class="check"><input type="checkbox" id="agree"> <span>[필수] 개인정보 수집·이용에 동의합니다.</span></label>
       <details><summary>자세히 보기</summary>
-        수집 항목: 이름, 이메일, 생년월일·태어난 시간·성별, 고민 내용(궁합은 상대방 생년월일 포함)<br>
+        수집 항목: 이름, 이메일, 생년월일·태어난 시간·성별, 고민 내용(궁합은 상대방, 반려동물 운세는 반려동물의 생일 포함)<br>
         이용 목적: 사주 풀이 작성과 결과 발송, 입금 확인 및 문의 응대<br>
         보관 기간: 풀이 발송 후 1년 뒤 파기 (입금 기록은 관련 법에 따라 5년 보관)<br>
         동의하지 않으실 수 있으나, 이 경우 풀이를 제공할 수 없습니다.
       </details>
       <label class="check"><input type="checkbox" id="agree_ai"> <span>[필수] 풀이 작성을 위한 개인정보 국외 이전(AI 처리)에 동의합니다.</span></label>
       <details><summary>자세히 보기</summary>
-        풀이 초안 작성에 AI(구글 Gemini 등, 미국 소재)를 사용하며, 이때 생년월일·고민 내용이 전송됩니다.
+        풀이 초안 작성에 AI(OpenAI ChatGPT, 구글 Gemini 등, 미국 소재)를 사용하며, 이때 이름·생년월일·고민 내용이 전송됩니다.
         이메일은 전송하지 않습니다. 작성된 초안은 운결이 직접 검토·수정해 보내드립니다.
       </details>
     </fieldset>
@@ -97,7 +219,7 @@
   </form>
 </main>
 <footer class="foot">
-  <p>운결은 명리학을 바탕으로 자기 이해와 방향 설정을 돕는 서비스이며, 의료·법률·투자 자문을 대신하지 않습니다.</p>
+  <p>운결은 명리학을 바탕으로 자기 이해와 방향 설정을 돕는 서비스이며, 의료·법률·투자 자문을 대신하지 않습니다. 등장인물은 AI로 만든 가상 캐릭터입니다.</p>
   <p>마음이 많이 힘드시다면 자살예방상담전화 109 · 정신건강위기상담 1577-0199</p>
 </footer>
 <script src="/form.js"></script>
