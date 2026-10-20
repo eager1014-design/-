@@ -798,8 +798,7 @@ class Handler(BaseHTTPRequestHandler):
         prod = orders.PRODUCTS[o["product"]]
         bank = orders.BANK_ACCOUNT or "(입금 계좌는 곧 메일로 안내해 드립니다)"
         my_link = f"{PUBLIC_URL}/?ref={referral.code_for(email)}"
-        invite_note = (f"\n\n────────\n친구에게 이 링크를 보내 주세요. 친구도 첫 풀이가 무료이고,\n"
-                  f"친구가 신청하면 {o['name']}님께 무료 풀이 한 번이 더 생겨요.\n{my_link}")
+        invite_note = (f"\n\n────────\n친구에게 운결을 알려 주세요. 친구도 자기 사주를 사이트에서 바로 무료로 볼 수 있어요.\n{PUBLIC_URL}")
         # 친구 초대로 온 손님이면, 링크를 보낸 사람에게 무료 1회
         ref_owner = referral.reward(b.get("ref"), email, is_new) if b.get("ref") else None
         if ref_owner:
@@ -1110,8 +1109,7 @@ class Handler(BaseHTTPRequestHandler):
                           f"신청해 주신 {label} 결과를 정성껏 작성해 PDF로 첨부해 드립니다.\n"
                           "천천히 읽어 보시고, 궁금한 점이 있으면 이 메일에 답장 주세요.\n\n"
                           "사주는 정해진 운명이 아니라 타고난 기운의 지도예요. 오늘의 선택에 작은 힌트가 되길 바랍니다.\n\n"
-                          f"친구에게 이 링크를 보내면, 친구는 첫 풀이가 무료이고 {o['name']}님께는 무료 풀이 한 번이 더 생겨요.\n"
-                          f"{PUBLIC_URL}/?ref={referral.code_for(o['email'])}\n\n"
+                          f"친구에게 운결을 알려 주세요. 친구도 자기 사주를 사이트에서 바로 볼 수 있어요.\n{PUBLIC_URL}\n\n"
                           f"운결 드림\n{PUBLIC_URL}", attachments=[(name, data, "application/pdf")])
         if not ok_:
             return self.error("메일 발송에 실패했습니다. 메일 설정(SMTP)과 손님 이메일 주소를 확인해 주세요.", 502)

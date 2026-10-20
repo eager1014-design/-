@@ -3,7 +3,8 @@
 실행:
   1) 시험 서버 켜기:
      env AI_PROVIDERS=none SAJU_DB=.tmp/sales_test.db PORT=8767 ADMIN_EMAIL=boss@test.com \\
-         ADMIN_API_KEY=testkey-0123456789abcdefghijklmn BANK_ACCOUNT=테스트은행 MAIL_RELAY=1 APPLY_LIMIT=200 python3 saju/server.py
+         ADMIN_API_KEY=testkey-0123456789abcdefghijklmn BANK_ACCOUNT=테스트은행 MAIL_RELAY=1 APPLY_LIMIT=200 FREE_FIRST=1 REF_FREE=1 python3 saju/server.py
+  (FREE_FIRST·REF_FREE 는 꺼져 있는 게 기본이지만, 다시 켤 때를 대비해 시험에서는 켜서 확인)
   2) python3 saju/tests/test_sales.py     (기본 주소 http://localhost:8767, 시험 DB는 매번 새로)
 확인하는 것: 신청서 → 관리 화면(입금·풀이·수정) → PDF·메일 → 홍보 센터 → 맥북 일꾼 대기열 → 보안(차단)
 """

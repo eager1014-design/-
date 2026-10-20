@@ -3,6 +3,7 @@
 
 막는 것: 자기 링크로 자기 신청(같은 이메일), 이미 왔던 사람(이메일·이름+생년월일)이 친구로 오는 것.
 """
+import os
 import secrets
 from datetime import datetime
 
@@ -48,7 +49,10 @@ def use_credit(email):
 
 
 def reward(code, new_email, is_new_person):
-    """친구가 초대 링크로 신청했을 때. 링크 주인의 이메일을 돌려준다 (보상이 없으면 None)."""
+    """친구가 초대 링크로 신청했을 때. 링크 주인의 이메일을 돌려준다 (보상이 없으면 None).
+    PDF는 언제나 유료라서 '무료 1회' 보상은 기본으로 꺼져 있다 (REF_FREE=1 로만 켬). 평생 종합 친구 할인은 invite.py"""
+    if os.environ.get("REF_FREE") != "1":
+        return None
     owner = owner_of(code)
     if not owner or owner == new_email.lower() or not is_new_person:
         return None

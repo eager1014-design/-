@@ -40,7 +40,8 @@ def is_admin(user):
 
 
 # 첫 풀이 1회 무료 (손님 끌어들이기). 끄려면 saju/.env 에 FREE_FIRST=0
-FREE_FIRST = os.environ.get("FREE_FIRST", "1") != "0"
+# 사장님 결정(2026-10-20 밤): PDF는 언제나 유료. 무료는 사이트에서 보여주는 짧은 풀이뿐 → 기본 꺼짐 (FREE_FIRST=1 로만 켬)
+FREE_FIRST = os.environ.get("FREE_FIRST", "0") == "1"
 
 
 def free_eligible(name, email, birth):
