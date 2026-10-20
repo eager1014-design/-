@@ -375,6 +375,8 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", "/api/admin/order/generate"): self.api_admin_generate,
             ("POST", "/api/admin/order/save"): self.api_admin_save,
             ("GET", "/api/admin/jobs"): self.api_admin_jobs,
+            ("GET", "/api/admin/outbox"): self.api_admin_outbox,
+            ("POST", "/api/admin/outbox/done"): self.api_admin_outbox_done,
             ("GET", "/api/admin/subs"): self.api_admin_subs,
             ("POST", "/api/admin/subs/update"): self.api_admin_subs_update,
             ("POST", "/api/admin/subs/send-now"): self.api_admin_subs_send_now,
@@ -746,6 +748,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"orders": orders.listing(q.get("status") or None), "status": orders.STATUS,
                             "products": orders.PRODUCTS, "ai": [llm.label(n) for n in llm.available()],
                             "mail_mode": mailer.MODE, "bank": orders.BANK_ACCOUNT, "mac_online": mac_online(), "started_at": STARTED_AT,
+                            "outbox_waiting": db.one("SELECT COUNT(*) c FROM outbox WHERE sent_at IS NULL AND tries < 5")["c"],
+                            "outbox_failed": db.one("SELECT COUNT(*) c FROM outbox WHERE sent_at IS NULL AND tries >= 5")["c"],
                             "concerns": {k: v["label"] for k, v in K.CONCERNS.items()}, "cities": list(CITIES.keys())})
 
     def order_or_404(self, oid):
@@ -828,6 +832,29 @@ class Handler(BaseHTTPRequestHandler):
 
         threading.Thread(target=job, daemon=True).start()
         self.send_json({"ok": True, "started": True, "order": orders.get(o["id"])})
+
+    # -- 메일 보관함: 맥북 일꾼이 가져가 Gmail로 보낸다 (서버는 메일 포트가 막혀 있음)
+    def api_admin_outbox(self, q):
+        if not self.need_admin():
+            return
+        promo.kv_set("mac_seen", promo.now())
+        rows = db.all_("SELECT * FROM outbox WHERE sent_at IS NULL AND tries < 5 ORDER BY id LIMIT 5")
+        for r in rows:
+            r["files"] = json.loads(r["files"] or "[]")
+        self.send_json({"mails": rows})
+
+    def api_admin_outbox_done(self, b):
+        if not self.need_admin():
+            return
+        try:
+            mid = int(b.get("id"))
+        except (TypeError, ValueError):
+            return self.error("메일을 찾을 수 없습니다.", 404)
+        if b.get("ok"):
+            db.run("UPDATE outbox SET sent_at=datetime('now','localtime'), error=NULL WHERE id=?", mid)
+        else:
+            db.run("UPDATE outbox SET tries=tries+1, error=? WHERE id=?", str(b.get("error") or "")[:300], mid)
+        self.send_json({"ok": True})
 
     # -- 월 구독 (매일 아침 오늘의 흐름)
     def api_admin_subs(self, q):

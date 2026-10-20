@@ -1,9 +1,14 @@
 """이메일 발송 (표준 smtplib).
 
-SMTP_HOST / SMTP_USER / SMTP_PASS 가 설정되어 있으면 실제로 보내고,
-없으면 '모의 모드'로 서버 로그에 내용을 출력한다(결제 mock 과 같은 방식).
+세 가지 방식 (MODE):
+  smtp  : SMTP_HOST / SMTP_USER / SMTP_PASS 가 있으면 직접 보낸다 (맥북에서 Gmail 앱 비밀번호로)
+  relay : 인터넷 서버(Railway Hobby)는 메일 포트가 막혀 있어서, 보낼 메일을 DB 보관함(outbox)에 넣고
+          맥북 일꾼(tools/saju_worker.py)이 가져가 사장님 Gmail로 대신 보낸다. 공개 주소 + SMTP 없음이면 자동.
+  mock  : 내 컴퓨터 시험용. 서버 로그에만 출력
 예) Gmail: SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, SMTP_USER=주소, SMTP_PASS=앱 비밀번호
 """
+import base64
+import json
 import os
 import smtplib
 import ssl
@@ -15,14 +20,27 @@ PORT = int(os.environ.get("SMTP_PORT", "587"))
 USER = os.environ.get("SMTP_USER", "")
 PASS = os.environ.get("SMTP_PASS", "")
 FROM = os.environ.get("SMTP_FROM", USER)
-MODE = "smtp" if HOST and USER and PASS else "mock"
+_PUBLIC = os.environ.get("PUBLIC_URL", "http://localhost").split("//")[-1].split(":")[0].split("/")[0] not in ("localhost", "127.0.0.1")
+MODE = "smtp" if HOST and USER and PASS else ("relay" if _PUBLIC or os.environ.get("MAIL_RELAY") == "1" else "mock")
+
+
+def queue(to, subject, text, attachments=None):
+    """맥북이 대신 보내도록 보관함에 넣는다."""
+    import db  # 맥북 일꾼처럼 DB 없이 mailer 만 쓰는 곳에서도 불러올 수 있게
+    files = [{"name": n, "type": t, "data": base64.b64encode(d).decode()} for n, d, t in attachments or []]
+    db.run("INSERT INTO outbox(to_addr,subject,body,files,created_at) VALUES (?,?,?,?,datetime('now','localtime'))",
+           to, subject, text, json.dumps(files, ensure_ascii=False))
+    print(f"[메일] 맥북 발송 대기: {to} / {subject}")
+    return True
 
 
 def send(to, subject, text, attachments=None):
     """성공 여부(bool). 실패해도 예외를 밖으로 던지지 않는다.
     attachments: [(파일이름, 바이트, "application/pdf"), ...]"""
+    if MODE == "relay":
+        return queue(to, subject, text, attachments)
     if MODE == "mock":
-        public = os.environ.get("PUBLIC_URL", "http://localhost").split("//")[-1].split(":")[0].split("/")[0] not in ("localhost", "127.0.0.1")
+        public = _PUBLIC
         # 공개 서버 로그에 비밀번호 재설정 링크가 남으면 위험하므로 본문은 내 컴퓨터에서만 출력
         files = "".join(f"\n첨부: {name} ({len(data):,}바이트)" for name, data, _ in attachments or [])
         print(f"\n[메일 모의 발송] 받는 사람: {to}\n제목: {subject}\n" + ("(공개 서버라 본문 생략)" if public else text) + files + "\n")

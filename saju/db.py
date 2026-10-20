@@ -101,6 +101,17 @@ CREATE TABLE IF NOT EXISTS promo_posts (
   posted_at TEXT
 );
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS outbox (    -- 맥북이 대신 보낼 메일 (mailer.MODE == relay)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  to_addr TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  files TEXT,                       -- JSON [{name, type, data(base64)}]
+  created_at TEXT NOT NULL,
+  sent_at TEXT,
+  tries INTEGER DEFAULT 0,
+  error TEXT
+);
 CREATE TABLE IF NOT EXISTS subs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT NOT NULL,

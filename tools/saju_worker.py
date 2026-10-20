@@ -1,4 +1,5 @@
-"""맥북 일꾼: 관리 화면에서 '맥북 챗GPT로 만들기'를 누른 주문을 가져가, 코덱스(챗GPT 구독)로 풀이를 써서 사이트에 올린다.
+"""맥북 일꾼: (1) '맥북 챗GPT로 만들기' 주문을 코덱스(챗GPT 구독)로 써서 올리고,
+(2) 사이트가 보관함에 넣어둔 메일(PDF·구독·안내)을 사장님 Gmail로 대신 보낸다 (서버는 메일 포트가 막혀 있음).
 
 맥북이 켜져 있는 동안 15초마다 운결 서버에 '맡길 일 있어?'를 묻는다 (launchd 로 항상 실행: tools/saju_worker.plist).
 풀이는 서버와 같은 코드(saju/longform.py)로 쓰고, AI만 맥북의 코덱스를 쓴다 → 추가 비용 0원.
@@ -77,6 +78,26 @@ def work(order):
             pass
 
 
+_mail_warned = False
+
+
+def send_outbox():
+    """보관함 메일을 Gmail(SMTP)로 보낸다. 맥북에 Gmail 앱 비밀번호(saju/.env 의 SMTP_*)가 있어야 함."""
+    global _mail_warned
+    import base64
+    import mailer
+    if mailer.MODE != "smtp":
+        if not _mail_warned:
+            log("메일 보관함: Gmail 앱 비밀번호(SMTP_*)가 맥북에 없어서 아직 못 보냄")
+            _mail_warned = True
+        return
+    for m in server("GET", "/api/admin/outbox")["mails"]:
+        files = [(f["name"], base64.b64decode(f["data"]), f["type"]) for f in m.get("files") or []]
+        ok = mailer.send(m["to_addr"], m["subject"], m["body"], attachments=files)
+        server("POST", "/api/admin/outbox/done", {"id": m["id"], "ok": ok, "error": "" if ok else "Gmail 발송 실패 (맥북 로그 확인)"})
+        log(f"메일 {'보냄' if ok else '실패'}: {m['to_addr']} / {m['subject']}")
+
+
 def main():
     load_env()
     sys.path.insert(0, os.path.join(ROOT, "saju"))
@@ -87,6 +108,7 @@ def main():
         try:
             for job in server("GET", "/api/admin/jobs")["jobs"]:
                 work(job)
+            send_outbox()
             if failing:
                 log("서버 연결 다시 됨")
             failing = False

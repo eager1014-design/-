@@ -3,7 +3,7 @@
 실행:
   1) 시험 서버 켜기:
      env AI_PROVIDERS=none SAJU_DB=.tmp/sales_test.db PORT=8767 ADMIN_EMAIL=boss@test.com \\
-         ADMIN_API_KEY=testkey-0123456789abcdefghijklmn BANK_ACCOUNT=테스트은행 python3 saju/server.py
+         ADMIN_API_KEY=testkey-0123456789abcdefghijklmn BANK_ACCOUNT=테스트은행 MAIL_RELAY=1 python3 saju/server.py
   2) python3 saju/tests/test_sales.py     (기본 주소 http://localhost:8767, 시험 DB는 매번 새로)
 확인하는 것: 신청서 → 관리 화면(입금·풀이·수정) → PDF·메일 → 홍보 센터 → 맥북 일꾼 대기열 → 보안(차단)
 """
@@ -159,6 +159,19 @@ def main():
     st, body = guest(f"/stop?t={tok}", raw=True)
     ok(st == 200 and "보내지 않을게요".encode() in body, "손님 '그만 받기'")
     ok(next(x for x in boss("/api/admin/subs")[1]["subs"] if x["id"] == sub["id"])["status"] == "stopped", "그만 받기 → 상태 반영")
+    # 메일 보관함 (서버 대신 맥북이 Gmail로 보냄)
+    mails = []
+    for _ in range(20):  # 맥북처럼 5통씩 가져가서 '보냄' 처리
+        batch = machine("/api/admin/outbox")[1]["mails"]
+        if not batch:
+            break
+        mails += batch
+        for m in batch:
+            machine("/api/admin/outbox/done", {"id": m["id"], "ok": True})
+    pdf_mail = next((m for m in mails if m["files"]), None)
+    ok(mails and pdf_mail and pdf_mail["files"][0]["name"].endswith(".pdf"), f"보낼 메일 보관함 ({len(mails)}통, PDF 첨부 포함)")
+    ok(machine("/api/admin/outbox")[1]["mails"] == [], "보낸 메일은 보관함에서 빠짐")
+    ok(boss("/api/admin/orders")[1]["mail_mode"] == "relay", "관리 화면: 맥북 대신 발송 방식")
     # 비상: 사장님 비밀번호 재설정 링크 (기계 열쇠로만)
     ok(guest("/api/admin/owner-reset", {"email": "boss@test.com"})[0] == 404, "열쇠 없이 비번 재설정 링크 차단")
     ok(machine("/api/admin/owner-reset", {"email": "stranger@test.com"})[0] == 404, "사장님 아닌 계정은 재설정 불가")

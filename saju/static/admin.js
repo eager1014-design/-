@@ -132,7 +132,10 @@ async function renderList(status) {
 function setupNotes(r) {
   const notes = [];
   if (!r.bank) notes.push("입금 계좌(BANK_ACCOUNT)가 아직 설정되지 않았어요. 손님에게 계좌 대신 '메일로 안내'라고 보입니다.");
-  if (r.mail_mode !== "smtp") notes.push("메일 설정(SMTP)이 아직 없어서, 메일은 실제로 나가지 않고 서버 기록에만 남습니다.");
+  if (r.mail_mode === "relay") {
+    if (r.outbox_waiting) notes.push(`보낼 메일 ${r.outbox_waiting}통이 맥북을 기다리는 중이에요. ${r.mac_online ? "곧 나가요." : "맥북을 켜면 사장님 Gmail로 나가요."}`);
+    if (r.outbox_failed) notes.push(`메일 ${r.outbox_failed}통이 계속 실패했어요. 맥북의 Gmail 앱 비밀번호를 확인해 주세요.`);
+  } else if (r.mail_mode !== "smtp") notes.push("메일 설정이 없어서, 메일은 실제로 나가지 않고 서버 기록에만 남습니다.");
   if (!r.ai.length) notes.push("AI가 꺼져 있어요. '풀이 만들기'는 기본(규칙) 풀이로 만들어집니다.");
   return notes.map((n) => `<p class="note">⚠️ ${esc(n)}</p>`).join("");
 }
@@ -224,14 +227,15 @@ async function renderOrder(id) {
     };
     $("#send").onclick = async () => {
       const again = o.status === "sent";
-      const mock = CFG.mail_mode !== "smtp" ? "\n\n⚠️ 메일 설정이 아직 없어 실제로는 보내지지 않습니다(기록만 남음)." : "";
+      const mock = CFG.mail_mode === "relay" ? (CFG.mac_online ? "" : "\n\n💻 맥북이 꺼져 있어요. 맥북을 켜면 그때 나갑니다.")
+        : CFG.mail_mode !== "smtp" ? "\n\n⚠️ 메일 설정이 아직 없어 실제로는 보내지지 않습니다(기록만 남음)." : "";
       if (!confirm(`${o.name}님(${o.email})에게 PDF를 ${again ? "다시 " : ""}보낼까요?${mock}`)) return;
       const b = $("#send");
       b.disabled = true; b.textContent = "보내는 중…";
       try {
         await save();
         await api("/api/admin/order/send", { id: o.id, resend: again });
-        toast(CFG.mail_mode === "smtp" ? "보냈어요!" : "기록만 남겼어요 (메일 설정 필요)");
+        toast(CFG.mail_mode === "smtp" ? "보냈어요!" : CFG.mail_mode === "relay" ? "맥북이 Gmail로 보내요" : "기록만 남겼어요 (메일 설정 필요)");
         renderOrder(o.id);
       } catch (x) { $("#oerr").textContent = x.message; b.disabled = false; b.textContent = "다시 시도"; }
     };
@@ -317,7 +321,8 @@ async function renderSubs() {
   app.innerHTML = `
     <div class="topline"><h2 style="margin:0">매일 아침 구독 <span class="muted small">받는 중 ${r.active}명</span></h2>
       <button class="btn ghost" id="sendnow">오늘 것 지금 보내기</button></div>
-    ${r.mail_mode !== "smtp" ? `<p class="note">⚠️ 메일 설정(SMTP)이 없어서 아침 메일이 실제로 나가지 않아요. Gmail 앱 비밀번호를 넣어야 구독이 동작합니다.</p>` : ""}
+    ${r.mail_mode === "relay" ? `<p class="note">💻 아침 메일은 맥북이 사장님 Gmail로 보내요. 맥북이 꺼져 있으면 켜는 순간 나갑니다.</p>`
+      : r.mail_mode !== "smtp" ? `<p class="note">⚠️ 메일 설정이 없어서 아침 메일이 실제로 나가지 않아요.</p>` : ""}
     <p class="muted small">매일 아침 ${r.send_hour}시 이후에 자동 발송 · 손님이 신청 → 신청 목록에서 '입금 확인' → 30일 시작/연장 · 끝나기 3일 전부터 메일에 연장 안내</p>
     <div class="card" style="padding:8px 12px">
       ${r.subs.length ? `<table><thead><tr><th>상태</th><th>이름</th><th>기간</th><th class="hide-sm">보낸 메일</th><th></th></tr></thead><tbody>
