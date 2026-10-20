@@ -37,6 +37,7 @@ import orders
 import products
 import promo
 import quick
+import referral
 import retention
 import subs
 import threads
@@ -728,7 +729,7 @@ class Handler(BaseHTTPRequestHandler):
     def api_apply(self, b):
         if not b.get("agree") or not b.get("agree_ai"):
             return self.error("개인정보 수집·이용과 AI 풀이를 위한 국외 이전에 모두 동의해 주세요.")
-        if too_many("apply:" + self.client_ip(), 10, 3600):
+        if too_many("apply:" + self.client_ip(), int(os.environ.get("APPLY_LIMIT", "10")), 3600):
             return self.error("신청이 너무 많습니다. 잠시 후 다시 시도해 주세요.", 429)
         try:
             form = self.read_order_form(b)
@@ -736,30 +737,45 @@ class Handler(BaseHTTPRequestHandler):
             return self.error(str(e))
         src = str(b.get("src") or "").strip().lower()[:20]
         product, name, email, birth = form[:4]
-        free = not orders.PRODUCTS[product].get("subscription") and orders.free_eligible(name, email, birth)
+        is_sub = bool(orders.PRODUCTS[product].get("subscription"))
+        is_new = orders.free_eligible(name, email, birth)  # 처음 온 사람인가 (첫 무료·초대 보상 기준)
+        # 무료: 첫 1회, 아니면 친구 초대로 쌓아둔 무료가 있으면 그걸 쓴다
+        free = False if is_sub else ("first" if is_new else ("ref" if referral.use_credit(email) else False))
         before = retention.visits(email)  # 예전에 온 적 있는 손님인가
         o = orders.create(*form, source="apply", ip=self.client_ip(), free=free, marketing=bool(b.get("marketing")),
                           channel=src if re.match(r"^[a-z0-9_-]+$", src) else None)
         prod = orders.PRODUCTS[o["product"]]
         bank = orders.BANK_ACCOUNT or "(입금 계좌는 곧 메일로 안내해 드립니다)"
+        my_link = f"{PUBLIC_URL}/?ref={referral.code_for(email)}"
+        invite = (f"\n\n────────\n친구에게 이 링크를 보내 주세요. 친구도 첫 풀이가 무료이고,\n"
+                  f"친구가 신청하면 {o['name']}님께 무료 풀이 한 번이 더 생겨요.\n{my_link}")
+        # 친구 초대로 온 손님이면, 링크를 보낸 사람에게 무료 1회
+        ref_owner = referral.reward(b.get("ref"), email, is_new) if b.get("ref") else None
+        if ref_owner:
+            db.run("UPDATE orders SET ref_from=? WHERE id=?", ref_owner, o["id"])
+            mailer.send(ref_owner, "[운결] …네 친구가 왔다. 무료 풀이 한 번이 생겼다",
+                        f"네가 보낸 링크로 친구가 운결에 왔다.\n\n약속대로 무료 풀이 한 번을 쌓아두었다 (지금 {referral.credits(ref_owner)}회).\n"
+                        f"다음에 이 이메일로 신청하면 자동으로 무료가 된다.\n{PUBLIC_URL}/?p=love")
         if free:
-            mailer.send(o["email"], f"[운결] 첫 풀이 무료 신청이 접수되었습니다 ({o['code']})",
+            why = "친구 초대로 받은 무료" if free == "ref" else "첫 1회 무료"
+            mailer.send(o["email"], f"[운결] 무료 풀이 신청이 접수되었습니다 ({o['code']})",
                         f"{o['name']}님, 운결에 사주 풀이를 신청해 주셔서 감사합니다.\n\n"
-                        f"신청번호: {o['code']}\n상품: {prod['label']} (첫 1회 무료)\n\n"
-                        "입금하실 필요 없어요. 풀이를 정성껏 작성해 1~2일 안에 이 메일 주소로 PDF로 보내드립니다.")
+                        f"신청번호: {o['code']}\n상품: {prod['label']} ({why})\n\n"
+                        "입금하실 필요 없어요. 풀이를 정성껏 작성해 1~2일 안에 이 메일 주소로 PDF로 보내드립니다." + invite)
         else:
             mailer.send(o["email"], f"[운결] {prod['label']} 신청이 접수되었습니다 ({o['code']})",
                         f"{o['name']}님, 운결에 사주 풀이를 신청해 주셔서 감사합니다.\n\n"
                         f"신청번호: {o['code']}\n상품: {prod['label']}\n금액: {o['amount']:,}원\n입금 계좌: {bank}\n"
                         f"입금자명: {o['name']}\n\n입금이 확인되면 풀이를 정성껏 작성해 이 메일 주소로 PDF로 보내드립니다.\n"
-                        "보통 입금 확인 후 1~2일 안에 받아보실 수 있어요.")
-        price = "무료(첫 1회)" if free else f"{o['amount']:,}원"
+                        "보통 입금 확인 후 1~2일 안에 받아보실 수 있어요." + invite)
+        price = {"first": "무료(첫 1회)", "ref": "무료(친구 초대)"}.get(free, f"{o['amount']:,}원")
         for admin_email in orders.ADMIN_EMAILS:
             mailer.send(admin_email, f"[운결] 새 신청 {o['code']} — {o['name']} / {prod['label']} {price}",
                         f"새 신청이 들어왔습니다.\n\n{o['name']} ({o['email']})\n{prod['label']} {price}\n"
                         f"관리 화면: {PUBLIC_URL}/admin")
         self.send_json({"ok": True, "code": o["code"], "amount": o["amount"], "product": prod["label"], "free": free, "key": o["product"],
-                        "returning": before,
+                        "returning": before, "free_kind": free or None, "my_link": my_link,
+                        "credits": referral.credits(email), "referred": bool(ref_owner),
                         "name": o["name"], "bank": orders.BANK_ACCOUNT})
 
     # -- 사장님 관리 화면
@@ -1037,6 +1053,8 @@ class Handler(BaseHTTPRequestHandler):
                           f"신청해 주신 {label} 결과를 정성껏 작성해 PDF로 첨부해 드립니다.\n"
                           "천천히 읽어 보시고, 궁금한 점이 있으면 이 메일에 답장 주세요.\n\n"
                           "사주는 정해진 운명이 아니라 타고난 기운의 지도예요. 오늘의 선택에 작은 힌트가 되길 바랍니다.\n\n"
+                          f"친구에게 이 링크를 보내면, 친구는 첫 풀이가 무료이고 {o['name']}님께는 무료 풀이 한 번이 더 생겨요.\n"
+                          f"{PUBLIC_URL}/?ref={referral.code_for(o['email'])}\n\n"
                           f"운결 드림\n{PUBLIC_URL}", attachments=[(name, data, "application/pdf")])
         if not ok_:
             return self.error("메일 발송에 실패했습니다. 메일 설정(SMTP)과 손님 이메일 주소를 확인해 주세요.", 502)

@@ -3,7 +3,7 @@
 실행:
   1) 시험 서버 켜기:
      env AI_PROVIDERS=none SAJU_DB=.tmp/sales_test.db PORT=8767 ADMIN_EMAIL=boss@test.com \\
-         ADMIN_API_KEY=testkey-0123456789abcdefghijklmn BANK_ACCOUNT=테스트은행 MAIL_RELAY=1 python3 saju/server.py
+         ADMIN_API_KEY=testkey-0123456789abcdefghijklmn BANK_ACCOUNT=테스트은행 MAIL_RELAY=1 APPLY_LIMIT=200 python3 saju/server.py
   2) python3 saju/tests/test_sales.py     (기본 주소 http://localhost:8767, 시험 DB는 매번 새로)
 확인하는 것: 신청서 → 관리 화면(입금·풀이·수정) → PDF·메일 → 홍보 센터 → 맥북 일꾼 대기열 → 보안(차단)
 """
@@ -203,6 +203,23 @@ def main():
     st, body = guest(link, raw=True)
     ok(st == 200 and "광고 메일을 더 보내지 않을게요".encode() in body, "광고 수신거부 링크")
     ok(boss("/api/admin/retention/run", {})[1]["followups"] == 0, "안부 메일은 한 번만")
+    # 친구 초대: 내 링크로 처음 온 친구가 신청하면 나에게 무료 1회, 다음 신청이 무료
+    st, r = apply(guest, "love", "초대자")
+    ref = r["my_link"].split("ref=")[1]
+    ok(r["free"] and "ref=" in r["my_link"] and r["credits"] == 0, "신청하면 나만의 초대 링크")
+    st, r = apply(guest, "love", "친구1", ref=ref)
+    ok(r["free"] and r["referred"], "친구가 초대 링크로 처음 신청 → 친구도 무료")
+    st, r = apply(guest, "career", "초대자")
+    ok(r["free"] and r["free_kind"] == "ref" and r["credits"] == 0, "초대한 사람의 다음 신청은 무료(쌓인 1회 사용)")
+    st, r = apply(guest, "match", "초대자", partner={"name": "철수", "relation": "연인", "birth": dict(B, year=1993, gender="male")})
+    ok(not r["free"] and r["amount"] > 0, "무료를 다 쓰면 다시 유료")
+    st, r = apply(guest, "love", "초대자", ref=ref)
+    ok(not r["referred"], "자기 링크로 자기 신청은 보상 없음")
+    st, r = guest("/api/apply", {"product": "love", "name": "친구1", "email": "다른메일@test.com", "birth": B, "situation": SIT,
+                                 "agree": True, "agree_ai": True, "ref": ref})
+    ok(not r["referred"], "이미 왔던 사람(같은 이름+생년월일)은 보상 없음")
+    rows = boss("/api/admin/orders")[1]["orders"]
+    ok(any(o["free_kind"] == "ref" for o in rows) and any(o["ref_from"] for o in rows), "관리 목록에 초대 표시")
     # 비상: 사장님 비밀번호 재설정 링크 (기계 열쇠로만)
     ok(guest("/api/admin/owner-reset", {"email": "boss@test.com"})[0] == 404, "열쇠 없이 비번 재설정 링크 차단")
     ok(machine("/api/admin/owner-reset", {"email": "stranger@test.com"})[0] == 404, "사장님 아닌 계정은 재설정 불가")

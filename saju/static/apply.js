@@ -15,6 +15,24 @@ function onProduct() {
     : p ? `${won(window.PRODUCTS[p].price)} 신청하기` : "신청하기";
 }
 
+/* 친구 초대 코드: 링크(?ref=)로 들어오면 기억해 두었다가 신청할 때 함께 보낸다 */
+const REF = (() => {
+  const q = new URLSearchParams(location.search).get("ref");
+  try { if (q) localStorage.setItem("ungyeol_ref", q); return q || localStorage.getItem("ungyeol_ref") || ""; }
+  catch (e) { return q || ""; }
+})();
+
+function shareBox(r) {
+  return `<div class="sharebox">
+    <p class="line small">${r.free_kind === "ref" ? "친구 덕에 받은 무료를 썼다. " : ""}친구에게 이 링크를 보내라.</p>
+    <p class="muted small">친구도 첫 풀이가 무료, 친구가 신청하면 너에게 <b style="color:var(--gold)">무료 풀이 한 번</b>이 더 생긴다.${r.credits ? ` (지금 남은 무료 ${r.credits}회)` : ""}</p>
+    <div class="linkline" id="mylink">${esc(r.my_link)}</div>
+    <div class="done-actions">
+      <button class="btn ghost" id="copy-link">링크 복사</button>
+      ${navigator.share ? '<button class="btn" id="share-link">친구에게 보내기</button>' : ""}
+    </div></div>`;
+}
+
 function showDone(r) {
   $("#app").innerHTML = `
     <div class="card done-box">
@@ -36,6 +54,15 @@ function showDone(r) {
         : "입금이 확인되면 1~2일 안에 풀이를 PDF로 보내드립니다."}<br>
       메일이 안 보이면 스팸함도 확인해 주세요.</p>
     </div>`}`;
+  if (r.my_link) {
+    $(".done-box").insertAdjacentHTML("beforeend", shareBox(r));
+    $("#copy-link").onclick = async () => {
+      try { await navigator.clipboard.writeText(r.my_link); $("#copy-link").textContent = "복사했어요 ✓"; }
+      catch (e) { getSelection().selectAllChildren($("#mylink")); $("#copy-link").textContent = "길게 눌러 복사하세요"; }
+    };
+    $("#share-link")?.addEventListener("click", () => navigator.share({ title: "운결 · 너의 인생이 보인다",
+      text: "태어난 날만 넣으면 사주를 보여줘. 이 링크로 들어가면 첫 풀이 무료래.", url: r.my_link }).catch(() => {}));
+  }
   $(".done-box").insertAdjacentHTML("beforeend", `<div class="done-actions">
       <a class="btn ghost" href="/">처음으로</a>
       <a class="btn" href="/#form">다른 풀이도 보기</a></div>`);
@@ -84,7 +111,7 @@ async function init() {
     const body = {
       product, name: $("#name").value.trim(), email: $("#email").value.trim(), birth: readBirth("me"),
       situation: { concern: $("#concern").value, job: $("#job").value, story: $("#story").value, goal: $("#goal").value },
-      agree: $("#agree").checked, agree_ai: $("#agree_ai").checked, marketing: $("#marketing").checked,
+      agree: $("#agree").checked, agree_ai: $("#agree_ai").checked, marketing: $("#marketing").checked, ref: REF,
       src: new URLSearchParams(location.search).get("src") || "",  // 어느 홍보 채널에서 왔는지 (?src=threads)
     };
     if (window.PRODUCTS[product].partner) body.partner = { name: $("#p-name").value, relation: $("#p-rel").value, birth: readBirth("p") };
@@ -223,6 +250,10 @@ function enter(withSound) {
   };
 }
 
+if ($("#gate") && REF) {  // 친구가 보낸 링크로 온 손님
+  const sub = document.querySelector(".gate-sub.free-only");
+  if (sub) sub.textContent = "친구가 보낸 링크로 왔구나. 너의 첫 풀이도… 그냥 봐주지.";
+}
 if ($("#gate")) {
   $("#enter-sound").onclick = () => enter(true);
   $("#enter-quiet").onclick = () => enter(false);

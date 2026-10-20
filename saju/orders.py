@@ -69,6 +69,8 @@ def create(product, name, email, birth, partner, situation, source, ip=None, sta
                  status, source, ip, n if source == "apply" else None, n, n, n if status == "paid" else None, channel)
     if marketing:
         db.run("UPDATE orders SET marketing_ok=1 WHERE id=?", oid)
+    if free:
+        db.run("UPDATE orders SET free_kind=? WHERE id=?", free if isinstance(free, str) else "first", oid)
     return get(oid)
 
 
@@ -84,7 +86,7 @@ def get(oid):
 
 
 def listing(status=None):
-    sql = ("SELECT id,code,product,amount,name,email,status,source,channel,created_at,paid_at,sent_at,"
+    sql = ("SELECT id,code,product,amount,name,email,status,source,channel,created_at,paid_at,sent_at,free_kind,ref_from,"
            "(SELECT COUNT(*) FROM orders o2 WHERE o2.email=orders.email AND o2.status!='canceled' AND o2.id<=orders.id) visit FROM orders")
     rows = db.all_(sql + (" WHERE status=?" if status else "") + " ORDER BY id DESC LIMIT 300", *([status] if status else []))
     for r in rows:

@@ -101,6 +101,8 @@ CREATE TABLE IF NOT EXISTS promo_posts (
   posted_at TEXT
 );
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS ref_codes (code TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL);  -- 친구 초대 코드
+CREATE TABLE IF NOT EXISTS ref_credits (email TEXT PRIMARY KEY, credits INTEGER NOT NULL DEFAULT 0, earned INTEGER NOT NULL DEFAULT 0);  -- 초대로 받은 무료 횟수
 CREATE TABLE IF NOT EXISTS ad_optout (email TEXT PRIMARY KEY, at TEXT NOT NULL);  -- 광고 메일 수신거부
 CREATE TABLE IF NOT EXISTS outbox (    -- 맥북이 대신 보낼 메일 (mailer.MODE == relay)
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -164,6 +166,9 @@ def _migrate(c):
     if "stats_at" not in pcols:
         c.execute("ALTER TABLE promo_posts ADD COLUMN stats_at TEXT")
     ocols = {r[1] for r in c.execute("PRAGMA table_info(orders)")}
+    if "ref_from" not in ocols:
+        c.execute("ALTER TABLE orders ADD COLUMN ref_from TEXT")    # 이 손님을 초대한 사람 이메일
+        c.execute("ALTER TABLE orders ADD COLUMN free_kind TEXT")   # 무료 이유: first(첫 1회) | ref(친구 초대로 받은 무료)
     if "marketing_ok" not in ocols:
         c.execute("ALTER TABLE orders ADD COLUMN marketing_ok INTEGER DEFAULT 0")  # [선택] 소식 받기 동의
         c.execute("ALTER TABLE orders ADD COLUMN followup_at TEXT")                # 풀이 뒤 안부 메일 보낸 때
