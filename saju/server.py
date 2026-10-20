@@ -68,6 +68,7 @@ def _secret():
 
 
 SECRET = _secret()
+STARTED_AT = datetime.now().isoformat(timespec="seconds")  # 서버가 켜진 시각 (다시 배포됐는지 확인용)
 PENDING_BILLING = {}  # customerKey -> (user_id, plan, ts)
 
 
@@ -725,7 +726,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.need_admin():
             self.send_json({"orders": orders.listing(q.get("status") or None), "status": orders.STATUS,
                             "products": orders.PRODUCTS, "ai": [llm.label(n) for n in llm.available()],
-                            "mail_mode": mailer.MODE, "bank": orders.BANK_ACCOUNT, "mac_online": mac_online(),
+                            "mail_mode": mailer.MODE, "bank": orders.BANK_ACCOUNT, "mac_online": mac_online(), "started_at": STARTED_AT,
                             "concerns": {k: v["label"] for k, v in K.CONCERNS.items()}, "cities": list(CITIES.keys())})
 
     def order_or_404(self, oid):
