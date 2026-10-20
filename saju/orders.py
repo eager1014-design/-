@@ -56,7 +56,8 @@ def free_eligible(name, email, birth):
     return True
 
 
-def create(product, name, email, birth, partner, situation, source, ip=None, status="pending", channel=None, free=False):
+def create(product, name, email, birth, partner, situation, source, ip=None, status="pending", channel=None, free=False,
+           marketing=False):
     code = new_code()
     if free:
         status = "paid"  # 무료는 입금 확인이 필요 없음
@@ -66,6 +67,8 @@ def create(product, name, email, birth, partner, situation, source, ip=None, sta
                  code, product, 0 if free else PRODUCTS[product]["price"], name, email, json.dumps(birth, ensure_ascii=False),
                  json.dumps(partner, ensure_ascii=False) if partner else None, json.dumps(situation, ensure_ascii=False),
                  status, source, ip, n if source == "apply" else None, n, n, n if status == "paid" else None, channel)
+    if marketing:
+        db.run("UPDATE orders SET marketing_ok=1 WHERE id=?", oid)
     return get(oid)
 
 
@@ -81,7 +84,8 @@ def get(oid):
 
 
 def listing(status=None):
-    sql = "SELECT id,code,product,amount,name,email,status,source,channel,created_at,paid_at,sent_at FROM orders"
+    sql = ("SELECT id,code,product,amount,name,email,status,source,channel,created_at,paid_at,sent_at,"
+           "(SELECT COUNT(*) FROM orders o2 WHERE o2.email=orders.email AND o2.status!='canceled' AND o2.id<=orders.id) visit FROM orders")
     rows = db.all_(sql + (" WHERE status=?" if status else "") + " ORDER BY id DESC LIMIT 300", *([status] if status else []))
     for r in rows:
         r["product_label"] = PRODUCTS.get(r["product"], {}).get("label", r["product"])

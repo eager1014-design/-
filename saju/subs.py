@@ -148,6 +148,8 @@ def start_scheduler(chart_of_birth, public_url, interval=300):
             try:
                 if datetime.now().hour >= SEND_HOUR:
                     send_due(chart_of_birth, public_url)
+                import retention  # 손님이 다시 오게 하는 메일 (안부, 구독 복귀)
+                retention.run(public_url)
             except Exception as e:  # noqa
                 print("[구독] 발송 오류:", e)
             time.sleep(interval)

@@ -174,6 +174,30 @@ def main():
     ok(mails and pdf_mail and pdf_mail["files"][0]["name"].endswith(".pdf"), f"보낼 메일 보관함 ({len(mails)}통, PDF 첨부 포함)")
     ok(machine("/api/admin/outbox")[1]["mails"] == [], "보낸 메일은 보관함에서 빠짐")
     ok(boss("/api/admin/orders")[1]["mail_mode"] == "relay", "관리 화면: 맥북 대신 발송 방식")
+    # 다시 오게: 재방문 표시, 안부 메일(풀이 3일 뒤), 광고 동의·수신거부
+    st, r = apply(guest, "career", "단골", marketing=True)
+    st, r = apply(guest, "match", "단골", partner={"name": "철수", "relation": "연인", "birth": dict(B, year=1993, gender="male")})
+    ok(r["returning"] == 1, "두 번째 온 손님 알아봄")
+    rows = boss("/api/admin/orders")[1]["orders"]
+    ok(max(o["visit"] for o in rows if o["name"] == "단골") == 2, "관리 목록에 재방문 2번째")
+    import sqlite3
+    dbp = os.environ.get("SAJU_TEST_DB", ".tmp/sales_test.db")
+    first = min(o["id"] for o in rows if o["name"] == "단골")
+    con = sqlite3.connect(dbp)
+    con.execute("UPDATE orders SET status='sent', sent_at=datetime('now','-4 days') WHERE id=?", (first,)); con.commit()
+    for _ in range(20):  # 보관함 비우기
+        batch = machine("/api/admin/outbox")[1]["mails"]
+        if not batch: break
+        for m in batch: machine("/api/admin/outbox/done", {"id": m["id"], "ok": True})
+    st, r = boss("/api/admin/retention/run", {})
+    ok(r["followups"] >= 1, f"풀이 3일 뒤 안부 메일 ({r['followups']}통)")
+    mails = machine("/api/admin/outbox")[1]["mails"]
+    fm = next((m for m in mails if m["to_addr"] == "단골@test.com"), None)
+    ok(fm and fm["subject"].startswith("(광고)") and "수신거부" in fm["body"] and "p=daily" in fm["body"], "동의한 손님: (광고) + 구독 안내 + 수신거부")
+    link = fm["body"].split("수신거부: ")[1].strip().replace(BASE, "")
+    st, body = guest(link, raw=True)
+    ok(st == 200 and "광고 메일을 더 보내지 않을게요".encode() in body, "광고 수신거부 링크")
+    ok(boss("/api/admin/retention/run", {})[1]["followups"] == 0, "안부 메일은 한 번만")
     # 비상: 사장님 비밀번호 재설정 링크 (기계 열쇠로만)
     ok(guest("/api/admin/owner-reset", {"email": "boss@test.com"})[0] == 404, "열쇠 없이 비번 재설정 링크 차단")
     ok(machine("/api/admin/owner-reset", {"email": "stranger@test.com"})[0] == 404, "사장님 아닌 계정은 재설정 불가")

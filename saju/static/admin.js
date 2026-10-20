@@ -120,7 +120,7 @@ async function renderList(status) {
       ${r.orders.length ? `<table>
         <thead><tr><th>상태</th><th>이름</th><th>상품</th><th class="hide-sm">금액</th><th class="hide-sm">신청번호</th><th>신청 시각</th></tr></thead>
         <tbody>${r.orders.map((o) => `<tr data-id="${o.id}">
-          <td>${stBadge(o)}</td><td><b>${esc(o.name)}</b><br><span class="muted small">${esc(o.email)}</span></td>
+          <td>${stBadge(o)}</td><td><b>${esc(o.name)}</b>${o.visit > 1 ? ` <span class="badge">재방문 ${o.visit}번째</span>` : ""}<br><span class="muted small">${esc(o.email)}</span></td>
           <td>${esc(o.product_label)}</td><td class="hide-sm">${o.amount ? won(o.amount) : '<span class="badge">무료</span>'}</td><td class="hide-sm">${esc(o.code)}</td>
           <td class="small">${fmt(o.created_at)}<br><span class="muted">${o.source === "manual" ? "직접 입력" : o.channel ? (CH_LABEL[o.channel] || esc(o.channel)) + "에서" : "직접 방문"}</span></td></tr>`).join("")}</tbody>
       </table>` : `<p class="muted" style="padding:16px">아직 신청이 없습니다.</p>`}

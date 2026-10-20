@@ -35,6 +35,8 @@ def load_env():
     os.environ["AI_PROVIDERS"] = "codex,gemini"  # 맥북에서는 챗GPT 구독 먼저
     os.environ["AI_DAILY_LIMIT"] = "0"           # 맥북 쪽 하루 상한 계산 안 함
     os.environ.setdefault("SAJU_DB", os.path.join(ROOT, ".tmp", "worker.db"))  # 서버 DB와 섞이지 않게
+    if os.environ.get("SMTP_PASS"):
+        os.environ.setdefault("MAIL_MODE", "smtp")  # 일꾼은 진짜로 보내는 곳 (시험 서버 안전장치에 안 걸리게)
 
 
 def log(msg):

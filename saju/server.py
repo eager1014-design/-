@@ -36,6 +36,7 @@ import longform
 import orders
 import products
 import promo
+import retention
 import subs
 import threads
 from saju_engine import compute_chart, current_luck, year_months, compatibility, CITIES
@@ -303,6 +304,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.route_api("GET", path, q)
         if path == "/stop":
             return self.stop_page(q)
+        if path == "/stop-ads":
+            done = retention.opt_out(q.get("e"), q.get("t"))
+            return self.simple_page("광고 메일을 더 보내지 않을게요. 풀이·구독 메일은 그대로 받으실 수 있어요." if done
+                                    else "링크가 올바르지 않아요. 이 메일에 답장으로 알려주시면 직접 처리해 드릴게요.")
         if path == "/billing/success":
             return self.billing_success(q)
         if path == "/billing/fail":
@@ -380,6 +385,7 @@ class Handler(BaseHTTPRequestHandler):
             ("GET", "/api/admin/subs"): self.api_admin_subs,
             ("POST", "/api/admin/subs/update"): self.api_admin_subs_update,
             ("POST", "/api/admin/subs/send-now"): self.api_admin_subs_send_now,
+            ("POST", "/api/admin/retention/run"): self.api_admin_retention_run,
             ("POST", "/api/admin/owner-reset"): self.api_admin_owner_reset,
             ("POST", "/api/admin/jobs/update"): self.api_admin_job_update,
             ("GET", "/api/admin/order/pdf"): self.api_admin_pdf,
@@ -719,7 +725,8 @@ class Handler(BaseHTTPRequestHandler):
         src = str(b.get("src") or "").strip().lower()[:20]
         product, name, email, birth = form[:4]
         free = not orders.PRODUCTS[product].get("subscription") and orders.free_eligible(name, email, birth)
-        o = orders.create(*form, source="apply", ip=self.client_ip(), free=free,
+        before = retention.visits(email)  # 예전에 온 적 있는 손님인가
+        o = orders.create(*form, source="apply", ip=self.client_ip(), free=free, marketing=bool(b.get("marketing")),
                           channel=src if re.match(r"^[a-z0-9_-]+$", src) else None)
         prod = orders.PRODUCTS[o["product"]]
         bank = orders.BANK_ACCOUNT or "(입금 계좌는 곧 메일로 안내해 드립니다)"
@@ -740,6 +747,7 @@ class Handler(BaseHTTPRequestHandler):
                         f"새 신청이 들어왔습니다.\n\n{o['name']} ({o['email']})\n{prod['label']} {price}\n"
                         f"관리 화면: {PUBLIC_URL}/admin")
         self.send_json({"ok": True, "code": o["code"], "amount": o["amount"], "product": prod["label"], "free": free, "key": o["product"],
+                        "returning": before,
                         "name": o["name"], "bank": orders.BANK_ACCOUNT})
 
     # -- 사장님 관리 화면
@@ -887,6 +895,22 @@ class Handler(BaseHTTPRequestHandler):
         """아침 시간을 기다리지 않고, 오늘 아직 못 받은 구독자에게 지금 보내기."""
         if self.need_admin():
             self.send_json({"ok": True, "sent": subs.send_due(chart_of_birth, PUBLIC_URL)})
+
+    def simple_page(self, msg):
+        body = (f'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+                f'<title>운결</title><body style="background:#0b0910;color:#efe8f5;font-family:sans-serif;text-align:center;padding:60px 20px">'
+                f'<p style="font-size:18px">{msg}</p><p><a style="color:#d9b26a" href="/">운결 첫 화면</a></p></body>').encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def api_admin_retention_run(self, b):
+        """(시험·급할 때) 시간 상관없이 안부·복귀 메일을 지금 확인해서 보내기."""
+        if self.need_admin():
+            f, w = retention.run(PUBLIC_URL, force=True)
+            self.send_json({"ok": True, "followups": f, "winbacks": w})
 
     def stop_page(self, q):
         """구독 메일 하단 '그만 받기' 링크."""

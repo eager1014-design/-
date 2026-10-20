@@ -18,8 +18,10 @@ function onProduct() {
 function showDone(r) {
   $("#app").innerHTML = `
     <div class="card done-box">
-      <p class="line">…좋다. ${esc(r.name)}, 네 이름 기억해 두지.</p>
-      <p class="line small">네 운명을 들여다볼 준비를 하마.</p>
+      ${r.returning ? `<p class="line">…또 왔구나, ${esc(r.name)}. 반갑다.</p>
+      <p class="line small">네 이야기는 기억하고 있다. 이번에도 들여다봐 주마.</p>`
+        : `<p class="line">…좋다. ${esc(r.name)}, 네 이름 기억해 두지.</p>
+      <p class="line small">네 운명을 들여다볼 준비를 하마.</p>`}
       <h2 style="margin-top:22px">신청이 접수되었어요</h2>
       ${r.free ? `
       <p class="muted">신청번호 <b>${esc(r.code)}</b> · ${esc(r.product)}</p>
@@ -78,7 +80,7 @@ async function init() {
     const body = {
       product, name: $("#name").value.trim(), email: $("#email").value.trim(), birth: readBirth("me"),
       situation: { concern: $("#concern").value, job: $("#job").value, story: $("#story").value, goal: $("#goal").value },
-      agree: $("#agree").checked, agree_ai: $("#agree_ai").checked,
+      agree: $("#agree").checked, agree_ai: $("#agree_ai").checked, marketing: $("#marketing").checked,
       src: new URLSearchParams(location.search).get("src") || "",  // 어느 홍보 채널에서 왔는지 (?src=threads)
     };
     if (window.PRODUCTS[product].partner) body.partner = { name: $("#p-name").value, relation: $("#p-rel").value, birth: readBirth("p") };

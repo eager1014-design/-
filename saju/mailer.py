@@ -22,6 +22,13 @@ PASS = os.environ.get("SMTP_PASS", "")
 FROM = os.environ.get("SMTP_FROM", USER)
 _PUBLIC = os.environ.get("PUBLIC_URL", "http://localhost").split("//")[-1].split(":")[0].split("/")[0] not in ("localhost", "127.0.0.1")
 MODE = "smtp" if HOST and USER and PASS else ("relay" if _PUBLIC or os.environ.get("MAIL_RELAY") == "1" else "mock")
+# 안전장치: 시험용 DB(.tmp 안)로 켠 서버는 진짜 메일을 절대 보내지 않는다 (2026-10-20 시험 메일이 실제로 나간 일 이후).
+# 진짜로 보내야 하는 곳(맥북 일꾼)은 MAIL_MODE=smtp 로 명시한다.
+_TESTING = "/.tmp/" in os.path.abspath(os.environ.get("SAJU_DB", "")) + "/"
+if os.environ.get("MAIL_MODE") in ("smtp", "relay", "mock"):
+    MODE = os.environ["MAIL_MODE"]
+elif _TESTING and MODE == "smtp":
+    MODE = "relay" if os.environ.get("MAIL_RELAY") == "1" else "mock"
 
 
 def queue(to, subject, text, attachments=None):

@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS promo_posts (
   posted_at TEXT
 );
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS ad_optout (email TEXT PRIMARY KEY, at TEXT NOT NULL);  -- 광고 메일 수신거부
 CREATE TABLE IF NOT EXISTS outbox (    -- 맥북이 대신 보낼 메일 (mailer.MODE == relay)
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   to_addr TEXT NOT NULL,
@@ -163,6 +164,12 @@ def _migrate(c):
     if "stats_at" not in pcols:
         c.execute("ALTER TABLE promo_posts ADD COLUMN stats_at TEXT")
     ocols = {r[1] for r in c.execute("PRAGMA table_info(orders)")}
+    if "marketing_ok" not in ocols:
+        c.execute("ALTER TABLE orders ADD COLUMN marketing_ok INTEGER DEFAULT 0")  # [선택] 소식 받기 동의
+        c.execute("ALTER TABLE orders ADD COLUMN followup_at TEXT")                # 풀이 뒤 안부 메일 보낸 때
+    scols = {r[1] for r in c.execute("PRAGMA table_info(subs)")}
+    if "winback_at" not in scols:
+        c.execute("ALTER TABLE subs ADD COLUMN winback_at TEXT")                   # 구독 끝난 뒤 복귀 안내 보낸 때
     if "gen_state" not in ocols:
         c.execute("ALTER TABLE orders ADD COLUMN gen_state TEXT")      # 긴 풀이 생성: running | done | error
         c.execute("ALTER TABLE orders ADD COLUMN gen_progress TEXT")   # 예) 3/8
