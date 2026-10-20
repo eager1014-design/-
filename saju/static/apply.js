@@ -167,24 +167,43 @@ const Sound = {
   },
 };
 
-/* ---------- 내레이션: 장면마다 /voice/n01.mp3 … 를 차례로 (파일이 없으면 조용히 건너뜀) ---------- */
+/* ---------- 내레이션: 지금 화면에 가장 크게 보이는 장면의 목소리를 바로 튼다 ----------
+   넘기면 즉시 다음 장면 목소리로, 위로 올라가면 그 장면 목소리로 바뀐다. 파일이 없으면 조용히 건너뜀. */
 const Voice = {
-  queue: [], cur: null, played: new Set(),
-  add(id) {
-    if (!id || this.played.has(id) || !Sound.on) return;
-    this.played.add(id);
-    this.queue.push(id);
-    if (!this.cur) this.next();
+  cache: {}, cur: null, active: null,
+  preload() {
+    document.querySelectorAll("[data-voice]").forEach((p) => {
+      const id = p.dataset.voice;
+      if (!this.cache[id]) { const a = new Audio(`/voice/${id}.mp3`); a.preload = "auto"; this.cache[id] = a; }
+    });
   },
-  next() {
-    const id = this.queue.shift();
-    if (!id) { this.cur = null; Sound.duck(false); return; }
-    const a = (this.cur = new Audio(`/voice/${id}.mp3`));
+  play(id) {
+    if (!id || !Sound.on) return;
+    this.stop(true);
+    const a = this.cache[id] || (this.cache[id] = new Audio(`/voice/${id}.mp3`));
+    try { a.currentTime = 0; } catch (e) { /* 아직 안 받아진 파일 */ }
+    this.cur = a;
     Sound.duck(true);
-    a.onended = a.onerror = () => this.next();
-    a.play().catch(() => this.next());
+    a.onended = () => { if (this.cur === a) { this.cur = null; Sound.duck(false); } };
+    a.play().catch(() => { if (this.cur === a) { this.cur = null; Sound.duck(false); } });
   },
-  stop() { this.queue = []; if (this.cur) { this.cur.pause(); this.cur = null; } Sound.duck(false); },
+  stop(keepDuck) {
+    if (this.cur) this.cur.pause();
+    this.cur = null;
+    if (!keepDuck) Sound.duck(false);
+  },
+  watch() {
+    // 장면마다 '화면을 얼마나 차지하는지'를 재서, 가장 큰 장면이 바뀌는 순간 목소리를 바꾼다
+    const seen = new Map();
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => seen.set(e.target, e.isIntersecting ? e.intersectionRect.height / innerHeight : 0));
+      let best = null, max = 0.3;
+      seen.forEach((v, el) => { if (v > max) { max = v; best = el; } });
+      const id = best?.dataset.voice || null;
+      if (id && id !== this.active) { this.active = id; this.play(id); }
+    }, { threshold: [0, .15, .3, .45, .6, .75, .9, 1] });
+    document.querySelectorAll("[data-voice]").forEach((p) => io.observe(p));
+  },
 };
 
 function enter(withSound) {
@@ -192,10 +211,15 @@ function enter(withSound) {
   setTimeout(() => $("#gate").remove(), 1100);
   const btn = $("#snd");
   btn.hidden = false;
-  if (withSound) Sound.start();
+  if (withSound) { Sound.start(); Voice.preload(); }
+  Voice.watch();
   setTimeout(startToon, 300);  // 소리가 켜진 뒤 첫 장면이 시작되게
   btn.textContent = withSound ? "🔊" : "🔇";
-  btn.onclick = () => { const on = Sound.toggle(); btn.textContent = on ? "🔊" : "🔇"; btn.setAttribute("aria-label", on ? "소리 끄기" : "소리 켜기"); };
+  btn.onclick = () => {
+    const on = Sound.toggle();
+    btn.textContent = on ? "🔊" : "🔇"; btn.setAttribute("aria-label", on ? "소리 끄기" : "소리 켜기");
+    if (on) { Voice.preload(); Voice.play(Voice.active); }  // 소리를 켜면 지금 장면 목소리부터
+  };
 }
 
 if ($("#gate")) {
@@ -252,7 +276,6 @@ function startToon() {
       io.unobserve(p);
       p.classList.add("show");
       Sound.gong(p.classList.contains("reveal"));
-      Voice.add(p.dataset.voice);
       let delay = 600;
       (queue.get(p) || []).forEach((chars) => {
         chars.forEach((c, i) => setTimeout(() => c.classList.add("on"), CALM ? 0 : delay + i * 70));
