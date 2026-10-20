@@ -45,12 +45,23 @@ def log(msg):
         f.write(line + "\n")
 
 
-def server(method, path, body=None):
+def server(method, path, body=None, retries=0):
+    """retries: 사이트가 잠깐 없을 때(다시 배포 중 502·503, 연결 끊김) 기다렸다 다시 시도할 횟수."""
     url = os.environ.get("SAJU_URL", "http://localhost:8000").rstrip("/") + path
-    req = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body is not None else None,
-                                 headers={"Content-Type": "application/json", "X-Admin-Key": os.environ.get("SAJU_ADMIN_KEY", "")})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read())
+    for attempt in range(retries + 1):
+        req = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body is not None else None,
+                                     headers={"Content-Type": "application/json", "X-Admin-Key": os.environ.get("SAJU_ADMIN_KEY", "")})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            if e.code not in (502, 503, 504) or attempt == retries:
+                raise
+        except (urllib.error.URLError, OSError):
+            if attempt == retries:
+                raise
+        log(f"사이트가 잠깐 응답 없음 → {15 * (attempt + 1)}초 뒤 다시 ({attempt + 1}/{retries})")
+        time.sleep(15 * (attempt + 1))
 
 
 def work(order):
@@ -66,9 +77,14 @@ def work(order):
     try:
         chart = chart_of_birth(order["birth"])
         partner = chart_of_birth(order["partner"]["birth"]) if order.get("partner") else None
-        res = longform.generate(order, chart, partner, progress=lambda d, n: server(
-            "POST", "/api/admin/jobs/update", {"id": oid, "state": "running", "progress": f"맥북에서 {d}/{n}장"}))
-        server("POST", "/api/admin/jobs/update", {"id": oid, "state": "done", "markdown": res["markdown"], "engine": res["engine"]})
+        def progress(d, n):
+            try:  # 진행 표시는 실패해도 글쓰기는 계속
+                server("POST", "/api/admin/jobs/update", {"id": oid, "state": "running", "progress": f"맥북에서 {d}/{n}장"})
+            except Exception:  # noqa
+                pass
+        res = longform.generate(order, chart, partner, progress=progress)
+        # 다 쓴 풀이는 꼭 올린다: 사이트가 다시 배포 중이면 최대 약 5분 기다리며 재시도
+        server("POST", "/api/admin/jobs/update", {"id": oid, "state": "done", "markdown": res["markdown"], "engine": res["engine"]}, retries=6)
         log(f"{order['code']} 완료 ({len(res['markdown']):,}자, {time.time() - t:.0f}초, {res['engine']})")
     except Exception as e:  # noqa — 실패하면 관리 화면에 이유를 남겨 다시 누를 수 있게
         log(f"{order['code']} 실패: {e}")
@@ -94,7 +110,8 @@ def send_outbox():
     for m in server("GET", "/api/admin/outbox")["mails"]:
         files = [(f["name"], base64.b64decode(f["data"]), f["type"]) for f in m.get("files") or []]
         ok = mailer.send(m["to_addr"], m["subject"], m["body"], attachments=files)
-        server("POST", "/api/admin/outbox/done", {"id": m["id"], "ok": ok, "error": "" if ok else "Gmail 발송 실패 (맥북 로그 확인)"})
+        # 보낸 기록을 꼭 남긴다 (못 남기면 같은 메일을 두 번 보낼 수 있음)
+        server("POST", "/api/admin/outbox/done", {"id": m["id"], "ok": ok, "error": "" if ok else "Gmail 발송 실패 (맥북 로그 확인)"}, retries=6)
         log(f"메일 {'보냄' if ok else '실패'}: {m['to_addr']} / {m['subject']}")
 
 
