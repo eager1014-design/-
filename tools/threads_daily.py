@@ -28,13 +28,14 @@ CLAUDE = os.path.expanduser("~/.local/bin/claude")
 
 
 def load_env():
+    given = set(os.environ)  # 실행할 때 직접 준 값(시험용 주소 등)은 .env 보다 우선
     for path in (os.path.join(ROOT, "saju", ".env"), os.path.join(ROOT, ".env")):  # 루트 .env 가 우선
         if os.path.exists(path):
             for line in open(path, encoding="utf-8"):
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
-                    if v.strip():
+                    if v.strip() and k.strip() not in given:
                         os.environ[k.strip()] = v.strip()
 
 

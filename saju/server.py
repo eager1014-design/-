@@ -367,6 +367,8 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", "/api/admin/order/status"): self.api_admin_status,
             ("POST", "/api/admin/order/generate"): self.api_admin_generate,
             ("POST", "/api/admin/order/save"): self.api_admin_save,
+            ("GET", "/api/admin/jobs"): self.api_admin_jobs,
+            ("POST", "/api/admin/jobs/update"): self.api_admin_job_update,
             ("GET", "/api/admin/order/pdf"): self.api_admin_pdf,
             ("POST", "/api/admin/order/send"): self.api_admin_send,
             ("GET", "/api/admin/promo"): self.api_admin_promo,
@@ -722,7 +724,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.need_admin():
             self.send_json({"orders": orders.listing(q.get("status") or None), "status": orders.STATUS,
                             "products": orders.PRODUCTS, "ai": [llm.label(n) for n in llm.available()],
-                            "mail_mode": mailer.MODE, "bank": orders.BANK_ACCOUNT,
+                            "mail_mode": mailer.MODE, "bank": orders.BANK_ACCOUNT, "mac_online": mac_online(),
                             "concerns": {k: v["label"] for k, v in K.CONCERNS.items()}, "cities": list(CITIES.keys())})
 
     def order_or_404(self, oid):
@@ -773,11 +775,15 @@ class Handler(BaseHTTPRequestHandler):
         o = self.order_or_404(b.get("id"))
         if not o:
             return
-        if o.get("gen_state") == "running":
+        if o.get("gen_state") in ("running", "mac_wait", "mac_running"):
             return self.error("이미 풀이를 만드는 중입니다. 잠시만 기다려 주세요.", 409)
         if o["content"] and not b.get("overwrite"):
             return self.error("이미 작성된 풀이가 있습니다. 새로 만들면 지금 글이 사라집니다.", 409, need_overwrite=True)
         total = len(orders.PRODUCTS.get(o["product"], {}).get("chapters", [])) or 1
+        if b.get("engine") == "mac":
+            # 맥북의 챗GPT 구독(코덱스)이 가져가서 쓴다 (tools/saju_worker.py)
+            orders.set_gen(o["id"], "mac_wait", "맥북이 가져가기를 기다리는 중")
+            return self.send_json({"ok": True, "started": True, "order": orders.get(o["id"])})
         orders.set_gen(o["id"], "running", f"0/{total}")
 
         def job():
@@ -797,6 +803,40 @@ class Handler(BaseHTTPRequestHandler):
 
         threading.Thread(target=job, daemon=True).start()
         self.send_json({"ok": True, "started": True, "order": orders.get(o["id"])})
+
+    # -- 맥북 일꾼(tools/saju_worker.py): 맥북의 챗GPT 구독으로 풀이를 써서 올려 준다
+    def api_admin_jobs(self, q):
+        if not self.need_admin():
+            return
+        promo.kv_set("mac_seen", promo.now())
+        ids = [r["id"] for r in db.all_("SELECT id FROM orders WHERE gen_state='mac_wait' ORDER BY id LIMIT 3")]
+        self.send_json({"jobs": [orders.get(i) for i in ids]})
+
+    def api_admin_job_update(self, b):
+        """맥북 일꾼의 진행 보고: state = running(진행 n/N) | done(풀이 도착) | error"""
+        if not self.need_admin():
+            return
+        o = self.order_or_404(b.get("id"))
+        if not o:
+            return
+        state = b.get("state")
+        if state == "claim":
+            if o.get("gen_state") != "mac_wait":
+                return self.error("이미 다른 곳에서 처리 중입니다.", 409)
+            orders.set_gen(o["id"], "mac_running", "맥북에서 쓰는 중")
+        elif state == "running":
+            orders.set_gen(o["id"], "mac_running", str(b.get("progress") or "")[:40])
+        elif state == "done":
+            text = str(b.get("markdown") or "")
+            if len(text) < 50:
+                return self.error("풀이가 비어 있습니다.")
+            orders.save_content(o["id"], text[:120_000], str(b.get("engine") or "mac")[:60])
+            if o["status"] in ("pending", "paid"):
+                orders.set_status(o["id"], "writing")
+            orders.set_gen(o["id"], "done", "맥북에서 완료")
+        else:
+            orders.set_gen(o["id"], "error", ("맥북: " + str(b.get("error") or "알 수 없는 오류"))[:200])
+        self.send_json({"ok": True})
 
     def api_admin_save(self, b):
         if not self.need_admin():
@@ -1114,6 +1154,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json({"ok": True, "access": billing.access(db.one("SELECT * FROM users WHERE id=?", u["id"]))})
 
 
+def mac_online():
+    """맥북 일꾼이 최근 1분 안에 들렀으면 켜져 있는 것."""
+    seen = promo.kv_get("mac_seen")
+    return bool(seen) and datetime.now() - datetime.fromisoformat(seen) < timedelta(seconds=60)
+
+
 def publish_post(p):
     """홍보 글 게시. 스레드는 실제로 올리고(+첫 댓글 신청서 링크), 인스타·당근은 '올렸음' 기록만."""
     post_id = permalink = None
@@ -1131,6 +1177,8 @@ def main():
     db.conn()
     # 풀이를 만들던 중 서버가 꺼졌으면 '중단'으로 표시 (다시 만들기 버튼이 보이게)
     db.run("UPDATE orders SET gen_state='error', gen_progress='서버가 다시 시작되어 중단됨' WHERE gen_state='running'")
+    # 맥북이 쓰던 중이던 건은 다시 대기로 (맥북이 다시 가져감)
+    db.run("UPDATE orders SET gen_state='mac_wait', gen_progress='맥북이 가져가기를 기다리는 중' WHERE gen_state='mac_running'")
     if not IS_LOCAL:
         if billing.MODE == "mock":
             print("⚠️  결제 키 없이 공개 주소로 실행 중: " + ("결제 시뮬레이션 허용(ALLOW_MOCK_BILLING=1)" if ALLOW_MOCK_BILLING else "구독 결제 불가"))

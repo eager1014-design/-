@@ -88,5 +88,5 @@ def save_note(oid, note):
 
 
 def set_gen(oid, state, progress=""):
-    """풀이 생성 진행 상황: running(진행 중) | done | error."""
+    """풀이 생성 진행 상황: running(서버에서 진행) | mac_wait(맥북 대기) | mac_running(맥북에서 진행) | done | error."""
     db.run("UPDATE orders SET gen_state=?, gen_progress=?, updated_at=? WHERE id=?", state, progress, now(), oid)

@@ -93,6 +93,7 @@ function setupNotes(r) {
 async function renderOrder(id) {
   if (!CFG) CFG = await api("/api/admin/orders");
   const { order: o, chart_text } = await api(`/api/admin/order?id=${id}`);
+  if (["mac_wait", "mac_running"].includes(o.gen_state)) CFG = await api("/api/admin/orders");  // 맥북 켜짐 여부 새로 확인
   const s = o.situation || {}, p = o.partner;
   app.innerHTML = `
     <p><a href="#/">← 목록</a></p>
@@ -134,11 +135,14 @@ async function renderOrder(id) {
         <h3 style="margin:0">풀이 ${o.engine ? `<span class="muted small">(${esc(o.engine)})</span>` : ""}</h3>
         <div class="row">
           ${o.content ? `<button class="btn ghost" id="pdf">PDF 미리보기</button><button class="btn" id="send">${o.status === "sent" ? "다시 보내기" : "손님에게 보내기"}</button>` : ""}
-          <button class="btn ghost" id="gen">${o.content ? "풀이 다시 만들기" : "풀이 만들기"}</button>
+          <button class="btn ${CFG.mac_online ? "" : "ghost"}" id="genmac" title="맥북의 챗GPT 구독으로 · 0원">💻 맥북 챗GPT로 ${o.content ? "다시 " : ""}만들기</button>
+          <button class="btn ghost" id="gen" title="서버의 제미나이로 · 1건 수십 원">서버 AI로 ${o.content ? "다시 " : ""}만들기</button>
           <button class="btn" id="save" ${o.content ? "" : "disabled"}>저장</button>
         </div>
       </div>
       ${o.gen_state === "running" ? `<p class="note">⏳ 풀이를 쓰는 중… <b id="genprog">${esc(o.gen_progress || "")}</b> 장 완료 (긴 리포트는 1~3분). 이 화면을 닫아도 계속 진행돼요.</p>` : ""}
+      ${o.gen_state === "mac_wait" || o.gen_state === "mac_running" ? `<p class="note">💻 ${esc(o.gen_progress || "")}${o.gen_state === "mac_wait" && !CFG.mac_online ? " — 맥북이 꺼져 있어요. 맥북을 켜면 바로 시작해요." : " (1~3분, 이 화면을 닫아도 계속 진행돼요)"}
+        <button class="btn ghost" id="maccancel" style="padding:3px 10px;font-size:13px;margin-left:6px">취소</button></p>` : ""}
       ${o.gen_state === "error" ? `<p class="err">풀이 만들기가 중단됐어요: ${esc(o.gen_progress || "")} — 다시 만들어 주세요.</p>` : ""}
       ${o.content ? `<div class="editor">
         <textarea id="content" aria-label="풀이 내용">${esc(o.content)}</textarea>
@@ -180,11 +184,22 @@ async function renderOrder(id) {
       } catch (x) { $("#oerr").textContent = x.message; b.disabled = false; b.textContent = "다시 시도"; }
     };
   }
-  if (o.gen_state === "running") {
-    $("#gen").disabled = true; $("#gen").textContent = "만드는 중…";
+  const busy = ["running", "mac_wait", "mac_running"].includes(o.gen_state);
+  if (busy) {
+    $("#gen").disabled = true; $("#genmac").disabled = true; $("#gen").textContent = "만드는 중…";
     clearTimeout(renderOrder.poll);
     renderOrder.poll = setTimeout(() => { if (location.hash === `#/order?id=${o.id}`) renderOrder(o.id); }, 3000);
   }
+  $("#maccancel")?.addEventListener("click", async () => {
+    await api("/api/admin/jobs/update", { id: o.id, state: "error", error: "사장님이 취소" }); renderOrder(o.id);
+  });
+  $("#genmac").onclick = async () => {
+    if (o.content && !confirm("지금 풀이를 지우고 맥북 챗GPT로 새로 만들까요? 고친 내용도 사라집니다.")) return;
+    try {
+      await api("/api/admin/order/generate", { id: o.id, overwrite: true, engine: "mac" });
+      toast(CFG.mac_online ? "맥북이 곧 쓰기 시작해요" : "맥북을 켜면 바로 시작해요"); renderOrder(o.id);
+    } catch (x) { $("#oerr").textContent = x.message; }
+  };
   $("#gen").onclick = async () => {
     const n = (CFG.products[o.product]?.chapters || []).length || 1;
     const paid = CFG.ai.length ? `AI(${CFG.ai[0]})로 ${n}개 장을 나눠 씁니다. 유료 호출 ${n}회(합쳐서 수십 원 수준)입니다.` : "기본(규칙) 풀이로 만듭니다.";

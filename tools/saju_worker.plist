@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 맥북 일꾼 (tools/saju_worker.py): 맥북이 켜져 있는 동안 항상 대기하며, 관리 화면의 '맥북 챗GPT로 만들기' 주문을 처리.
+     설치:  cp tools/saju_worker.plist ~/Library/LaunchAgents/com.ungyeol.saju-worker.plist
+            launchctl load ~/Library/LaunchAgents/com.ungyeol.saju-worker.plist
+     끄기:  launchctl unload ~/Library/LaunchAgents/com.ungyeol.saju-worker.plist -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.ungyeol.saju-worker</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/mac/ai/tools/saju_worker.py</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>30</integer>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/Users/mac/.local/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+  <key>StandardOutPath</key><string>/Users/mac/ai/.tmp/saju_worker.out</string>
+  <key>StandardErrorPath</key><string>/Users/mac/ai/.tmp/saju_worker.out</string>
+</dict>
+</plist>
