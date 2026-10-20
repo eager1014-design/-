@@ -220,6 +220,13 @@ def main():
     ok(not r["referred"], "이미 왔던 사람(같은 이름+생년월일)은 보상 없음")
     rows = boss("/api/admin/orders")[1]["orders"]
     ok(any(o["free_kind"] == "ref" for o in rows) and any(o["ref_from"] for o in rows), "관리 목록에 초대 표시")
+    # 평생 종합 사주: 34,900원, 첫 무료·초대 무료 대상 아님
+    st, c = guest("/api/apply/config")
+    ok(c["products"]["life"]["price"] == 34900 and c["products"]["life"]["no_free"], "평생 종합 34,900원 · 무료 제외 표시")
+    st, r = apply(guest, "life", "프리미엄첫손님")
+    ok(not r["free"] and r["amount"] == 34900, "처음 온 손님도 평생 종합은 유료")
+    st, r = apply(guest, "love", "프리미엄첫손님")
+    ok(r["free"], "평생 종합 신청 뒤에도 다른 풀이 첫 무료는 남아 있음")
     # 비상: 사장님 비밀번호 재설정 링크 (기계 열쇠로만)
     ok(guest("/api/admin/owner-reset", {"email": "boss@test.com"})[0] == 404, "열쇠 없이 비번 재설정 링크 차단")
     ok(machine("/api/admin/owner-reset", {"email": "stranger@test.com"})[0] == 404, "사장님 아닌 계정은 재설정 불가")

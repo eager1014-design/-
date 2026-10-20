@@ -737,10 +737,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.error(str(e))
         src = str(b.get("src") or "").strip().lower()[:20]
         product, name, email, birth = form[:4]
-        is_sub = bool(orders.PRODUCTS[product].get("subscription"))
+        is_sub = bool(orders.PRODUCTS[product].get("subscription") or orders.PRODUCTS[product].get("no_free"))  # 무료 안 되는 상품
         is_new = orders.free_eligible(name, email, birth)  # 처음 온 사람인가 (첫 무료·초대 보상 기준)
         # 무료: 첫 1회, 아니면 친구 초대로 쌓아둔 무료가 있으면 그걸 쓴다
-        free = False if is_sub else ("first" if is_new else ("ref" if referral.use_credit(email) else False))
+        first_ok = orders.FREE_FIRST and not orders.used_free(name, email, birth)
+        free = False if is_sub else ("first" if first_ok else ("ref" if referral.use_credit(email) else False))
         before = retention.visits(email)  # 예전에 온 적 있는 손님인가
         o = orders.create(*form, source="apply", ip=self.client_ip(), free=free, marketing=bool(b.get("marketing")),
                           channel=src if re.match(r"^[a-z0-9_-]+$", src) else None)

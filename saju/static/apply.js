@@ -11,7 +11,9 @@ function onProduct() {
   if (need) PARTNER_FOR = need;
   $("#story-label").textContent = p === "counsel" ? "궁금한 질문 하나" : "지금 상황과 고민";
   const sub = p && window.PRODUCTS[p].subscription;
-  $("#submit").textContent = sub ? `월 ${won(window.PRODUCTS[p].price)} 구독 신청` : window.FREE_FIRST ? "신청하기 · 처음이면 무료"
+  const nofree = p && window.PRODUCTS[p].no_free;
+  $("#submit").textContent = sub ? `월 ${won(window.PRODUCTS[p].price)} 구독 신청` : nofree ? `${won(window.PRODUCTS[p].price)} 신청하기`
+    : window.FREE_FIRST ? "신청하기 · 처음이면 무료"
     : p ? `${won(window.PRODUCTS[p].price)} 신청하기` : "신청하기";
 }
 
@@ -92,7 +94,7 @@ async function init() {
     const head = p.tier !== lastTier ? `<div class="tier">${esc(p.tier)}</div>` : "";
     lastTier = p.tier;
     return `${head}<label class="product"><input type="radio" name="product" value="${k}">
-      <span><b>${esc(p.label)}</b> <span class="pages">${p.subscription ? "매일 아침 메일" : `PDF 약 ${p.pages}쪽`}</span><br><span class="muted small">${esc(p.desc)}</span></span>
+      <span><b>${esc(p.label)}</b> <span class="pages">${p.subscription ? "매일 아침 메일" : `PDF 약 ${p.pages}쪽`}</span>${p.no_free && !p.subscription ? ' <span class="pages">무료 제외</span>' : ""}<br><span class="muted small">${esc(p.desc)}</span></span>
       <span class="p">${won(p.price)}${p.subscription ? '<br><span class="muted small">/ 월</span>' : ""}</span></label>`;
   }).join("");
   $("#concern").innerHTML = Object.entries(cfg.concerns).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
@@ -360,7 +362,7 @@ function showQuick(r, birth) {
   const recs = quickPanel(`<p class="kicker">여기까지가 겉이다</p>${say("더 깊이 보고 싶다면… 너에게는 이게 맞겠다.")}
     <div class="recs">${r.recs.map((x) => `<button class="rec" data-key="${x.key}">
       <b>${esc(x.label)}</b><span>${esc(x.why)}</span>
-      <em>${x.subscription ? `월 ${won(x.price)}` : window.FREE_FIRST ? `처음이면 무료 · 원래 ${won(x.price)}` : won(x.price)}</em></button>`).join("")}</div>
+      <em>${x.subscription ? `월 ${won(x.price)}` : window.FREE_FIRST && !window.PRODUCTS[x.key]?.no_free ? `처음이면 무료 · 원래 ${won(x.price)}` : won(x.price)}</em></button>`).join("")}</div>
     <button class="linkbtn" id="rec-all">다른 풀이도 보기 ↓</button>`, "recs-panel");
   recs.querySelectorAll(".rec").forEach((b) => (b.onclick = () => pickProduct(b.dataset.key, birth)));
   $("#rec-all").onclick = () => pickProduct(null, birth);

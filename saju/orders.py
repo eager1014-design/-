@@ -56,6 +56,17 @@ def free_eligible(name, email, birth):
     return True
 
 
+def used_free(name, email, birth):
+    """이미 '첫 1회 무료'를 받은 사람인가 (같은 이메일, 또는 같은 이름+생년월일). 유료로만 받았으면 아직 무료가 남아 있다."""
+    if db.one("SELECT id FROM orders WHERE email=? AND free_kind='first' AND status!='canceled' LIMIT 1", email):
+        return True
+    for r in db.all_("SELECT birth FROM orders WHERE name=? AND free_kind='first' AND status!='canceled'", name):
+        b = json.loads(r["birth"])
+        if (b.get("solar"), b.get("gender")) == (birth.get("solar"), birth.get("gender")):
+            return True
+    return False
+
+
 def create(product, name, email, birth, partner, situation, source, ip=None, status="pending", channel=None, free=False,
            marketing=False):
     code = new_code()

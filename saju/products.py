@@ -86,7 +86,8 @@ _CATALOG = [
                   ("좋은 달과 조심할 달", "좋은 달 3개, 조심할 달 3개를 이유와 함께. 중요한 일을 잡기 좋은 때", 1100),
                   (f"{NY}년 개운법", "용신을 쓰는 색·방향·장소·사람·습관, 분기별 실천 체크리스트", 1300)],
      "data": ["newyear", "daeun"]},
-    {"key": "life", "label": "평생 종합 사주 (프리미엄)", "price": 29000, "tier": "프리미엄", "pages": 25, "partner": None,
+    {"key": "life", "label": "평생 종합 사주 (프리미엄)", "price": 34900, "tier": "프리미엄", "pages": 25, "partner": None,
+     "no_free": True,  # 사장님 결정(2026-10-20): 가장 깊은 풀이는 첫 1회 무료·친구 초대 무료 대상이 아님
      "desc": "성격·재능·일·돈·연애·가족·건강·평생 대운 흐름까지 담은 가장 깊은 리포트",
      "chapters": [("한눈에 보는 나의 사주", "핵심 7줄 불릿 + 이 사주를 한 문장으로 표현한 제목", 900),
                   ("타고난 성격", "일간·월지·오행 쏠림으로 보는 기본 성격. 남들이 보는 나와 내가 아는 나의 차이", 2200),
@@ -136,5 +137,5 @@ def public():
     """신청서에 보여줄 상품 (묶음 순서 → 가격 낮은 순)."""
     order = lambda kv: (TIER_ORDER.index(kv[1]["tier"]) if kv[1]["tier"] in TIER_ORDER else 9, kv[1]["price"])
     return {k: dict({kk: p[kk] for kk in ("label", "price", "tier", "pages", "partner", "desc")},
-                    subscription=bool(p.get("subscription")))
+                    subscription=bool(p.get("subscription")), no_free=bool(p.get("no_free") or p.get("subscription")))
             for k, p in sorted(PRODUCTS.items(), key=order) if not p.get("hidden")}
