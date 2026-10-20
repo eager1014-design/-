@@ -422,7 +422,7 @@ function showQuick(r, birth) {
   try { sessionStorage.setItem("ungyeol_birth", JSON.stringify(birth)); } catch (e) { /* 상담실에서 다시 물음 */ }
   const T = [["counsel", "고민 상담", "무엇이든 하나"], ["love", "연애운 · 인연", "언제, 누구와"], ["reunion", "재회운", "다시 닿을까"],
     ["match", "궁합", "그 사람과 나"], ["career", "직업 · 재물", "일과 돈의 길"], ["pet", "반려동물", "우리 아이 (재미로)"]];
-  quickPanel(`${dory("…이게 너다. 그런데 마음에 걸리는 게 있어서 왔겠지. 앉아라. 묻고, 답해주마.")}
+  quickPanel(`<img class="cutimg" src="/img/toon/q01.jpg" alt="…이게 너다. 그런데 마음에 걸리는 게 있어서 왔겠지. 앉아라. 묻고, 답해주마.">
     <div class="topics">${T.map(([k, l, d]) => `<a href="/consult?t=${k}${INV ? `&inv=${encodeURIComponent(INV)}` : ""}">${l}<small>${d}</small></a>`).join("")}</div>
     <p class="small muted" style="margin-top:12px">도령의 상담은 무료. 네 이야기를 듣고 네 사주로 답한다.</p>`, "askpanel", "q01")
     .querySelectorAll(".topics a").forEach((a) => (a.onclick = (e) => { e.preventDefault(); turnPage("셋째 장 · 도령의 상담실", a.href); }));

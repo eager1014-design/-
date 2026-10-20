@@ -34,8 +34,21 @@ const chat = () => $("#chat");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const down = (el) => el.scrollIntoView({ behavior: "smooth", block: "end" });
 
+/* 사장님이 그린 웹툰 컷 (static/img/toon/<id>.jpg). 그 대사는 말풍선 대신 컷으로 보여준다 */
+const CUTS = new Set(["c01", "c02", "c03", "c04", "c05", "c06", "c07"]);
+const cutImg = (id, alt) => `<img class="cutimg" src="/img/toon/${id}.jpg" alt="${esc(alt)}">`;
+
 async function dory(text, title, voice) {
   VOICE.play(voice);
+  if (CUTS.has(voice)) {
+    const m = document.createElement("div");
+    m.className = "msg cut";
+    m.innerHTML = cutImg(voice, text);
+    chat().appendChild(m);
+    down(m);
+    await wait(1200);
+    return m;
+  }
   const w = document.createElement("div");
   w.className = "msg wait";
   w.innerHTML = `${AVA}<div class="say"><span class="dots"></span></div>`;
@@ -125,7 +138,8 @@ async function askPartner(need) {
 }
 
 async function askStory(t) {
-  await dory(t.story, "", "c03");
+  await dory("이제 네 이야기를 해봐라. 한 줄이면 된다.", "", "c03");
+  await dory(t.story);
   return new Promise((done) => {
     const a = answerBox(`<textarea id="s-text" maxlength="500" placeholder="편하게 적어라. 길게 써도 된다."></textarea>
       <label class="check small"><input type="checkbox" id="s-ok" checked> <span>상담을 위해 AI(구글 Gemini, 미국)에 생년월일·고민을 보내는 것에 동의해요. 상담 내용은 저장하지 않아요.</span></label>
@@ -163,7 +177,8 @@ async function runConsult() {
   const w = document.createElement("div");
   w.className = "msg wait";
   VOICE.play("c04");
-  w.innerHTML = `${AVA}<div class="say">네 사주를 펼쳐 보는 중이다<span class="dots"></span> (길면 30초)</div>`;
+  w.className = "msg cut wait";
+  w.innerHTML = `${cutImg("c04", "네 사주를 펼쳐 보는 중이다… 조금만 기다려라.")}<p class="small muted" style="text-align:center;margin:6px 0 0">들여다보는 중<span class="dots"></span> (길면 30초)</p>`;
   chat().appendChild(w);
   down(w);
   let r;
@@ -211,7 +226,8 @@ function offer() {
   box.innerHTML = `<h3>📄 ${esc(t.label)} PDF · 약 ${p.pages}쪽</h3>
     ${p.toc?.length ? `<details class="toc"><summary>PDF에 들어가는 것 보기 · ${p.toc.length}개 장</summary><ol>${p.toc.map((c) => `<li><b>${esc(c.t)}</b><span>${esc(c.d)}</span></li>`).join("")}</ol></details>` : ""}
     <div class="way gift" id="w-gift">
-      <p style="margin:0">💌 <b>친구에게 이 사이트를 보내면, 더 깊은 풀이를 PDF로 무료로 보내주마.</b> <span class="muted small">(위 목차 그대로)</span></p>
+      ${cutImg("c06", "친구에게 이 사이트를 보내라. 친구가 와서 자기 사주를 보면… 더 깊은 풀이를 PDF로 보내주마.")}
+      <p style="margin:10px 0 0">💌 <b>친구에게 이 사이트를 보내면, 더 깊은 풀이를 PDF로 무료로 보내주마.</b> <span class="muted small">(위 목차 그대로)</span></p>
       <p class="muted small" style="margin:6px 0 0">친구가 네 링크로 들어와 <b>자기 사주를 보면</b>, 이 화면에 'PDF 무료로 받기'가 열린다. (1인 1회 · 이 폰에서)</p>
       <div class="linkline" id="g-link">${esc(link)}</div>
       <div class="row">${navigator.share ? '<button class="btn" id="g-share" style="flex:1">친구에게 보내기</button>' : ""}<button class="btn ghost" id="g-copy" style="flex:1">링크 복사</button></div>
@@ -246,7 +262,7 @@ function watchFriend(box) {
     FRIEND = st;
     if (st.pdf_ready) {
       opened = true;
-      el.innerHTML = '<span class="ready">친구가 왔다. 약속대로 PDF를 무료로 보내주마 ✓</span>';
+      el.innerHTML = `${cutImg("c07", "친구가 왔구나. 약속대로, PDF를 보내주마.")}<span class="ready">친구가 왔다. 약속대로 PDF를 무료로 보내주마 ✓</span>`;
       VOICE.play("c07");
       orderForm(box.querySelector("#w-gift"), S.topic, true);
     }

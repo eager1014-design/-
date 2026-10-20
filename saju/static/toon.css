@@ -330,3 +330,4 @@
     box-shadow: 0 0 30px rgba(192,40,58,.4); }
   .backlink { display: block; margin: 8px auto 0; text-align: center; color: var(--ink-3); font-size: 14px; background: none; border: 0; text-decoration: underline; cursor: pointer; }
   [hidden] { display: none !important; }
+  .cutimg { display: block; width: 100%; max-width: 560px; border-radius: 6px; border: 1px solid rgba(217,178,106,.3); box-shadow: 0 8px 30px rgba(0,0,0,.5); }
