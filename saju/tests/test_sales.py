@@ -132,6 +132,15 @@ def main():
     st, r = machine("/api/admin/promo/import", {"posts": [{"theme": "love", "text": "맥북 클로드가 쓴 글"}], "engine": "claude:시험"})
     ok(r["count"] == 1, "맥북 클로드 글 받기")
     ok(any(s["ch"] == "threads" for s in boss("/api/admin/promo")[1]["stats"]), "채널별 집계")
+    # 비상: 사장님 비밀번호 재설정 링크 (기계 열쇠로만)
+    ok(guest("/api/admin/owner-reset", {"email": "boss@test.com"})[0] == 404, "열쇠 없이 비번 재설정 링크 차단")
+    ok(machine("/api/admin/owner-reset", {"email": "stranger@test.com"})[0] == 404, "사장님 아닌 계정은 재설정 불가")
+    st, r = machine("/api/admin/owner-reset", {"email": "boss@test.com"})
+    ok(st == 200 and "#/reset?token=" in r["link"], "사장님 비번 재설정 링크 발급")
+    tok = r["link"].split("token=")[1]
+    fresh = client()
+    st, r = fresh("/api/password/reset", {"token": tok, "password": "new-boss-pass-1"})
+    ok(st == 200 and fresh("/api/admin/orders")[0] == 200, "새 비밀번호로 바꾸고 관리 화면 열림")
     print(f"\n결과: {sum(results)}/{len(results)} 통과")
     return 0 if all(results) else 1
 

@@ -368,6 +368,7 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", "/api/admin/order/generate"): self.api_admin_generate,
             ("POST", "/api/admin/order/save"): self.api_admin_save,
             ("GET", "/api/admin/jobs"): self.api_admin_jobs,
+            ("POST", "/api/admin/owner-reset"): self.api_admin_owner_reset,
             ("POST", "/api/admin/jobs/update"): self.api_admin_job_update,
             ("GET", "/api/admin/order/pdf"): self.api_admin_pdf,
             ("POST", "/api/admin/order/send"): self.api_admin_send,
@@ -803,6 +804,21 @@ class Handler(BaseHTTPRequestHandler):
 
         threading.Thread(target=job, daemon=True).start()
         self.send_json({"ok": True, "started": True, "order": orders.get(o["id"])})
+
+    def api_admin_owner_reset(self, b):
+        """사장님이 비밀번호를 잊었을 때: 맥북의 비밀 열쇠(ADMIN_API_KEY)로만 '새 비밀번호 정하기' 링크를 만든다.
+        메일 설정 전이라 비밀번호 찾기 메일이 안 갈 때 쓰는 비상구. 사장님 계정(ADMIN_EMAIL)에만 쓸 수 있다."""
+        key = os.environ.get("ADMIN_API_KEY", "")
+        if not (len(key) >= 24 and hmac.compare_digest(self.headers.get("X-Admin-Key", ""), key)):
+            return self.error("not found", 404)
+        email = (b.get("email") or "").strip().lower()
+        u = db.one("SELECT * FROM users WHERE email=?", email)
+        if not u or email not in orders.ADMIN_EMAILS:
+            return self.error("사장님 계정을 찾을 수 없습니다.", 404)
+        clear_attempts("login:" + email)  # 로그인 잠김도 풀기
+        raw = issue_email_token(u["id"], "reset", RESET_TTL_H)
+        print(f"[비상] 사장님 비밀번호 재설정 링크 발급 ({email})")
+        self.send_json({"ok": True, "link": f"{PUBLIC_URL}/app#/reset?token={raw}", "valid_hours": RESET_TTL_H})
 
     # -- 맥북 일꾼(tools/saju_worker.py): 맥북의 챗GPT 구독으로 풀이를 써서 올려 준다
     def api_admin_jobs(self, q):
