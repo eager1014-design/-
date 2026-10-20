@@ -1,0 +1,67 @@
+{
+  "title": "운결 도령 웹툰 내레이션",
+  "voice": {
+    "name": "Charon",
+    "speed": 1,
+    "style": "Read this Korean narration as a mysterious young male fortune teller from an ancient Korean tale, speaking at night. Deep, low, calm and heavy voice, slow pace, long dramatic pauses at ellipses, slightly ominous but never shouting"
+  },
+  "scenes": [
+    {
+      "id": "n01",
+      "narration": "토요일 밤, 번화가 골목. 천막마다 사주, 타로 간판이 줄지어 불을 밝힌다.",
+      "direction": "like the opening of a dark story, quiet and slow"
+    },
+    {
+      "id": "n02",
+      "narration": "손을 꼭 잡은 두 사람이 들어간다. 재미로 한번 보자며… 오만 원을 내고."
+    },
+    {
+      "id": "n03",
+      "narration": "처음 본 사람이 생년월일 몇 글자를 들여다보더니, 말한다. 둘은 안 맞아. 헤어질 상이야.",
+      "direction": "the quoted last sentence colder and flat"
+    },
+    {
+      "id": "n04",
+      "narration": "그날 밤, 둘은 아무 말 없이 집으로 돌아갔다.",
+      "direction": "sad, slow, trailing off"
+    },
+    {
+      "id": "n05",
+      "narration": "…어리석구나. 너를 단 한 번도 본 적 없는 사람에게, 너의 인생을 판별하게 두지 마라.",
+      "direction": "slower, lower, heavier, with long pauses"
+    },
+    {
+      "id": "n06",
+      "narration": "사주는 심심풀이가 아니다. 네가 어떤 결을 타고났는지, 지금 어떤 흐름 위에 서 있는지… 그 지도를 읽는 일이다.",
+      "direction": "firm and weighty"
+    },
+    {
+      "id": "n07",
+      "narration": "…또 한 명이 찾아왔군.",
+      "direction": "almost a whisper, slightly amused"
+    },
+    {
+      "id": "n08",
+      "narration": "너, 요즘 마음이 편하지 않지? 잠들기 전에 같은 생각이 자꾸 맴돌고.",
+      "direction": "knowing, intimate"
+    },
+    {
+      "id": "n09",
+      "narration": "숨길 필요 없다. 네가 태어난 날에… 다 적혀 있으니까."
+    },
+    {
+      "id": "n10",
+      "narration": "너의 인생이… 보인다.",
+      "direction": "very slow, deep, dramatic pause before the last word"
+    },
+    {
+      "id": "n11",
+      "narration": "그리고… 원한다면, 매일 아침. 너의 하루가 어디로 흐르는지 알려주마. 오늘은 밀어붙일 날인지, 숨을 고를 날인지."
+    },
+    {
+      "id": "n12",
+      "narration": "알고 싶다면… 태어난 날을 적어라. 처음 온 자의 첫 풀이는… 내가 그냥 봐주지.",
+      "direction": "inviting but still mysterious"
+    }
+  ]
+}

@@ -139,12 +139,36 @@ const Sound = {
       s.connect(f).connect(g).connect(this.master); s.start(t); s.stop(t + 2.5);
     }
   },
+  duck(down) {  // 목소리가 나올 때 배경 소리를 줄인다
+    if (this.ctx && this.on) this.master.gain.linearRampToValueAtTime(down ? 0.35 : 0.9, this.ctx.currentTime + 0.8);
+  },
   toggle() {
     if (!this.ctx) { this.start(); return true; }
     this.on = !this.on;
+    if (!this.on) Voice.stop();
     this.master.gain.linearRampToValueAtTime(this.on ? 0.9 : 0, this.ctx.currentTime + 0.6);
     return this.on;
   },
+};
+
+/* ---------- 내레이션: 장면마다 /voice/n01.mp3 … 를 차례로 (파일이 없으면 조용히 건너뜀) ---------- */
+const Voice = {
+  queue: [], cur: null, played: new Set(),
+  add(id) {
+    if (!id || this.played.has(id) || !Sound.on) return;
+    this.played.add(id);
+    this.queue.push(id);
+    if (!this.cur) this.next();
+  },
+  next() {
+    const id = this.queue.shift();
+    if (!id) { this.cur = null; Sound.duck(false); return; }
+    const a = (this.cur = new Audio(`/voice/${id}.mp3`));
+    Sound.duck(true);
+    a.onended = a.onerror = () => this.next();
+    a.play().catch(() => this.next());
+  },
+  stop() { this.queue = []; if (this.cur) { this.cur.pause(); this.cur = null; } Sound.duck(false); },
 };
 
 function enter(withSound) {
@@ -153,6 +177,7 @@ function enter(withSound) {
   const btn = $("#snd");
   btn.hidden = false;
   if (withSound) Sound.start();
+  setTimeout(startToon, 300);  // 소리가 켜진 뒤 첫 장면이 시작되게
   btn.textContent = withSound ? "🔊" : "🔇";
   btn.onclick = () => { const on = Sound.toggle(); btn.textContent = on ? "🔊" : "🔇"; btn.setAttribute("aria-label", on ? "소리 끄기" : "소리 켜기"); };
 }
@@ -185,6 +210,7 @@ function startToon() {
       io.unobserve(p);
       p.classList.add("show");
       Sound.gong(p.classList.contains("reveal"));
+      Voice.add(p.dataset.voice);
       let delay = 600;
       (queue.get(p) || []).forEach((chars) => {
         chars.forEach((c, i) => setTimeout(() => c.classList.add("on"), CALM ? 0 : delay + i * 70));
@@ -207,6 +233,6 @@ function ember() {
   setTimeout(() => e.remove(), 13000);
 }
 
-startToon();
+if (!document.querySelector("#gate")) startToon();  // 입장 화면이 있으면 '들어가기'를 누른 뒤 시작
 
 init().catch((x) => ($("#app").innerHTML = `<div class="card"><p>${esc(x.message)}</p></div>`));

@@ -114,6 +114,26 @@
   .bankline { font: 700 20px "Noto Serif KR", serif; padding: 14px; border: 1px dashed var(--gold); border-radius: 10px; margin: 14px 0; user-select: all; color: var(--gold); }
   .apply .foot { color: var(--ink-3); border-top-color: var(--line); }
 
+  /* 이야기 장면 */
+  .panel.story { min-height: min(62vh, 560px); }
+  .neon { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 22px; margin-bottom: 20px; }
+  .neon span { font: 400 clamp(26px, 8vw, 40px) "Song Myung", serif; padding: 4px 14px; border: 2px solid currentColor; border-radius: 6px; opacity: .15; }
+  .panel.show .neon span { animation: flick 3.6s infinite; }
+  .neon .n1 { color: #ff4f7a; } .neon .n2 { color: #4fd8ff; animation-delay: .7s !important; }
+  .neon .n3 { color: #ffb14f; animation-delay: 1.3s !important; } .neon .n4 { color: #c77dff; animation-delay: .3s !important; }
+  .neon span { text-shadow: 0 0 8px currentColor, 0 0 24px currentColor; box-shadow: 0 0 12px currentColor, inset 0 0 10px currentColor; }
+  @keyframes flick { 0%, 100% { opacity: .9; } 8% { opacity: .2; } 10% { opacity: .9; } 46% { opacity: .85; } 48% { opacity: .25; } 52% { opacity: .9; } }
+  .couple { width: 150px; fill: #2a2235; stroke: #4a3d5a; margin-bottom: 14px; opacity: 0; transition: opacity 1.4s; }
+  .couple path[fill="none"] { stroke: #ff4f7a; }
+  .panel.show .couple { opacity: 1; }
+  .verdict { font-size: clamp(25px, 7vw, 34px); color: #dfe8ff; text-shadow: 0 0 18px rgba(120,160,255,.5); letter-spacing: .02em; }
+  .line.red { color: var(--accent-2); font-size: clamp(28px, 8vw, 38px); text-shadow: 0 0 20px rgba(192,40,58,.8); }
+  .line.gold { color: #f6e7c4; font-size: clamp(26px, 7vw, 34px); text-shadow: 0 0 18px rgba(217,178,106,.6); }
+  .panel.rain::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .25;
+    background: repeating-linear-gradient(105deg, transparent 0 14px, rgba(160,170,220,.35) 14px 15px);
+    background-size: 100% 200%; animation: rainfall .6s linear infinite; }
+  @keyframes rainfall { to { background-position: 0 100%; } }
+
   /* 입장 화면 · 소리 버튼 */
   #gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; text-align: center; padding: 24px;
     background: radial-gradient(ellipse at 50% 40%, #1c1424, #07060a 70%); transition: opacity 1s; }
@@ -156,31 +176,71 @@
   <section class="toon" aria-label="운결 도령의 이야기">
     <div class="skip"><a href="#form">바로 신청하기 ↓</a></div>
 
-    <div class="panel blank">
+    <!-- 이야기: 번화가 골목의 커플 -->
+    <div class="panel story" data-voice="n01">
+      <div class="neon" aria-hidden="true"><span class="n1">사주</span><span class="n2">타로</span><span class="n3">궁합</span><span class="n4">신점</span></div>
+      <p class="line" data-type>토요일 밤, 번화가 골목.</p>
+      <p class="line small" data-type>천막마다 사주, 타로 간판이 줄지어 불을 밝힌다.</p>
+    </div>
+
+    <div class="panel story" data-voice="n02">
+      <svg class="couple" viewBox="0 0 160 120" aria-hidden="true">
+        <circle cx="58" cy="28" r="12"/><path d="M42 118 L46 58 Q58 44 70 58 L74 118 Z"/>
+        <circle cx="102" cy="32" r="11"/><path d="M88 118 L90 62 Q102 48 114 62 L118 118 Z"/>
+        <path d="M72 76 Q80 82 90 76" stroke-width="4" fill="none"/>
+      </svg>
+      <p class="line" data-type>손을 꼭 잡은 두 사람이 들어간다.</p>
+      <p class="line small" data-type>재미로 한번 보자며… 오만 원을 내고.</p>
+    </div>
+
+    <div class="panel story" data-voice="n03">
+      <p class="line small" data-type>처음 본 사람이 생년월일 몇 글자를 들여다보더니, 말한다.</p>
+      <p class="line verdict" data-type>“둘은 안 맞아. 헤어질 상이야.”</p>
+    </div>
+
+    <div class="panel story rain" data-voice="n04">
+      <p class="line" data-type>그날 밤, 둘은 아무 말 없이</p>
+      <p class="line" data-type>집으로 돌아갔다.</p>
+    </div>
+
+    <div class="panel story" data-voice="n05">
+      <div class="smoke"></div>
+      <p class="line red" data-type>…어리석구나.</p>
+      <p class="line" data-type>너를 단 한 번도 본 적 없는 사람에게,</p>
+      <p class="line bubble" data-type>너의 인생을 판별하게 두지 마라.</p>
+    </div>
+
+    <div class="panel story" data-voice="n06">
+      <p class="line gold" data-type>사주는 심심풀이가 아니다.</p>
+      <p class="line small" data-type>네가 어떤 결을 타고났는지, 지금 어떤 흐름 위에 서 있는지…</p>
+      <p class="line small" data-type>그 지도를 읽는 일이다.</p>
+    </div>
+
+    <div class="panel blank" data-voice="n07">
       <div class="smoke"></div>
       <div class="art moon"><img src="/img/dory.jpg" alt=""></div>
       <p class="line" data-type>…또 한 명이 찾아왔군.</p>
     </div>
 
-    <div class="panel">
+    <div class="panel" data-voice="n08">
       <div class="art eyes"><img src="/img/dory.jpg" alt=""></div>
       <p class="line bubble" data-type>너, 요즘 마음이 편하지 않지?</p>
       <p class="line small" data-type>잠들기 전에 같은 생각이 자꾸 맴돌고.</p>
     </div>
 
-    <div class="panel">
+    <div class="panel" data-voice="n09">
       <div class="smoke"></div>
       <div class="art hand"><img src="/img/dory.jpg" alt=""></div>
       <p class="line bubble" data-type>숨길 필요 없다.</p>
       <p class="line small" data-type>네가 태어난 날에… 다 적혀 있으니까.</p>
     </div>
 
-    <div class="panel reveal">
+    <div class="panel reveal" data-voice="n10">
       <div class="art"><img src="/img/dory.jpg" alt="운결 도령"></div>
       <div class="big">너의 인생이<br>보인다.</div>
     </div>
 
-    <div class="panel blank">
+    <div class="panel blank" data-voice="n11">
       <div class="smoke"></div>
       <p class="line" data-type>그리고… 원한다면, 매일 아침.</p>
       <p class="line bubble" data-type>너의 하루가 어디로 흐르는지 알려주마.</p>
@@ -188,7 +248,7 @@
       <p class="proof sub-proof">매일 아침 7시, 내 사주로 본 오늘의 흐름을 메일로 · <b id="sub-price">월 구독</b></p>
     </div>
 
-    <div class="panel blank cta">
+    <div class="panel blank cta" data-voice="n12">
       <div class="smoke"></div>
       <p class="line" data-type>일, 사랑, 돈, 그리고 올해의 흐름까지.</p>
       <p class="line" data-type>알고 싶다면… 태어난 날을 적어라.</p>
