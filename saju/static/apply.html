@@ -408,22 +408,6 @@
         <img src="/img/toon/reveal.jpg" alt="운결 도령: 너의 인생이 보인다"></div></div>
     </div>
 
-    <!-- 무료 바로 보기: 생년월일만 넣으면 바로 (저장 안 함, AI 안 씀) -->
-    <section id="quick" class="quick">
-      <div class="panel blank q-ask">
-        <div class="smoke"></div>
-        <p class="line" data-type>…궁금하냐.</p>
-        <p class="line bubble" data-type>태어난 날만 알려다오. 지금 바로 보여주마.</p>
-        <form id="qform" class="qcard" novalidate>
-          <div id="q-birth"></div>
-          <button class="btn block" id="q-go">내 사주 바로 보기 · 무료</button>
-          <p class="err" id="q-err"></p>
-          <p class="muted small">입력한 생년월일은 저장하지 않아요. 태어난 시간을 몰라도 돼요.</p>
-        </form>
-      </div>
-      <div id="quick-result"></div>
-    </section>
-
     <div class="panel blank" data-voice="n11">
       <div class="smoke"></div>
       <p class="line" data-type>그리고… 원한다면, 매일 아침.</p>
@@ -458,9 +442,22 @@
       <p class="line" data-type>일, 사랑, 돈, 그리고 올해의 흐름까지.</p>
       <p class="line" data-type>알고 싶다면… 태어난 날을 적어라.</p>
       <p class="line small free-only" data-type>처음 온 자의 첫 풀이는… 내가 그냥 봐주지.</p>
-      <a class="btn" href="#quick">운명 들여다보기 · 무료</a>
-      <p class="proof"><b class="free-only" style="color:var(--gold)">첫 풀이 1회 무료 · </b>생년월일과 고민을 보내면, 맞춤 풀이를 PDF로 보내준다.</p>
     </div>
+    <!-- 무료 바로 보기: 생년월일만 넣으면 바로 (저장 안 함, AI 안 씀) -->
+    <section id="quick" class="quick">
+      <div class="panel blank q-ask">
+        <div class="smoke"></div>
+        <p class="line small" data-type>성향·올해·오늘의 운은 지금 바로, 무료로. 고민도 짧게 풀어주마.</p>
+        <form id="qform" class="qcard" novalidate>
+          <div id="q-birth"></div>
+          <button class="btn block" id="q-go">내 사주 바로 보기 · 무료</button>
+          <p class="err" id="q-err"></p>
+          <p class="muted small">입력한 생년월일은 저장하지 않아요. 태어난 시간을 몰라도 돼요.</p>
+        </form>
+      </div>
+      <div id="quick-result"></div>
+    </section>
+
   </section>
 
   <form id="form" class="card" novalidate>

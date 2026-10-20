@@ -131,12 +131,11 @@ async function init() {
     $("#sub-day").textContent = Math.round(price / 30).toLocaleString("ko-KR");
     $("#pick-daily").textContent = `운결에게 맡기기 · 월 ${won(price)}`;
   }
-  $("#pick-daily").onclick = (e) => {  // 구독을 골라둔 채로 신청서로
+  $("#pick-daily").onclick = (e) => {  // 구독을 골라둔 채로: 생년월일 → 고민 → 간단 신청 흐름으로
     e.preventDefault();
-    $("#form").hidden = false;
-    const d = document.querySelector('input[name="product"][value="daily"]');
-    if (d) { d.checked = true; onProduct(); }
-    $("#form").scrollIntoView({ behavior: "smooth" });
+    WANT = "daily";
+    if (QUICK?.concern) { checkout("daily"); $("#form").scrollIntoView({ behavior: "smooth" }); }
+    else $("#quick").scrollIntoView({ behavior: "smooth" });
   };
   document.body.classList.toggle("no-free", !cfg.free_first);
   let lastTier = "";

@@ -22,6 +22,7 @@ import quick
 from saju_engine import current_luck
 
 DAILY = int(os.environ.get("QUICK_AI_LIMIT", "300"))
+WAIT = int(os.environ.get("QUICK_AI_WAIT", "25"))  # 화면에서 기다려 줄 최대 초
 _cache, _lock = {}, threading.Lock()  # token → (만든 시각, 깊은 풀이)
 
 PRODUCT_FOR = {"career": "career", "money": "career", "change": "career", "study": "career",
@@ -61,11 +62,12 @@ def _rules(chart, luck, concern, story):
     dm = quick.DM[chart["day_master"]["ko"]]
     lens = LENS.get(concern, LENS["career"])
     y = luck["year"]
-    brief = (f"{K.CONCERNS.get(concern, {}).get('label', '그 고민')} 때문에 왔구나. 너는 {quick._clean(K.DAY_MASTER[chart['day_master']['ko']]['image'])}다 — "
+    brief = (f"{K.CONCERNS.get(concern, {}).get('label', '그 고민')} 때문에 왔구나. 너는 「{quick._clean(K.DAY_MASTER[chart['day_master']['ko']]['image'])}」의 사람이다 — "
              f"{dm['core']} 그래서 이 고민도 네 방식대로 붙잡고 있을 것이다. "
-             f"올해는 {quick.YEAR_GOD.get(y['stem_god'], '')}")
+             "그런데… 네 사주에는 이 고민을 풀 열쇠가 하나 보인다. 그게 무엇인지는, 조금 더 들여다봐야 말해줄 수 있다.")
     deeper = (f"사주에서 이 고민은 이렇게 본다: {lens} 네 그림자는 '{dm['shadow'][0]}'이다. 이 고민이 길어진다면 거기서 막혀 있을 가능성이 크다. "
-              f"{dm['tip']} 언제 움직이고 언제 기다려야 하는지는, 달마다의 흐름까지 봐야 정확히 말해줄 수 있다.")
+              f"올해 들어온 기운은 이렇다 — {quick.YEAR_GOD.get(luck['year']['stem_god'], '')} {dm['tip']} "
+              "언제 움직이고 언제 기다려야 하는지, 달마다 정확한 건 PDF에 담아주마.")
     return brief, deeper
 
 
@@ -84,16 +86,25 @@ def reading(birth, chart_of_birth, concern, story):
 [고민 분야] {label}
 [손님이 쓴 고민] {story or '(따로 적지 않음)'}
 
-JSON 으로만 답하세요: {{"brief": "...", "deeper": "..."}}
-- brief: 150~250자, 3~4문장. 답을 주지 말고 '궁금하게' 만든다. ① 고민을 꿰뚫는 한마디(사주 근거 하나, 쉽게) ② "그런데 네 사주에는 이 고민을 풀 열쇠가 하나 보인다" 같은 예고 ③ 그 열쇠가 무엇인지는 말하지 않고 끝낸다.
-- deeper: 300~450자. brief 에서 예고한 열쇠를 조금 보여준다: 이 고민이 반복되는 진짜 이유 하나, 앞으로 1년 중 움직이기 좋은 때 하나(제공된 운의 흐름에 근거). 다 말하지 말고 "언제, 어떻게 움직일지 달마다 정확한 건 PDF에 담아주마"로 끝낸다."""
-        text, eng = llm.generate(SYSTEM, [{"role": "user", "content": prompt}], 1500)
-        m = re.search(r"\{.*\}", text or "", re.S)
-        try:
-            d = json.loads(m.group(0)) if m else {}
-            brief, deeper, engine = d.get("brief", "").strip(), d.get("deeper", "").strip(), eng
-        except ValueError:
-            pass
+아래 두 칸을 그대로 써서 답하세요 (다른 말 없이):
+[짧게]
+150~250자, 3~4문장. 답을 다 주지 말고 궁금하게 만든다. 첫 문장은 고민을 꿰뚫는 한마디(사주 근거 하나, 쉽게). 그다음 네 사주에 이 고민을 풀 열쇠가 하나 보인다는 예고. 그 열쇠가 무엇인지는 말하지 않고 끝낸다.
+[깊게]
+300~450자. 예고한 열쇠를 조금 보여준다: 이 고민이 반복되는 진짜 이유 하나, 앞으로 1년 중 움직이기 좋은 때 하나(제공된 운의 흐름에 근거). 다 말하지 말고, 언제 어떻게 움직일지 달마다 정확한 건 PDF에 담아주겠다는 말로 끝낸다."""
+        # 손님이 화면에서 기다리는 중이라 AI는 최대 WAIT 초만 기다리고, 늦으면 기본 문장으로 (AI 답은 버림)
+        box = {}
+        t = threading.Thread(target=lambda: box.update(r=llm.generate(SYSTEM, [{"role": "user", "content": prompt}], 900)), daemon=True)
+        t.start()
+        t.join(WAIT)
+        text, eng = box.get("r") or (None, None)
+        if t.is_alive():
+            print(f"[고민 풀이] AI가 {WAIT}초 안에 답하지 않아 기본 문장으로")
+        m = re.search(r"\[짧게\]\s*(.+?)\s*\[깊게\]\s*(.+)", text or "", re.S)
+        if m:
+            clean = lambda t: re.sub(r"^\s*[\(（]?\d+~\d+자[^\n]*\n", "", t).strip().strip('"')
+            brief, deeper, engine = clean(m.group(1)), clean(m.group(2)), eng
+        elif text:
+            print(f"[고민 풀이] AI 답 모양이 달라 기본 문장으로: {text[:120]}")
     if not brief or not deeper:
         brief, deeper = _rules(chart, luck, concern, story)
         engine = "rules"
