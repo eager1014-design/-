@@ -58,6 +58,7 @@
     color: var(--ink); text-shadow: 0 2px 14px rgba(0,0,0,.9); min-height: 1.6em; }
   .line.small { font-size: clamp(16px, 4vw, 19px); color: var(--ink-2); margin-top: 10px; }
   .line .c { opacity: 0; transition: opacity .25s; }
+  .line .w { white-space: nowrap; }
   .line .c.on { opacity: 1; }
   .bubble { border: 1px solid rgba(217,178,106,.35); background: rgba(11,9,16,.72); padding: 14px 22px; border-radius: 2px; backdrop-filter: blur(3px); }
 
@@ -203,6 +204,9 @@
     box-shadow: 0 0 0 2px var(--gold), 0 0 20px rgba(192,40,58,.5); opacity: 0; transition: opacity .8s; }
   .panel.show .talk .ava { opacity: 1; }
   .talk .line { margin: 0; text-align: left; font-size: clamp(18px, 4.8vw, 23px); }
+  .talk.long { flex-direction: column; align-items: center; width: 100%; }
+  .talk.long .line { width: 100%; font: 400 17px/1.75 "Song Myung", serif; padding: 16px 18px; }
+  .kicker.nobreak { white-space: nowrap; }
   .bars5 { width: 100%; max-width: 420px; margin: 8px 0 6px; }
   .b5 { display: grid; grid-template-columns: 42px 1fr 22px; gap: 8px; align-items: center; margin: 7px 0; font-size: 14px; color: var(--ink-2); }
   .b5 i { display: block; height: 10px; border-radius: 99px; width: 0; transition: width 1.4s ease-out; }
@@ -247,6 +251,25 @@
   .tocnote { margin: 6px 0 0; padding: 10px; border-radius: 8px; background: rgba(217,178,106,.07); color: var(--ink-2); line-height: 1.6; }
   #products details.toc { margin: -4px 4px 4px 44px; }
   .lock.paid { border-color: rgba(217,178,106,.55); }
+
+  /* 고민 고르기 · 간단 신청 */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 16px 0 10px; max-width: 520px; }
+  .chip input { display: none; }
+  .chip span { display: inline-block; padding: 8px 14px; border-radius: 99px; border: 1px solid var(--line); background: #100d15;
+    color: var(--ink-2); font-size: 14px; cursor: pointer; }
+  .chip input:checked + span { border-color: var(--accent); color: #fff; background: #2a1219; box-shadow: 0 0 14px rgba(192,40,58,.35); }
+  .askpanel textarea { max-width: 520px; min-height: 70px; margin: 4px 0 8px; }
+  .askpanel .check { max-width: 520px; text-align: left; color: var(--ink-3); }
+  .askpanel .btn { max-width: 520px; margin-top: 10px; font: 400 19px "Song Myung", serif; border-radius: 4px; background: linear-gradient(180deg, #c0283a, #8e1625); }
+  .compact-only { display: none; }
+  #form.compact .compact-only { display: block; margin: 10px 0 0; font-size: 14px; color: var(--ink-2); }
+  #form.compact #me-birth, #form.compact #me-birth + *, #form.compact .concern-set { display: none; }
+  #form.compact #products .product:not(.rec-item), #form.compact #products .product:not(.rec-item) + details.toc,
+  #form.compact #products .tier { display: none; }
+  #form.compact.all #products .product, #form.compact.all #products details.toc, #form.compact.all #products .tier { display: flex; }
+  #form.compact.all #products details.toc, #form.compact.all #products .tier { display: block; }
+  #more-products { display: none; }
+  #form.compact #more-products { display: inline-block; }
 
   /* 입장 화면 · 소리 버튼 */
   #gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; text-align: center; padding: 24px;
@@ -427,7 +450,7 @@
       <p class="line" data-type>일, 사랑, 돈, 그리고 올해의 흐름까지.</p>
       <p class="line" data-type>알고 싶다면… 태어난 날을 적어라.</p>
       <p class="line small free-only" data-type>처음 온 자의 첫 풀이는… 내가 그냥 봐주지.</p>
-      <a class="btn" href="#form">운명 들여다보기</a>
+      <a class="btn" href="#quick">운명 들여다보기 · 무료</a>
       <p class="proof"><b class="free-only" style="color:var(--gold)">첫 풀이 1회 무료 · </b>생년월일과 고민을 보내면, 맞춤 풀이를 PDF로 보내준다.</p>
     </div>
   </section>
@@ -436,11 +459,13 @@
     <div class="form-head">
       <span class="muted small">운결 도령의 사주 풀이</span>
       <h2>네 이야기를 들려다오</h2>
+      <p class="compact-only" id="compact-summary"></p>
       <p class="freebox free-only">✦ 처음이라면 <b>1회 무료</b> ✦<br><span class="muted small">이메일·이름·생년월일 기준 1인 1회 (평생 종합 사주·월 구독 제외). 두 번째부터는 표시된 가격이에요.</span></p>
     </div>
     <fieldset>
       <legend>무엇을 들여다볼까 <small>받고 싶은 풀이</small></legend>
       <div class="products" id="products"></div>
+      <button type="button" class="linkbtn" id="more-products">다른 풀이도 보기 ↓</button>
     </fieldset>
 
     <fieldset>
@@ -454,7 +479,7 @@
 
     <fieldset id="partner-box" hidden></fieldset>
 
-    <fieldset>
+    <fieldset class="concern-set">
       <legend>무엇이 마음에 걸리느냐 <small>지금의 고민</small></legend>
       <label for="concern">가장 궁금한 분야</label>
       <select id="concern"></select>

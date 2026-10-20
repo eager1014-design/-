@@ -36,6 +36,7 @@ import longform
 import orders
 import products
 import promo
+import concern
 import invite
 import quick
 import referral
@@ -379,6 +380,8 @@ class Handler(BaseHTTPRequestHandler):
             ("POST", "/api/quick"): self.api_quick,
             ("POST", "/api/quick/unlock"): self.api_quick_unlock,
             ("GET", "/api/invite/status"): self.api_invite_status,
+            ("POST", "/api/quick/concern"): self.api_quick_concern,
+            ("POST", "/api/quick/concern/unlock"): self.api_quick_concern_unlock,
             ("GET", "/api/admin/orders"): self.api_admin_orders,
             ("GET", "/api/admin/order"): self.api_admin_order,
             ("POST", "/api/admin/order/create"): self.api_admin_create,
@@ -695,6 +698,24 @@ class Handler(BaseHTTPRequestHandler):
         if b.get("inv"):  # 친구가 보낸 링크로 와서 자기 사주를 봤다 → 링크 주인에게 평생 종합 할인
             invite.record(str(b.get("inv")), str(b.get("vid") or ""), birth)
         self.send_json(quick.reading(birth, chart_of_birth))
+
+    def api_quick_concern(self, b):
+        """고민을 고르면 그 자리에서 짧은 풀이 + 잠긴 깊은 풀이. 저장 안 함."""
+        if not b.get("consent"):
+            return self.error("고민 풀이를 위해 AI 처리(국외 이전)에 동의해 주세요.")
+        if too_many("concern:" + self.client_ip(), 15, 3600):
+            return self.error("오늘은 여기까지 보여주마. 잠시 후 다시 와라.", 429)
+        try:
+            birth = parse_birth(b.get("birth") or {})
+        except ValueError as e:
+            return self.error(str(e))
+        self.send_json(concern.reading(birth, chart_of_birth, b.get("concern"), b.get("story")))
+
+    def api_quick_concern_unlock(self, b):
+        text = concern.unlock(b.get("token"))
+        if not text:
+            return self.error("시간이 지나 닫혔다. 고민을 다시 골라 다오.", 404)
+        self.send_json({"ok": True, "text": text})
 
     def api_invite_status(self, q):
         self.send_json(invite.status(q.get("vid")))
