@@ -376,6 +376,7 @@ class Handler(BaseHTTPRequestHandler):
             ("GET", "/api/apply/config"): self.api_apply_config,
             ("POST", "/api/apply"): self.api_apply,
             ("POST", "/api/quick"): self.api_quick,
+            ("POST", "/api/quick/unlock"): self.api_quick_unlock,
             ("GET", "/api/admin/orders"): self.api_admin_orders,
             ("GET", "/api/admin/order"): self.api_admin_order,
             ("POST", "/api/admin/order/create"): self.api_admin_create,
@@ -691,6 +692,19 @@ class Handler(BaseHTTPRequestHandler):
             return self.error(str(e))
         self.send_json(quick.reading(birth, chart_of_birth))
 
+    def api_quick_unlock(self, b):
+        """친구에게 링크를 보낸 손님에게 잠긴 칸 하나를 열어준다."""
+        if too_many("unlock:" + self.client_ip(), 40, 3600):
+            return self.error("잠시 후 다시 해주세요.", 429)
+        try:
+            birth = parse_birth(b.get("birth") or {})
+        except ValueError as e:
+            return self.error(str(e))
+        text = quick.unlock(birth, chart_of_birth, b.get("id"))
+        if not text:
+            return self.error("열 수 없는 칸입니다.", 403)
+        self.send_json({"ok": True, "text": text})
+
     def read_order_form(self, b):
         """신청서·직접 입력 공통 검사. (product, name, email, birth, partner, situation) — 잘못되면 ValueError."""
         product = b.get("product")
@@ -770,6 +784,8 @@ class Handler(BaseHTTPRequestHandler):
                         f"입금자명: {o['name']}\n\n입금이 확인되면 풀이를 정성껏 작성해 이 메일 주소로 PDF로 보내드립니다.\n"
                         "보통 입금 확인 후 1~2일 안에 받아보실 수 있어요." + invite)
         price = {"first": "무료(첫 1회)", "ref": "무료(친구 초대)"}.get(free, f"{o['amount']:,}원")
+        if free:
+            auto_generate(o)  # 무료 신청은 바로 풀이 쓰기 시작
         for admin_email in orders.ADMIN_EMAILS:
             mailer.send(admin_email, f"[운결] 새 신청 {o['code']} — {o['name']} / {prod['label']} {price}",
                         f"새 신청이 들어왔습니다.\n\n{o['name']} ({o['email']})\n{prod['label']} {price}\n"
@@ -826,6 +842,8 @@ class Handler(BaseHTTPRequestHandler):
         if b.get("status") not in orders.STATUS:
             return self.error("알 수 없는 상태입니다.")
         orders.set_status(o["id"], b["status"])
+        if b["status"] == "paid" and o["status"] == "pending":
+            auto_generate(orders.get(o["id"]))  # 입금 확인 = 풀이 자동으로 쓰기 시작 (맥북 챗GPT)
         if b["status"] == "paid" and orders.PRODUCTS.get(o["product"], {}).get("subscription") and o["status"] == "pending":
             s = subs.activate(o)  # 구독: 입금 확인 = 30일 구독 시작/연장 → 신청은 '발송 완료'로
             orders.set_status(o["id"], "sent")
@@ -841,8 +859,10 @@ class Handler(BaseHTTPRequestHandler):
         o = self.order_or_404(b.get("id"))
         if not o:
             return
-        if o.get("gen_state") in ("running", "mac_wait", "mac_running"):
+        if o.get("gen_state") in ("running", "mac_running"):  # 맥북 '대기' 중이면 사장님이 다른 방법으로 바꿀 수 있음
             return self.error("이미 풀이를 만드는 중입니다. 잠시만 기다려 주세요.", 409)
+        if o.get("gen_state") == "mac_wait" and b.get("engine") == "mac":
+            return self.error("이미 맥북 챗GPT 대기열에 있어요. 맥북이 켜지면 바로 시작해요.", 409)
         if o["content"] and not b.get("overwrite"):
             return self.error("이미 작성된 풀이가 있습니다. 새로 만들면 지금 글이 사라집니다.", 409, need_overwrite=True)
         total = len(orders.PRODUCTS.get(o["product"], {}).get("chapters", [])) or 1
@@ -1320,6 +1340,17 @@ class Handler(BaseHTTPRequestHandler):
         db.run("UPDATE subscriptions SET current_period_end=? WHERE user_id=? AND current_period_end > ?", past, u["id"], past)
         billing.run_renewals()
         self.send_json({"ok": True, "access": billing.access(db.one("SELECT * FROM users WHERE id=?", u["id"]))})
+
+
+def auto_generate(o):
+    """입금 확인(또는 무료 신청) 순간 풀이 쓰기를 자동으로 시작한다. 기본은 맥북 챗GPT 대기열(0원, 맥북이 켜지면 시작).
+    AUTO_GENERATE=off 면 끔. 사장님은 다 쓰인 풀이를 읽고 '손님에게 보내기'만 누르면 된다."""
+    mode = os.environ.get("AUTO_GENERATE", "mac")
+    if mode == "off" or not o or o.get("content") or o.get("gen_state") in ("running", "mac_wait", "mac_running"):
+        return
+    if orders.PRODUCTS.get(o["product"], {}).get("subscription"):
+        return
+    orders.set_gen(o["id"], "mac_wait", "맥북이 가져가기를 기다리는 중 (자동 시작)")
 
 
 def mac_online():

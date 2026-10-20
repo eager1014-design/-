@@ -221,6 +221,19 @@
   .rec:active { transform: scale(.98); }
   .linkbtn { margin-top: 14px; background: none; border: 0; color: var(--ink-2); text-decoration: underline; font-size: 14px; cursor: pointer; }
 
+  /* 잠긴 칸 */
+  .lock { width: 100%; max-width: 520px; padding: 16px; border: 1px solid rgba(192,40,58,.45); border-radius: 12px;
+    background: linear-gradient(180deg, #1a1119, #120e17); text-align: left; position: relative; overflow: hidden; }
+  .lock .blurred { margin: 6px 0 10px; font: 400 17px/1.7 "Song Myung", serif; color: var(--ink); filter: blur(5px); user-select: none;
+    letter-spacing: .02em; transition: filter 1.2s; }
+  .lock.open { border-color: var(--gold); box-shadow: 0 0 30px rgba(217,178,106,.3); }
+  .lock.open .blurred { filter: none; user-select: text; color: #f6e7c4; }
+  .lock.open .lockbtn { display: none; }
+  .lockbtn { width: 100%; margin-top: 6px; font: 700 15px "Noto Sans KR", sans-serif !important; color: #fff !important;
+    background: linear-gradient(180deg, #c0283a, #8e1625) !important; border: 1px solid rgba(217,178,106,.5) !important;
+    box-shadow: 0 0 18px rgba(192,40,58,.35); }
+  .sharepanel .done-actions { margin-top: 12px; }
+
   /* 입장 화면 · 소리 버튼 */
   #gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; text-align: center; padding: 24px;
     background: radial-gradient(ellipse at 50% 40%, #1c1424, #07060a 70%); transition: opacity 1s; }

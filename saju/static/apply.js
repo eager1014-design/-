@@ -358,6 +358,52 @@ function showQuick(r, birth) {
   if (r.stars.length) quickPanel(`<p class="kicker">너에게 있는 별</p>${r.stars.map((s) => say(s, "small")).join("")}`);
   quickPanel(`<p class="kicker">올해 ${r.year.year}년 · ${esc(r.year.ko)}</p>${say(r.year.text)}
     <p class="kicker" style="margin-top:22px">오늘 ${esc(r.today.date)} · ${esc(r.today.ko)}일</p>${say(r.today.text)}`, "fortune");
+  // 잠긴 칸: 더 깊은 결과는 결제하면 PDF로, '인연이 들어오는 때'는 친구에게 보내면 지금 열림
+  const priceTag = (x) => window.FREE_FIRST && !window.PRODUCTS[x.product]?.no_free ? `처음이면 무료` : won(x.price);
+  r.locked.forEach((x) => {
+    const p = quickPanel(`<div class="lock" id="lock-${x.id}">
+      <p class="kicker">🔒 ${esc(x.title)}</p>
+      <p class="blurred">${esc(x.masked)}</p>
+      ${x.share_unlock ? `<p class="small muted">친구에게 이 사이트를 보내면 <b style="color:var(--gold)">지금 바로</b> 열어주마.</p>` : ""}
+      <button class="btn ghost lockbtn" data-key="${x.product}">${esc(x.label)}에서 전부 보기 · ${priceTag(x)}</button>
+    </div>`, "locked");
+    p.querySelector(".lockbtn").onclick = () => pickProduct(x.product, birth);
+  });
+  // 친구에게 보내기 → '인연이 들어오는 때' 열기
+  const shareUrl = `${location.origin}/?src=share`;
+  const sp = quickPanel(`<p class="kicker">친구에게 보내라</p>${say("친구에게 이 사이트를 보내면… 잠긴 것 하나를 지금 열어주마.")}
+    <div class="done-actions">
+      ${navigator.share ? '<button class="btn" id="q-share">친구에게 보내기</button>' : ""}
+      <button class="btn ghost" id="q-copy">링크 복사</button></div>
+    <p class="muted small">친구도 첫 풀이가 무료다.</p>`, "sharepanel");
+  const doUnlock = async () => {
+    try {
+      const u = await api("/api/quick/unlock", { birth, id: "love" });
+      const box = $("#lock-love");
+      if (box) {
+        box.querySelector(".blurred").textContent = u.text;
+        box.classList.add("open");
+        box.querySelector(".kicker").textContent = "🔓 인연이 들어오는 때";
+        box.scrollIntoView({ behavior: "smooth", block: "center" });
+        Sound.gong(true);
+      }
+    } catch (e) { /* 열기 실패는 조용히 */ }
+  };
+  sp.querySelector("#q-share")?.addEventListener("click", async () => {
+    try { await navigator.share({ title: "운결 · 너의 인생이 보인다", text: "태어난 날만 넣으면 사주를 보여줘. 첫 풀이는 무료래.", url: shareUrl }); doUnlock(); }
+    catch (e) { /* 공유 창을 닫음 */ }
+  });
+  sp.querySelector("#q-copy").onclick = async () => {
+    doUnlock();  // 복사가 막힌 폰에서도 열리게 먼저 연다
+    const btn = sp.querySelector("#q-copy");
+    try {
+      await Promise.race([navigator.clipboard.writeText(shareUrl), new Promise((_, no) => setTimeout(no, 1500))]);
+      btn.textContent = "복사했어요 ✓ 친구에게 붙여넣어 보내세요";
+    } catch (e) {  // 복사가 안 되면 링크를 보여주고 길게 눌러 복사하게
+      btn.insertAdjacentHTML("afterend", `<div class="linkline">${esc(shareUrl)}</div>`);
+      btn.textContent = "아래 링크를 길게 눌러 복사하세요";
+    }
+  };
   quickPanel(dory(r.tip));
   const recs = quickPanel(`<p class="kicker">여기까지가 겉이다</p>${say("더 깊이 보고 싶다면… 너에게는 이게 맞겠다.")}
     <div class="recs">${r.recs.map((x) => `<button class="rec" data-key="${x.key}">

@@ -74,6 +74,8 @@ def main():
     st, r = apply(guest, "newyear", "김손님", src="threads")
     ok(st == 200 and r["code"].startswith("UG"), "신청 완료 + 신청번호")
     ok(r["free"] and r["amount"] == 0, "첫 신청은 무료")
+    st, jobs = machine("/api/admin/jobs")
+    ok(any(j["name"] == "김손님" for j in jobs["jobs"]), "무료 신청은 바로 맥북 풀이 대기열에 (자동 시작)")
     st, r = apply(guest, "love", "김손님")
     ok(not r["free"] and r["amount"] > 0, "같은 이메일 두 번째는 유료")
     st, r = guest("/api/apply", {"product": "love", "name": "김손님", "email": "other@test.com", "birth": B, "situation": SIT,
@@ -89,6 +91,11 @@ def main():
     ok(st == 200 and r["image"] and r["good"] and r["year"]["text"] and r["today"]["text"] and 2 <= len(r["recs"]) <= 3,
        f"무료 바로 보기: {r.get('image')} / 추천 {[x['key'] for x in r.get('recs', [])]}")
     ok(guest("/api/quick", {"birth": {"year": 1995}})[0] == 400, "바로 보기: 잘못된 생년월일 거절")
+    import re as _re
+    ok(len(r["locked"]) >= 2 and not _re.search(r"\d", "".join(x["masked"] for x in r["locked"])), "잠긴 칸: 진짜 결과(숫자) 안 보냄")
+    st, u = guest("/api/quick/unlock", {"birth": B, "id": "love"})
+    ok(st == 200 and "인연" in u["text"], "친구에게 보내면 '인연이 들어오는 때' 열림")
+    ok(guest("/api/quick/unlock", {"birth": B, "id": "turn"})[0] == 403, "다른 잠긴 칸은 결제해야 열림")
     # 보안
     ok(guest("/api/admin/orders")[0] == 401, "비로그인 → 관리 화면 차단")
     ok(client({"X-Admin-Key": "wrong-key-0123456789abcdefgh"})("/api/admin/orders")[0] == 401, "틀린 기계 열쇠 차단")
@@ -123,7 +130,7 @@ def main():
     st, r = boss("/api/admin/order/generate", {"id": mid, "engine": "mac"})
     ok(r["order"]["gen_state"] == "mac_wait", "맥북 챗GPT로 만들기 → 대기")
     st, r = machine("/api/admin/jobs")
-    ok([j["id"] for j in r["jobs"]] == [mid], "맥북이 대기 주문을 받아감")
+    ok(st == 200 and boss(f"/api/admin/order?id={mid}")[1]["order"]["gen_state"] == "mac_wait", "맥북 대기열에 들어감")
     ok(machine("/api/admin/jobs/update", {"id": mid, "state": "claim"})[0] == 200, "맥북이 맡음")
     ok(machine("/api/admin/jobs/update", {"id": mid, "state": "claim"})[0] == 409, "두 번 맡기 막힘")
     machine("/api/admin/jobs/update", {"id": mid, "state": "done", "markdown": "## 맥북이 쓴 풀이\n\n" + "내용 " * 50, "engine": "codex:시험"})

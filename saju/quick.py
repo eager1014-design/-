@@ -7,7 +7,7 @@ from datetime import date
 
 import knowledge as K
 import products
-from saju_engine import compute_chart, current_luck
+from saju_engine import compute_chart, current_luck, year_months
 
 # 일간(태어난 날의 기운)별 — 너는 누구인가
 DM = {
@@ -121,6 +121,59 @@ def recommend(chart, luck):
     return out[:3]
 
 
+# ---------------------------------------------------------------- 잠긴 부분 (결제하면 PDF에서, 친구에게 보내면 하나 열림)
+# 진짜 결과는 잠겨 있는 동안 화면에 보내지 않는다 (가린 글씨는 모양만 비슷한 가짜 글자).
+UNLOCK_BY_SHARE = "love"  # 친구에게 링크를 보내면 열어주는 칸
+
+
+def _months_text(ms):
+    return ", ".join(f"{m}월" for m in ms) if ms else "없다"
+
+
+def locked_sections(chart, luck):
+    ny = products.NY
+    nd = luck.get("next_daeun") or {}
+    ym = year_months(chart, ny)
+    good = [m["solar_month"] for m in ym if m["yongsin_hit"] and not m["clash"]][:3]
+    care = [m["solar_month"] for m in ym if m["clash"]][:3]
+    spouse = ("정관", "편관") if chart["input"]["gender"] == "female" else ("정재", "편재")
+    love = []
+    for y in (luck["year"]["year"], ny):
+        for m in year_months(chart, y):
+            ym_date = (y + (1 if m["solar_month"] == 1 else 0), m["solar_month"])
+            if ym_date >= (date.today().year, date.today().month) and (m["stem_god"] in spouse or m["branch_god"] in spouse):
+                love.append(f"{ym_date[0]}년 {ym_date[1]}월")
+    love = list(dict.fromkeys(love))[:3]
+    out = []
+    if nd:
+        g = nd["stem_god"]
+        out.append({"id": "turn", "title": "네 인생의 다음 전환점", "product": "life",
+                    "text": f"{nd['age']}세, {nd['start_year']}년부터 10년의 큰 흐름이 바뀐다. "
+                            + YEAR_GOD.get(g, "").replace("해다", "시기다").replace("해", "시기")})
+    out.append({"id": "months", "title": f"{ny}년, 좋은 달과 조심할 달", "product": "newyear",
+                "text": f"{ny}년 힘이 붙는 달은 {_months_text(good)}, 부딪힘을 조심할 달은 {_months_text(care)}다. "
+                        "중요한 시작은 좋은 달에 잡아라."})
+    out.append({"id": "love", "title": "인연이 들어오는 때", "product": "love",
+                "text": (f"너에게 인연의 기운이 들어오는 때는 {', '.join(love)}. 이때 새로운 만남을 피하지 마라."
+                         if love else "앞으로 1년 남짓은 새 인연보다 지금 곁의 사람을 돌볼 때다. 큰 인연의 흐름은 더 뒤에 온다.")})
+    return out
+
+
+def _mask(text):
+    """잠긴 글: 글자 수와 모양만 비슷하게 (숫자·내용은 가림)."""
+    out = []
+    for i, c in enumerate(text):
+        if c == " ":
+            out.append(" ")
+        elif c in ",.":
+            out.append("·")
+        elif i < 3 and not c.isdigit():  # 앞 두세 글자만 살짝 (숫자는 언제나 가림)
+            out.append(c)
+        else:
+            out.append("█")
+    return "".join(out)
+
+
 def reading(birth, chart_of_birth):
     """birth: server.parse_birth 결과 → 화면에 그릴 내용."""
     chart = chart_of_birth(birth)
@@ -141,4 +194,15 @@ def reading(birth, chart_of_birth):
         "year": {"year": y["year"], "ko": y["ko"], "god": y["stem_god"], "text": YEAR_GOD.get(y["stem_god"], "")},
         "today": {"date": date.today().strftime("%m월 %d일"), "ko": t["ko"], "text": TODAY_GOD.get(t["stem_god"], "")},
         "recs": recommend(chart, luck),
+        "locked": [{"id": x["id"], "title": x["title"], "masked": _mask(x["text"]), "product": x["product"],
+                    "label": products.PRODUCTS[x["product"]]["label"], "price": products.PRODUCTS[x["product"]]["price"],
+                    "share_unlock": x["id"] == UNLOCK_BY_SHARE} for x in locked_sections(chart, luck)],
     }
+
+
+def unlock(birth, chart_of_birth, section):
+    """친구에게 링크를 보낸 뒤 여는 칸 하나 (UNLOCK_BY_SHARE 만)."""
+    if section != UNLOCK_BY_SHARE:
+        return None
+    chart = chart_of_birth(birth)
+    return next((x["text"] for x in locked_sections(chart, current_luck(chart)) if x["id"] == section), None)
