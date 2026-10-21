@@ -54,7 +54,7 @@ function tocToggle(key) {
   if (!p || !p.toc?.length) return "";
   const chars = p.toc.reduce((a, t) => a + t.chars, 0);
   return `<details class="toc"><summary>📖 PDF에 들어가는 것 보기 · ${p.toc.length}개 장 · 약 ${p.pages}쪽</summary>
-    <ol>${p.toc.map((t, i) => `<li><b>${esc(t.t)}</b><span>${esc(t.d)}</span>${i >= 2 ? `<em>네 사주로 쓴 ${Math.round(t.chars / 100) * 100}자 분량 ███</em>` : ""}</li>`).join("")}</ol>
+    <ol>${p.toc.map((t, i) => `<li><b>${esc(t.t)}</b><span>${esc(t.d)}</span>${i >= 2 ? `<em>네 사주로 쓴 ${Math.round(t.chars / 100) * 100}자 분량</em>` : ""}</li>`).join("")}</ol>
     <p class="tocnote">표지(네 이름·사주 네 기둥) · 여는 말 · 차례 · 본문 ${p.toc.length}장 · 맺는 말. 약 ${(Math.round(chars / 1000)).toLocaleString("ko-KR")}천 자를 오직 네 생년월일과 고민으로 쓴다.<br>
     ${p.no_free ? "결제하면" : "결제(또는 첫 무료 신청)하면"} 1~2일 안에 이메일로 PDF가 간다.</p></details>`;
 }
