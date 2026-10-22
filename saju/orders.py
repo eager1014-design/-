@@ -39,9 +39,9 @@ def is_admin(user):
     return bool(user) and user["email"].lower() in ADMIN_EMAILS
 
 
-# 첫 풀이 1회 무료 (손님 끌어들이기). 끄려면 saju/.env 에 FREE_FIRST=0
-# 사장님 결정(2026-10-20 밤): PDF는 언제나 유료. 무료는 사이트에서 보여주는 짧은 풀이뿐 → 기본 꺼짐 (FREE_FIRST=1 로만 켬)
-FREE_FIRST = os.environ.get("FREE_FIRST", "0") == "1"
+# 첫 풀이 PDF 1회 무료 (손님 끌어들이기 + 받은 사람에게 친구 추천 링크). 끄려면 saju/.env 에 FREE_FIRST=0
+# 사장님 결정(2026-10-22): 가벼운 풀이 6종(고민·연애·반려동물·재회·궁합·직업재물)만. 기본·신년·평생은 products 의 no_free 로 제외
+FREE_FIRST = os.environ.get("FREE_FIRST", "1") == "1"
 
 
 def free_eligible(name, email, birth):

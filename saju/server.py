@@ -119,6 +119,13 @@ _attempts = {}
 _attempts_lock = threading.Lock()
 
 
+def recommend_note(email):
+    """메일 끝에 붙이는 친구 추천 부탁 + 이 손님만의 링크 (?ref=). 친구도 처음이면 가벼운 풀이 PDF 1개 무료."""
+    return ("────────\n마음에 드셨다면 친구에게도 추천해 주세요 🙏\n"
+            "친구도 처음이면 가벼운 풀이 PDF 1개를 무료로 받을 수 있어요. 아래 링크를 그대로 보내 주시면 돼요.\n"
+            f"{PUBLIC_URL}/?ref={referral.code_for(email)}")
+
+
 def too_many(key, limit, window_sec):
     """window_sec 안에 limit 번을 넘으면 True. 호출할 때마다 1회로 센다."""
     now_t = time.time()
@@ -726,7 +733,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(invite.status(q.get("vid")))
 
     def api_consult_config(self, q):
-        self.send_json({"topics": consult.questions(), "products": products.public(), "bank": bool(orders.BANK_ACCOUNT)})
+        self.send_json({"topics": consult.questions(), "products": products.public(), "bank": bool(orders.BANK_ACCOUNT),
+                        "free_first": orders.FREE_FIRST})
 
     def api_consult(self, b):
         """상담 페이지: 주제·생년월일·도령의 질문에 고른 답·하고 싶은 말 → 그 자리에서 상담. 저장 안 함."""
@@ -821,6 +829,8 @@ class Handler(BaseHTTPRequestHandler):
         vid = str(b.get("vid") or "")
         if not free and b.get("use_invite") and product in consult.FREE_PDF and invite.status(vid, email)["pdf_ready"]:
             free = "invite"  # 친구가 내 링크로 와서 사주를 봤다 → 가벼운 풀이 PDF 1개 무료 (1인 1회)
+        if b.get("want_free") and not free:  # 상담실 '처음이면 무료로 받기' — 무료가 아니면 유료 신청을 만들지 않고 알려준다
+            return self.error("첫 1회 무료는 이미 받았구나 (이메일·이름+생년월일 기준 1인 1회). 아래에서 친구에게 보내거나 결제로 받을 수 있다.")
         before = retention.visits(email)  # 예전에 온 적 있는 손님인가
         disc = 0
         if not free and products.friend_discount(product) and invite.status(vid, email)["ready"]:  # 무료 신청엔 할인 안 붙임
@@ -836,7 +846,7 @@ class Handler(BaseHTTPRequestHandler):
         prod = orders.PRODUCTS[o["product"]]
         bank = orders.BANK_ACCOUNT or "(입금 계좌는 곧 메일로 안내해 드립니다)"
         my_link = f"{PUBLIC_URL}/?ref={referral.code_for(email)}"
-        invite_note = (f"\n\n────────\n친구에게 운결을 알려 주세요. 친구도 자기 사주를 사이트에서 바로 무료로 볼 수 있어요.\n{PUBLIC_URL}")
+        invite_note = "\n\n" + recommend_note(email)
         # 친구 초대로 온 손님이면, 링크를 보낸 사람에게 무료 1회
         ref_owner = referral.reward(b.get("ref"), email, is_new) if b.get("ref") else None
         if ref_owner:
@@ -1147,7 +1157,7 @@ class Handler(BaseHTTPRequestHandler):
                           f"신청해 주신 {label} 결과를 정성껏 작성해 PDF로 첨부해 드립니다.\n"
                           "천천히 읽어 보시고, 궁금한 점이 있으면 이 메일에 답장 주세요.\n\n"
                           "사주는 정해진 운명이 아니라 타고난 기운의 지도예요. 오늘의 선택에 작은 힌트가 되길 바랍니다.\n\n"
-                          f"친구에게 운결을 알려 주세요. 친구도 자기 사주를 사이트에서 바로 볼 수 있어요.\n{PUBLIC_URL}\n\n"
+                          + recommend_note(o["email"]) + "\n\n"
                           f"운결 드림\n{PUBLIC_URL}", attachments=[(name, data, "application/pdf")])
         if not ok_:
             return self.error("메일 발송에 실패했습니다. 메일 설정(SMTP)과 손님 이메일 주소를 확인해 주세요.", 502)

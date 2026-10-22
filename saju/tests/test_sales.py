@@ -3,8 +3,8 @@
 실행:
   1) 시험 서버 켜기:
      env AI_PROVIDERS=none SAJU_DB=.tmp/sales_test.db PORT=8767 ADMIN_EMAIL=boss@test.com \\
-         ADMIN_API_KEY=testkey-0123456789abcdefghijklmn BANK_ACCOUNT=테스트은행 MAIL_RELAY=1 APPLY_LIMIT=200 FREE_FIRST=1 REF_FREE=1 python3 saju/server.py
-  (FREE_FIRST·REF_FREE 는 꺼져 있는 게 기본이지만, 다시 켤 때를 대비해 시험에서는 켜서 확인)
+         ADMIN_API_KEY=testkey-0123456789abcdefghijklmn BANK_ACCOUNT=테스트은행 MAIL_RELAY=1 APPLY_LIMIT=200 REF_FREE=1 python3 saju/server.py
+  (FREE_FIRST 는 켜진 게 기본 — 가벼운 풀이 6종만. REF_FREE 는 꺼진 게 기본이라 시험에서만 켜서 확인)
   2) python3 saju/tests/test_sales.py     (기본 주소 http://localhost:8767, 시험 DB는 매번 새로)
 확인하는 것: 신청서 → 관리 화면(입금·풀이·수정) → PDF·메일 → 홍보 센터 → 맥북 일꾼 대기열 → 보안(차단)
 """
@@ -72,13 +72,19 @@ def main():
     st, c = guest("/api/apply/config")
     ok(st == 200 and len(c["products"]) == 10 and c["bank"], f"상품 {len(c['products'])}개 + 계좌")
     ok(apply(guest, "full", "동의없음", agree_ai=False)[0] == 400, "AI 동의 없으면 거절")
-    st, r = apply(guest, "newyear", "김손님", src="threads")
+    st, r = apply(guest, "newyear", "신년첫손님")
+    ok(st == 200 and not r["free"] and r["amount"] == 14900, "처음 온 손님도 신년운세는 유료 (첫 무료는 가벼운 풀이만)")
+    st, r = apply(guest, "full", "기본첫손님")
+    ok(st == 200 and not r["free"], "처음 온 손님도 기본 리포트는 유료")
+    st, r = apply(guest, "career", "김손님", src="threads")
     ok(st == 200 and r["code"].startswith("UG"), "신청 완료 + 신청번호")
     ok(r["free"] and r["amount"] == 0, "첫 신청은 무료")
     st, jobs = machine("/api/admin/jobs")
     ok(any(j["name"] == "김손님" for j in jobs["jobs"]), "무료 신청은 바로 맥북 풀이 대기열에 (자동 시작)")
     st, r = apply(guest, "love", "김손님")
     ok(not r["free"] and r["amount"] > 0, "같은 이메일 두 번째는 유료")
+    st, r = apply(guest, "love", "김손님", want_free=True)
+    ok(st == 400 and "이미" in r.get("error", ""), "상담실 '무료로 받기'를 또 누르면 유료 신청을 만들지 않고 알려줌")
     st, r = guest("/api/apply", {"product": "love", "name": "김손님", "email": "other@test.com", "birth": B, "situation": SIT,
                                  "agree": True, "agree_ai": True})
     ok(not r["free"], "이메일 바꿔도 같은 이름+생년월일이면 유료")
@@ -164,7 +170,7 @@ def main():
     boss("/api/signup", {"email": "boss@test.com", "name": "사장", "password": "boss-pass-123", "agree": True, "agree_ai": True})
     st, r = boss("/api/admin/orders")
     ok(st == 200 and len(r["orders"]) >= 5, "사장님 목록 보기")
-    ny = next(o for o in r["orders"] if o["product"] == "newyear")
+    ny = next(o for o in r["orders"] if o["product"] == "career" and o["name"] == "김손님")
     ok(ny["status"] == "paid" and ny["amount"] == 0, "무료 신청은 바로 '입금 확인' 상태")
     ok(ny["channel"] == "threads", "신청 채널 기록 (스레드에서)")
     st, r = boss("/api/admin/order/status", {"id": ny["id"], "status": "paid"})
@@ -289,6 +295,9 @@ def main():
     # 평생 종합 사주: 34,900원, 첫 무료·초대 무료 대상 아님
     st, c = guest("/api/apply/config")
     ok(c["products"]["life"]["price"] == 34900 and c["products"]["life"]["no_free"], "평생 종합 34,900원 · 무료 제외 표시")
+    ok(all(c["products"][k]["no_free"] for k in ("full", "newyear")) and not any(
+        c["products"][k]["no_free"] for k in ("counsel", "love", "pet", "reunion", "match", "career")), "첫 무료는 가벼운 풀이 6종만")
+    ok(guest("/api/consult/config")[1].get("free_first") is True, "상담실에 '처음이면 무료' 켜짐")
     st, r = apply(guest, "life", "프리미엄첫손님")
     ok(not r["free"] and r["amount"] == 34900, "처음 온 손님도 평생 종합은 유료")
     st, r = apply(guest, "love", "프리미엄첫손님")

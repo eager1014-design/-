@@ -72,8 +72,8 @@ const REF = (() => {
 function shareBox(r) {
   r.my_link = `${location.origin}/?inv=${VID}`;  // 친구가 이 링크로 자기 사주를 보면 평생 종합 할인
   return `<div class="sharebox">
-    <p class="line small">친구에게 이 링크를 보내라.</p>
-    <p class="muted small">친구도 자기 사주를 사이트에서 바로 무료로 본다. 친구가 이 링크로 와서 사주를 보면, 너는 <b style="color:var(--gold)">가벼운 풀이 PDF 1개 무료</b> (<a href="/consult" style="color:var(--gold)">상담실</a>에서 받기) + <b style="color:var(--gold)">평생 종합 사주 ${won(window.PRODUCTS?.life?.friend_discount || 9900)} 할인</b>.</p>
+    <p class="line small">${r.free ? "🙏 하나만 부탁하자. 마음에 들면 친구에게도 운결을 알려줘라." : "친구에게 이 링크를 보내라."}</p>
+    <p class="muted small">친구도 처음이면 가벼운 풀이 PDF 하나를 무료로 받는다. 친구가 이 링크로 와서 사주를 보면, 너는 <b style="color:var(--gold)">가벼운 풀이 PDF 1개 무료</b> (<a href="/consult" style="color:var(--gold)">상담실</a>에서 받기) + <b style="color:var(--gold)">평생 종합 사주 ${won(window.PRODUCTS?.life?.friend_discount || 9900)} 할인</b>.</p>
     <div class="linkline" id="mylink">${esc(r.my_link)}</div>
     <div class="done-actions">
       <button class="btn ghost" id="copy-link">링크 복사</button>

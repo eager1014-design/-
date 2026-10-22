@@ -251,6 +251,12 @@ function offer() {
   box.className = "offer";
   box.innerHTML = `<h3>📄 ${esc(t.label)} PDF · 약 ${p.pages}쪽</h3>
     ${p.toc?.length ? `<details class="toc"><summary>PDF에 들어가는 것 보기 · ${p.toc.length}개 장</summary><ol>${p.toc.map((c) => `<li><b>${esc(c.t)}</b><span>${esc(c.d)}</span></li>`).join("")}</ol></details>` : ""}
+    ${CFG.free_first ? `<div class="way gift" id="w-first">
+      <p style="margin:0">🎁 <b>처음이라면, 이 PDF를 무료로 보내주마.</b></p>
+      <p class="muted small" style="margin:6px 0 0">이름과 이메일만 적어라. 1인 1회 (이메일·이름+생년월일 기준). 받고 나서 마음에 들면 친구에게 알려줘라.</p>
+      <button class="btn" id="first-go">PDF 무료로 받기</button>
+    </div>
+    <p class="muted small" style="margin:14px 0 6px">이미 첫 무료를 받았다면 —</p>` : ""}
     <div class="way gift" id="w-gift">
       ${cutImg("c06", "친구에게 이 사이트를 보내라. 친구가 와서 자기 사주를 보면… 더 깊은 풀이를 PDF로 보내주마.")}
       <p style="margin:10px 0 0">💌 <b>친구에게 이 사이트를 보내면, 더 깊은 풀이를 PDF로 무료로 보내주마.</b> <span class="muted small">(위 목차 그대로)</span></p>
@@ -272,6 +278,7 @@ function offer() {
     catch (e) { getSelection().selectAllChildren(box.querySelector("#g-link")); b.textContent = "위 링크를 길게 눌러 복사"; }
   };
   box.querySelector("#pay-go").onclick = () => orderForm(box.querySelector("#w-pay"), S.topic, false);
+  box.querySelector("#first-go")?.addEventListener("click", (e) => { e.target.hidden = true; orderForm(box.querySelector("#w-first"), S.topic, false, true); });
   watchFriend(box);
   tail();
 }
@@ -298,16 +305,16 @@ function watchFriend(box) {
 }
 
 /* 이름·이메일만 받는 간단 신청 (생년월일·고민은 상담에서 받은 그대로) */
-function orderForm(where, product, useInvite) {
+function orderForm(where, product, useInvite, wantFree = false) {
   if (where.querySelector(".mini")) return;
   const p = CFG.products[product];
   const f = document.createElement("div");
   f.className = "mini";
-  f.innerHTML = `<label>이름 ${useInvite ? "" : '<span class="muted small">(입금자 이름과 같게)</span>'}</label><input class="m-name" maxlength="20" autocomplete="name">
+  f.innerHTML = `<label>이름 ${useInvite || wantFree ? "" : '<span class="muted small">(입금자 이름과 같게)</span>'}</label><input class="m-name" maxlength="20" autocomplete="name">
     <label>PDF를 받을 이메일</label><input class="m-email" type="email" maxlength="120" autocomplete="email">
     <label class="check small"><input type="checkbox" class="m-agree"> <span>[필수] 개인정보(이름·이메일·생년월일·고민) 수집·이용과, 풀이 작성을 위한 AI 처리(국외 이전)에 동의해요. 발송 후 1년 뒤 파기.</span></label>
     <label class="check small"><input type="checkbox" class="m-mkt"> <span>[선택] 새 운세·할인 소식을 이메일로 받을게요.</span></label>
-    <button class="btn m-go">${useInvite ? "PDF 무료로 받기" : p.subscription ? `월 ${won(p.price)} 구독 신청`
+    <button class="btn m-go">${useInvite || wantFree ? "PDF 무료로 받기" : p.subscription ? `월 ${won(p.price)} 구독 신청`
       : FRIEND.ready && p.friend_discount ? `${won(p.price - p.friend_discount)} 신청하기 (친구 할인 -${won(p.friend_discount)})` : `${won(p.price)} 신청하기`}</button>
     <p class="err m-err"></p>`;
   where.appendChild(f);
@@ -322,7 +329,7 @@ function orderForm(where, product, useInvite) {
     if (story.length < 10) story += ` (${t.label} 상담을 받았어요)`;
     const body = { product, name: f.querySelector(".m-name").value.trim(), email: f.querySelector(".m-email").value.trim(),
       birth: S.birth, situation: { concern: t.concern, job: "", story, goal: "" },
-      agree: true, agree_ai: true, marketing: f.querySelector(".m-mkt").checked, vid: VID, use_invite: useInvite,
+      agree: true, agree_ai: true, marketing: f.querySelector(".m-mkt").checked, vid: VID, use_invite: useInvite, want_free: wantFree,
       src: new URLSearchParams(location.search).get("src") || "consult" };
     if (CFG.products[product].partner && S.partner) {
       const rel = { match: S.answers.relation, reunion: "전 연인", pet: S.answers.kind }[product] || "";
@@ -333,7 +340,7 @@ function orderForm(where, product, useInvite) {
     try {
       const r = await api("/api/apply", body);
       f.innerHTML = r.free
-        ? `<p class="done">…좋다, ${esc(r.name)}. 신청번호 <b>${esc(r.code)}</b>.<br>정성껏 써서 1~2일 안에 이메일로 PDF를 보내주마. (스팸함도 봐라)</p>`
+        ? `<p class="done">…좋다, ${esc(r.name)}. 신청번호 <b>${esc(r.code)}</b>.<br>정성껏 써서 1~2일 안에 이메일로 PDF를 보내주마. (스팸함도 봐라)</p>${recommendBox()}`
         : `<p class="done">신청번호 <b>${esc(r.code)}</b> · ${esc(r.product)}</p>
            <p>아래 계좌로 <b>${won(r.amount)}</b>을 입금해 주세요. 입금자명은 <b>${esc(r.name)}</b>.</p>
            <div class="linkline">${r.bank ? esc(r.bank) : "입금 계좌는 이메일로 곧 안내해 드릴게요"}</div>
@@ -343,6 +350,28 @@ function orderForm(where, product, useInvite) {
       btn.disabled = false;
     }
   };
+}
+
+/* 무료 PDF를 받은 손님에게: 친구에게 추천해 달라는 부탁 + 내 링크 (친구가 와서 사주를 보면 나도 가벼운 PDF 1개 무료) */
+function recommendBox() {
+  const link = `${location.origin}/?inv=${VID}`;
+  const id = `rec-${Date.now()}`;
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.querySelector(".r-share")?.addEventListener("click", () => navigator.share({ title: "운결 · 너의 인생이 보인다",
+      text: "태어난 날만 넣으면 사주를 보여줘. 처음이면 PDF 풀이 하나가 무료래.", url: link }).catch(() => {}));
+    el.querySelector(".r-copy").onclick = async (e) => {
+      try { await Promise.race([navigator.clipboard.writeText(link), new Promise((_, no) => setTimeout(no, 1500))]); e.target.textContent = "복사했다 ✓ 친구에게 붙여넣어라"; }
+      catch (x) { getSelection().selectAllChildren(el.querySelector(".linkline")); e.target.textContent = "위 링크를 길게 눌러 복사"; }
+    };
+  });
+  return `<div class="recbox" id="${id}" style="margin-top:14px">
+    <p style="margin:0">🙏 <b>하나만 부탁하자. 친구에게도 운결을 알려줘라.</b></p>
+    <p class="muted small" style="margin:6px 0 0">친구도 처음이면 PDF 하나를 무료로 받는다. 친구가 이 링크로 와서 자기 사주를 보면, 너도 가벼운 풀이 PDF 하나를 더 받는다.</p>
+    <div class="linkline">${esc(link)}</div>
+    <div class="row">${navigator.share ? '<button class="btn r-share" style="flex:1">친구에게 보내기</button>' : ""}<button class="btn ghost r-copy" style="flex:1">링크 복사</button></div>
+  </div>`;
 }
 
 /* 넷째 장 아래: 더 깊은 PDF (친구가 오면 할인: 평생 9,900원 · 기본·신년 10%) → 맨 끝에 매일 아침 구독 */

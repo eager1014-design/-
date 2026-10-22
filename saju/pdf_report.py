@@ -296,6 +296,18 @@ class _Doc(BaseDocTemplate):
                                             onPage=_closing_bg)])
 
 
+def _ref_link(url, email):
+    """이 손님만의 친구 추천 링크. 사이트 주소·이메일이 없거나 DB를 못 쓰면 빈 값 (PDF는 그래도 만든다)."""
+    if not url.startswith("http") or not email:
+        return ""
+    try:
+        import referral
+        return f"{url}/?ref={referral.code_for(email)}"
+    except Exception as e:
+        print(f"[pdf] 추천 링크 생략: {e}")
+        return ""
+
+
 def build(order, chart):
     buf = io.BytesIO()
     doc = _Doc(buf, order, title=f"{order['name']}님의 {order['product_label']}", author="운결")
@@ -330,8 +342,15 @@ def build(order, chart):
     story += [NextPageTemplate("closing"), PageBreak(), Spacer(1, 8 * mm),
               _font_para("…여기까지가, 지금 보이는 너의 길이다.", ST["voice"]), Spacer(1, 4 * mm),
               Paragraph("사주는 정해진 운명이 아니라, 타고난 기운의 지도다.<br/>어느 길로 걸을지는 오늘의 네가 정한다.", ST["voice_s"]),
-              Spacer(1, 12 * mm),
-              HRFlowable(width="40%", thickness=0.8, color=GOLD, spaceAfter=10),
+              Spacer(1, 12 * mm)]
+    ref = _ref_link(url, order.get("email"))
+    if ref:  # 친구 추천 부탁 (사장님 결정 2026-10-22: 무료 PDF를 주면서 친구에게 추천해 달라고)
+        story += [HRFlowable(width="40%", thickness=0.8, color=GOLD, spaceAfter=10),
+                  Paragraph('<font color="#f0d08a">마음에 들었다면, 친구에게도 알려줘라</font>', ST["center"]),
+                  Paragraph("친구도 처음이면 가벼운 풀이 PDF 하나를 무료로 받는다. 이 링크를 그대로 보내면 된다."
+                            f'<br/><font color="#d9b26a">{_esc(ref)}</font>', ST["center"]),
+                  Spacer(1, 10 * mm)]
+    story += [HRFlowable(width="40%", thickness=0.8, color=GOLD, spaceAfter=10),
               Paragraph('<font color="#f0d08a">매일 아침, 너의 하루가 궁금하다면</font>', ST["center"]),
               Paragraph(f"아침 7시마다 네 사주로 본 오늘의 기운과 할 일을 메일로 보내주마. 월 {price:,}원, 하루 {round(price / 30):,}원."
                         + (f'<br/><font color="#d9b26a">{_esc(url)}/?p=daily</font>' if url.startswith("http") else ""), ST["center"]),
