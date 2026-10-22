@@ -135,12 +135,13 @@ for _p in _CATALOG:
 
 TIER_ORDER = ["가볍게", "깊게", "프리미엄", "구독"]
 FRIEND_DISCOUNT = int(os.environ.get("FRIEND_DISCOUNT", "9900"))  # 평생 종합: 친구가 내 링크로 사주를 보면 깎아주는 금액
-FRIEND_PCT_KEYS = ("full", "newyear")  # 기본 사주·신년운세: 친구가 오면 10% 할인 (사장님 결정 2026-10-20 밤)
+FRIEND_PCT_KEYS = ("newyear",)  # 신년운세: 친구가 오면 10% 할인 (사장님 결정 2026-10-20 밤. 기본 리포트는 2026-10-22부터 할인 대신 무료)
+INVITE_FREE = "full"  # 친구가 내 링크로 와서 사주를 보면 기본 리포트 1개 무료 (사장님 결정 2026-10-22, 1인 1회)
 FRIEND_PCT = int(os.environ.get("FRIEND_PCT", "10"))
 
 
 def friend_discount(key):
-    """친구가 내 링크로 와서 사주를 보면 깎아주는 금액 (1인 1회). 가벼운 풀이는 할인 대신 1개 무료."""
+    """친구가 내 링크로 와서 사주를 보면 깎아주는 금액 (1인 1회). 기본 리포트는 할인 대신 1개 무료(INVITE_FREE)."""
     if key == "life":
         return FRIEND_DISCOUNT
     if key in FRIEND_PCT_KEYS and key in PRODUCTS:
@@ -163,6 +164,6 @@ def public():
     """신청서에 보여줄 상품 (묶음 순서 → 가격 낮은 순)."""
     order = lambda kv: (TIER_ORDER.index(kv[1]["tier"]) if kv[1]["tier"] in TIER_ORDER else 9, kv[1]["price"])
     return {k: dict({kk: p[kk] for kk in ("label", "price", "tier", "pages", "partner", "desc")},
-                    subscription=bool(p.get("subscription")), no_free=bool(p.get("no_free") or p.get("subscription")),
+                    subscription=bool(p.get("subscription")), no_free=bool(p.get("no_free") or p.get("subscription")), invite_free=k == INVITE_FREE,
                     toc=toc(p), friend_discount=friend_discount(k))
             for k, p in sorted(PRODUCTS.items(), key=order) if not p.get("hidden")}

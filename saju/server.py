@@ -119,11 +119,54 @@ _attempts = {}
 _attempts_lock = threading.Lock()
 
 
+def invite_link(email):
+    """이 손님만의 친구 초대 링크. 친구가 이 링크로 와서 사주를 보면 손님에게 기본 리포트 1개 무료 (reward_by_link)."""
+    return f"{PUBLIC_URL}/?inv={referral.code_for(email)}"
+
+
 def recommend_note(email):
-    """메일 끝에 붙이는 친구 추천 부탁 + 이 손님만의 링크 (?ref=). 친구도 처음이면 가벼운 풀이 PDF 1개 무료."""
+    """메일 끝에 붙이는 친구 추천 부탁 + 이 손님만의 링크."""
     return ("────────\n마음에 드셨다면 친구에게도 추천해 주세요 🙏\n"
-            "친구도 처음이면 가벼운 풀이 PDF 1개를 무료로 받을 수 있어요. 아래 링크를 그대로 보내 주시면 돼요.\n"
-            f"{PUBLIC_URL}/?ref={referral.code_for(email)}")
+            "아래 링크로 친구가 와서 자기 사주를 보면, 감사의 뜻으로 '내 사주 기본 리포트'(9,900원) PDF를 무료로 하나 더 보내드려요. "
+            "(1인 1회) 친구도 처음이면 가벼운 풀이 PDF 1개를 무료로 받을 수 있어요.\n"
+            f"{invite_link(email)}")
+
+
+_reward_lock = threading.Lock()
+
+
+def reward_by_link(inv, friend_birth):
+    """친구가 손님의 초대 코드 링크(?inv=초대코드)로 와서 사주를 봤다 → 손님에게 기본 리포트를 자동으로 무료 신청·작성.
+    1인 1회(이메일 기준). 링크 주인이 자기 사주를 본 경우(같은 생년월일·성별)는 보상 없음."""
+    if not re.fullmatch(r"[A-Z2-9]{8}", inv or ""):  # 초대코드가 아니라 방문자번호면 → 상담실 화면에서 받는다
+        return None
+    email = referral.owner_of(inv)
+    if not email:
+        return None
+    with _reward_lock:
+        if invite.status(inv, email)["pdf_used"]:
+            return None
+        last = db.one("SELECT id FROM orders WHERE email=? AND status!='canceled' ORDER BY id DESC LIMIT 1", email)
+        if not last:
+            return None
+        o = orders.get(last["id"])
+        if (o["birth"].get("solar"), o["birth"].get("gender")) == (friend_birth.get("solar"), friend_birth.get("gender")):
+            return None
+        new = orders.create(products.INVITE_FREE, o["name"], email, o["birth"], None, o["situation"], source="invite", free="invite")
+        db.run("UPDATE orders SET consent_at=(SELECT consent_at FROM orders WHERE id=?) WHERE id=?", o["id"], new["id"])
+        invite.use_pdf(inv, email, new["id"])
+    auto_generate(new)
+    label = new["product_label"]
+    mailer.send(email, "[운결] …네 친구가 왔다. 약속대로 기본 리포트를 보내주마",
+                f"{o['name']}님, 보내주신 링크로 친구분이 운결에 와서 자기 사주를 봤어요.\n\n"
+                f"고마운 마음으로 '{label}'(9,900원)를 무료로 쓰기 시작했어요. 신청번호 {new['code']}.\n"
+                "1~2일 안에 이 메일 주소로 PDF를 보내드릴게요. 따로 하실 일은 없어요.\n\n"
+                f"운결 드림\n{PUBLIC_URL}")
+    for admin_email in orders.ADMIN_EMAILS:
+        mailer.send(admin_email, f"[운결] 새 신청 {new['code']} — {o['name']} / {label} 무료(친구 초대)",
+                    f"{o['name']}({email})님의 링크로 친구가 와서 사주를 봤습니다. 기본 리포트 무료 신청이 자동으로 들어왔어요.\n"
+                    f"관리 화면: {PUBLIC_URL}/admin")
+    return new
 
 
 def too_many(key, limit, window_sec):
@@ -707,8 +750,9 @@ class Handler(BaseHTTPRequestHandler):
             birth = parse_birth(b.get("birth") or {})
         except ValueError as e:
             return self.error(str(e))
-        if b.get("inv"):  # 친구가 보낸 링크로 와서 자기 사주를 봤다 → 링크 주인에게 평생 종합 할인
-            invite.record(str(b.get("inv")), str(b.get("vid") or ""), birth)
+        if b.get("inv"):  # 친구가 보낸 링크로 와서 자기 사주를 봤다 → 링크 주인에게 기본 리포트 무료·할인
+            if invite.record(str(b.get("inv")), str(b.get("vid") or ""), birth):
+                reward_by_link(str(b.get("inv")), birth)
         self.send_json(quick.reading(birth, chart_of_birth))
 
     def api_quick_concern(self, b):
@@ -758,8 +802,9 @@ class Handler(BaseHTTPRequestHandler):
                 partner = {"name": str(p.get("name") or "").strip()[:20], "birth": parse_birth(p.get("birth") or {}, min_year=1900)}
             except ValueError as e:
                 return self.error(who + str(e))
-        if b.get("inv"):  # 친구가 보낸 링크로 와서 상담을 받았다 → 링크 주인에게 무료 PDF·평생 종합 할인
-            invite.record(str(b.get("inv")), str(b.get("vid") or ""), birth)
+        if b.get("inv"):  # 친구가 보낸 링크로 와서 상담을 받았다 → 링크 주인에게 기본 리포트 무료·할인
+            if invite.record(str(b.get("inv")), str(b.get("vid") or ""), birth):
+                reward_by_link(str(b.get("inv")), birth)
         self.send_json(consult.reading(topic, birth, chart_of_birth, b.get("answers") or {}, b.get("story"), partner))
 
     def api_quick_unlock(self, b):
@@ -827,8 +872,8 @@ class Handler(BaseHTTPRequestHandler):
         first_ok = orders.FREE_FIRST and not orders.used_free(name, email, birth)
         free = False if is_sub else ("first" if first_ok else ("ref" if referral.use_credit(email) else False))
         vid = str(b.get("vid") or "")
-        if not free and b.get("use_invite") and product in consult.FREE_PDF and invite.status(vid, email)["pdf_ready"]:
-            free = "invite"  # 친구가 내 링크로 와서 사주를 봤다 → 가벼운 풀이 PDF 1개 무료 (1인 1회)
+        if not free and b.get("use_invite") and product == products.INVITE_FREE and invite.status(vid, email)["pdf_ready"]:
+            free = "invite"  # 친구가 내 링크로 와서 사주를 봤다 → 기본 리포트 1개 무료 (1인 1회)
         if b.get("want_free") and not free:  # 상담실 '처음이면 무료로 받기' — 무료가 아니면 유료 신청을 만들지 않고 알려준다
             return self.error("첫 1회 무료는 이미 받았구나 (이메일·이름+생년월일 기준 1인 1회). 아래에서 친구에게 보내거나 결제로 받을 수 있다.")
         before = retention.visits(email)  # 예전에 온 적 있는 손님인가
@@ -845,7 +890,7 @@ class Handler(BaseHTTPRequestHandler):
             invite.use_pdf(vid, email, o["id"])
         prod = orders.PRODUCTS[o["product"]]
         bank = orders.BANK_ACCOUNT or "(입금 계좌는 곧 메일로 안내해 드립니다)"
-        my_link = f"{PUBLIC_URL}/?ref={referral.code_for(email)}"
+        my_link = invite_link(email)
         invite_note = "\n\n" + recommend_note(email)
         # 친구 초대로 온 손님이면, 링크를 보낸 사람에게 무료 1회
         ref_owner = referral.reward(b.get("ref"), email, is_new) if b.get("ref") else None

@@ -1,5 +1,5 @@
 /* 운결 — 도령의 상담실: 도령이 하나씩 묻고, 손님이 답하면, 네 사주로 그 자리에서 상담한다.
-   상담은 무료이고 다 보여준다. 달마다의 흐름·구체적인 방법은 PDF로 (결제, 또는 친구가 와서 사주를 보면 1개 무료). */
+   상담은 무료이고 다 보여준다. 달마다의 흐름·구체적인 방법은 PDF로 (처음이면 1개 무료, 결제, 친구가 와서 사주를 보면 기본 리포트 무료). */
 
 const VID = (() => {  // 방문자번호 (이 폰에만 저장, 개인정보 아님) — 첫 화면과 같은 값
   try {
@@ -256,11 +256,11 @@ function offer() {
       <p class="muted small" style="margin:6px 0 0">이름과 이메일만 적어라. 1인 1회 (이메일·이름+생년월일 기준). 받고 나서 마음에 들면 친구에게 알려줘라.</p>
       <button class="btn" id="first-go">PDF 무료로 받기</button>
     </div>
-    <p class="muted small" style="margin:14px 0 6px">이미 첫 무료를 받았다면 —</p>` : ""}
+    <p class="muted small" style="margin:14px 0 6px">하나 더 받고 싶다면 —</p>` : ""}
     <div class="way gift" id="w-gift">
       ${cutImg("c06", "친구에게 이 사이트를 보내라. 친구가 와서 자기 사주를 보면… 더 깊은 풀이를 PDF로 보내주마.")}
-      <p style="margin:10px 0 0">💌 <b>친구에게 이 사이트를 보내면, 더 깊은 풀이를 PDF로 무료로 보내주마.</b> <span class="muted small">(위 목차 그대로)</span></p>
-      <p class="muted small" style="margin:6px 0 0">친구가 네 링크로 들어와 <b>자기 사주를 보면</b>, 이 화면에 'PDF 무료로 받기'가 열린다. (1인 1회 · 이 폰에서)</p>
+      <p style="margin:10px 0 0">💌 <b>친구에게 이 사이트를 보내면, ${esc(CFG.products.full?.label || "내 사주 기본 리포트")}(${won(CFG.products.full?.price || 9900)})를 PDF로 무료로 보내주마.</b></p>
+      <p class="muted small" style="margin:6px 0 0">친구가 네 링크로 들어와 <b>자기 사주를 보면</b>, 이 화면에 'PDF 무료로 받기'가 열린다. (1인 1회 · 이 폰에서. 위에서 먼저 신청했다면 친구가 오는 순간 메일로 자동으로 보내준다)</p>
       <div class="linkline" id="g-link">${esc(link)}</div>
       <div class="row">${navigator.share ? '<button class="btn" id="g-share" style="flex:1">친구에게 보내기</button>' : ""}<button class="btn ghost" id="g-copy" style="flex:1">링크 복사</button></div>
       <p class="small" id="g-state" style="margin:10px 0 0;color:var(--ink-3)">친구가 오기를 기다리는 중…</p>
@@ -291,13 +291,13 @@ function watchFriend(box) {
     let st;
     try { st = await api(`/api/invite/status?vid=${VID}`); } catch (e) { return; }
     const el = box.querySelector("#g-state");
-    if (st.pdf_used) { el.textContent = "친구 초대 무료 PDF는 이미 받았다. (1인 1회)"; opened = true; return; }
+    if (st.pdf_used) { el.textContent = "친구 초대 무료 기본 리포트는 이미 받았다. (1인 1회)"; opened = true; return; }
     FRIEND = st;
     if (st.pdf_ready) {
       opened = true;
-      el.innerHTML = `${cutImg("c07", "친구가 왔구나. 약속대로, PDF를 보내주마.")}<span class="ready">친구가 왔다. 약속대로 PDF를 무료로 보내주마 ✓</span>`;
+      el.innerHTML = `${cutImg("c07", "친구가 왔구나. 약속대로, PDF를 보내주마.")}<span class="ready">친구가 왔다. 약속대로 기본 리포트를 무료로 보내주마 ✓</span>`;
       VOICE.play("c07");
-      orderForm(box.querySelector("#w-gift"), S.topic, true);
+      orderForm(box.querySelector("#w-gift"), "full", true);
     }
   };
   check();
@@ -340,7 +340,7 @@ function orderForm(where, product, useInvite, wantFree = false) {
     try {
       const r = await api("/api/apply", body);
       f.innerHTML = r.free
-        ? `<p class="done">…좋다, ${esc(r.name)}. 신청번호 <b>${esc(r.code)}</b>.<br>정성껏 써서 1~2일 안에 이메일로 PDF를 보내주마. (스팸함도 봐라)</p>${recommendBox()}`
+        ? `<p class="done">…좋다, ${esc(r.name)}. 신청번호 <b>${esc(r.code)}</b>.<br>정성껏 써서 1~2일 안에 이메일로 PDF를 보내주마. (스팸함도 봐라)</p>${wantFree ? recommendBox(r.my_link) : ""}`
         : `<p class="done">신청번호 <b>${esc(r.code)}</b> · ${esc(r.product)}</p>
            <p>아래 계좌로 <b>${won(r.amount)}</b>을 입금해 주세요. 입금자명은 <b>${esc(r.name)}</b>.</p>
            <div class="linkline">${r.bank ? esc(r.bank) : "입금 계좌는 이메일로 곧 안내해 드릴게요"}</div>
@@ -352,9 +352,9 @@ function orderForm(where, product, useInvite, wantFree = false) {
   };
 }
 
-/* 무료 PDF를 받은 손님에게: 친구에게 추천해 달라는 부탁 + 내 링크 (친구가 와서 사주를 보면 나도 가벼운 PDF 1개 무료) */
-function recommendBox() {
-  const link = `${location.origin}/?inv=${VID}`;
+/* 무료 PDF를 받은 손님에게: 친구에게 추천해 달라는 부탁 + 내 링크 (친구가 와서 사주를 보면 기본 리포트가 자동으로 무료 신청됨) */
+function recommendBox(myLink) {
+  const link = myLink || `${location.origin}/?inv=${VID}`;
   const id = `rec-${Date.now()}`;
   setTimeout(() => {
     const el = document.getElementById(id);
@@ -368,13 +368,13 @@ function recommendBox() {
   });
   return `<div class="recbox" id="${id}" style="margin-top:14px">
     <p style="margin:0">🙏 <b>하나만 부탁하자. 친구에게도 운결을 알려줘라.</b></p>
-    <p class="muted small" style="margin:6px 0 0">친구도 처음이면 PDF 하나를 무료로 받는다. 친구가 이 링크로 와서 자기 사주를 보면, 너도 가벼운 풀이 PDF 하나를 더 받는다.</p>
+    <p class="muted small" style="margin:6px 0 0">친구가 이 링크로 와서 자기 사주를 보면, 고마운 뜻으로 <b style="color:var(--gold)">내 사주 기본 리포트(${won(CFG.products.full?.price || 9900)})</b>를 무료로 하나 더 메일로 보내주마. 친구도 처음이면 PDF 하나가 무료다.</p>
     <div class="linkline">${esc(link)}</div>
     <div class="row">${navigator.share ? '<button class="btn r-share" style="flex:1">친구에게 보내기</button>' : ""}<button class="btn ghost r-copy" style="flex:1">링크 복사</button></div>
   </div>`;
 }
 
-/* 넷째 장 아래: 더 깊은 PDF (친구가 오면 할인: 평생 9,900원 · 기본·신년 10%) → 맨 끝에 매일 아침 구독 */
+/* 넷째 장 아래: 더 깊은 PDF (친구가 오면: 기본 리포트 무료 · 평생 9,900원 · 신년 10% 할인) → 맨 끝에 매일 아침 구독 */
 function tail() {
   const P = CFG.products;
   const deeper = [["full", "타고난 성향부터 일·돈·사람·올해까지, 내 사주 한 권"], ["newyear", "내년 열두 달, 달마다의 흐름"],
@@ -383,10 +383,10 @@ function tail() {
   const box = document.createElement("div");
   box.className = "offer";
   box.innerHTML = `<h3>더 깊게 보고 싶다면</h3>
-    <p class="muted small" style="margin:0">친구가 네 링크로 와서 자기 사주를 보면 할인해주마 (1인 1회).</p>
+    <p class="muted small" style="margin:0">친구가 네 링크로 와서 자기 사주를 보면, 기본 리포트는 무료 · 나머지는 할인해주마 (1인 1회).</p>
     ${deeper.map(([k, d]) => `<div class="way" id="w-${k}">
       <p style="margin:0"><b>${esc(P[k].label)}</b> · ${won(P[k].price)} · PDF 약 ${P[k].pages}쪽</p>
-      <p class="muted small" style="margin:6px 0 0">${esc(d)}. <span style="color:var(--gold)">친구가 오면 ${won(P[k].friend_discount)} 할인</span></p>
+      <p class="muted small" style="margin:6px 0 0">${esc(d)}. <span style="color:var(--gold)">${P[k].invite_free ? "친구가 오면 무료" : `친구가 오면 ${won(P[k].friend_discount)} 할인`}</span></p>
       <button class="btn ghost" data-k="${k}">신청하기</button></div>`).join("")}
     ${daily ? `<div class="way" id="w-daily" style="margin-top:22px;border-color:rgba(217,178,106,.5)">
       <p style="margin:0">그리고… 원한다면, <b>매일 아침, 오늘의 흐름</b> · 월 ${won(daily.price)} (하루 ${Math.round(daily.price / 30).toLocaleString("ko-KR")}원)</p>

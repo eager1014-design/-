@@ -12,7 +12,7 @@ function onProduct() {
   $("#story-label").textContent = p === "counsel" ? "궁금한 질문 하나" : "지금 상황과 고민";
   const sub = p && window.PRODUCTS[p].subscription;
   const nofree = p && window.PRODUCTS[p].no_free;
-  const lifeDisc = p && DISCOUNT.ready ? window.PRODUCTS[p].friend_discount || 0 : 0;  // 친구가 왔으면: 평생 9,900원 · 기본·신년 10%
+  const lifeDisc = p && DISCOUNT.ready ? window.PRODUCTS[p].friend_discount || 0 : 0;  // 친구가 왔으면: 평생 9,900원 · 신년 10%
   $("#submit").textContent = sub ? `월 ${won(window.PRODUCTS[p].price)} 구독 신청`
     : lifeDisc ? `${won(window.PRODUCTS[p].price - lifeDisc)} 신청하기 (친구 할인 -${won(lifeDisc)})`
     : nofree ? `${won(window.PRODUCTS[p].price)} 신청하기`
@@ -70,10 +70,10 @@ const REF = (() => {
 })();
 
 function shareBox(r) {
-  r.my_link = `${location.origin}/?inv=${VID}`;  // 친구가 이 링크로 자기 사주를 보면 평생 종합 할인
+  r.my_link = r.my_link || `${location.origin}/?inv=${VID}`;  // 서버가 준 초대코드 링크: 친구가 와서 사주를 보면 기본 리포트가 자동으로 무료 신청됨
   return `<div class="sharebox">
     <p class="line small">${r.free ? "🙏 하나만 부탁하자. 마음에 들면 친구에게도 운결을 알려줘라." : "친구에게 이 링크를 보내라."}</p>
-    <p class="muted small">친구도 처음이면 가벼운 풀이 PDF 하나를 무료로 받는다. 친구가 이 링크로 와서 사주를 보면, 너는 <b style="color:var(--gold)">가벼운 풀이 PDF 1개 무료</b> (<a href="/consult" style="color:var(--gold)">상담실</a>에서 받기) + <b style="color:var(--gold)">평생 종합 사주 ${won(window.PRODUCTS?.life?.friend_discount || 9900)} 할인</b>.</p>
+    <p class="muted small">친구도 처음이면 가벼운 풀이 PDF 하나를 무료로 받는다. 친구가 이 링크로 와서 사주를 보면, 너는 <b style="color:var(--gold)">내 사주 기본 리포트 PDF 무료</b> (따로 할 것 없이 메일로 온다) + <b style="color:var(--gold)">평생 종합 사주 ${won(window.PRODUCTS?.life?.friend_discount || 9900)} 할인</b>.</p>
     <div class="linkline" id="mylink">${esc(r.my_link)}</div>
     <div class="done-actions">
       <button class="btn ghost" id="copy-link">링크 복사</button>
@@ -148,7 +148,7 @@ async function init() {
     const head = p.tier !== lastTier ? `<div class="tier">${esc(p.tier)}</div>` : "";
     lastTier = p.tier;
     return `${head}<label class="product"><input type="radio" name="product" value="${k}">
-      <span><b>${esc(p.label)}</b> <span class="pages">${p.subscription ? "매일 아침 메일" : `PDF 약 ${p.pages}쪽`}</span>${p.no_free && !p.subscription ? ' <span class="pages">무료 제외</span>' : ""}<br><span class="muted small">${esc(p.desc)}</span></span>
+      <span><b>${esc(p.label)}</b> <span class="pages">${p.subscription ? "매일 아침 메일" : `PDF 약 ${p.pages}쪽`}</span>${p.invite_free ? ' <span class="pages">친구가 오면 무료</span>' : p.no_free && !p.subscription ? ' <span class="pages">무료 제외</span>' : ""}<br><span class="muted small">${esc(p.desc)}</span></span>
       <span class="p">${won(p.price)}${p.subscription ? '<br><span class="muted small">/ 월</span>' : ""}</span></label>${tocToggle(k)}`;
   }).join("");
   $("#concern").innerHTML = Object.entries(cfg.concerns).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
@@ -426,12 +426,12 @@ function showQuick(r, birth) {
     <div class="topics">${T.map(([k, l, d]) => `<a href="/consult?t=${k}${INV ? `&inv=${encodeURIComponent(INV)}` : ""}">${l}<small>${d}</small></a>`).join("")}</div>
     <p class="small muted" style="margin-top:12px">도령의 상담은 무료. 네 이야기를 듣고 네 사주로 답한다.</p>`, "askpanel", "q01")
     .querySelectorAll(".topics a").forEach((a) => (a.onclick = (e) => { e.preventDefault(); turnPage("셋째 장 · 도령의 상담실", a.href); }));
-  // 기본 사주도 PDF로 정리해준다 (친구가 오면 10% 할인)
+  // 기본 사주도 PDF로 정리해준다 (친구가 와서 사주를 보면 무료 — 사장님 결정 2026-10-22)
   const full = window.PRODUCTS.full;
   if (full) {
     const fp = quickPanel(`<p class="kicker">네 사주, 한 권으로</p>${say("방금 본 너를… PDF 한 권으로 정리해주마.", "small")}
       <p class="small muted">타고난 성향 · 다섯 기운 · 일과 돈 · 사람 · 올해의 흐름 · 약 ${full.pages}쪽.
-        친구가 네 링크로 와서 자기 사주를 보면 <b style="color:var(--gold)">${won(full.friend_discount)} 할인</b>.</p>
+        친구에게 운결을 보내서 친구가 자기 사주를 보면 <b style="color:var(--gold)">무료</b>로 보내주마 (<a href="/consult" style="color:var(--gold)">상담실</a>에서 링크 받기 · 1인 1회).</p>
       ${tocToggle("full")}
       <button class="btn ghost lockbtn" id="pick-full">기본 사주 PDF 받기 · ${won(full.price)}</button>`, "lockpanel");
     fp.querySelector("#pick-full").onclick = () => pickProduct("full", QUICK.birth);

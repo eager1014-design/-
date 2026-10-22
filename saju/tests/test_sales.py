@@ -140,27 +140,40 @@ def main():
                                     "partner": {"name": "콩이", "birth": {"year": 2021, "month": 3, "day": 1, "calendar": "solar", "gender": "male"}}})
     ok(st == 200 and "수의사" in json.dumps(pr, ensure_ascii=False), "반려동물 상담 (재미로 · 수의사 안내)")
     ok(guest("/api/consult", dict(body, consent=True, topic="reunion"))[0] == 200, "재회 상담: 상대 생년월일 몰라도 됨")
-    # 친구에게 사이트를 보내면 가벼운 풀이 PDF 1개 무료 (친구가 실제로 와서 사주를 봐야)
+    # 친구에게 사이트를 보내면 기본 리포트 PDF 1개 무료 (친구가 실제로 와서 사주를 봐야)
     ok(not guest("/api/invite/status?vid=GV12345678")[1]["pdf_ready"], "친구가 오기 전엔 무료 PDF 없음")
     guest("/api/consult", dict(body, consent=True, birth=dict(B, year=2001), inv="GV12345678", vid="FF87654321"))
     ok(guest("/api/invite/status?vid=GV12345678")[1]["pdf_ready"], "친구가 내 링크로 와서 상담받으면 무료 PDF 준비")
     form = {"name": "선물손님", "email": "gift@test.com", "birth": dict(B, year=1988), "situation": SIT,
             "agree": True, "agree_ai": True, "vid": "GV12345678"}
     guest("/api/apply", dict(form, product="counsel"))  # 시험 서버는 FREE_FIRST=1 이라 첫 무료를 먼저 써둔다
-    st, r = guest("/api/apply", dict(form, product="full", use_invite=True))
-    ok(not r["free"] and r["amount"] > 0, "기본 리포트는 친구 무료 대상 아님 (가벼운 풀이만)")
     st, r = guest("/api/apply", dict(form, product="love", use_invite=True))
-    ok(r["free"] == "invite" and r["amount"] == 0, "친구 보상: 연애운 PDF 무료")
+    ok(not r["free"] and r["amount"] > 0, "친구 보상은 기본 리포트만 (가벼운 풀이는 아님)")
+    st, r = guest("/api/apply", dict(form, product="full", use_invite=True))
+    ok(r["free"] == "invite" and r["amount"] == 0, "친구 보상: 기본 리포트 PDF 무료")
     ok(guest("/api/invite/status?vid=GV12345678")[1]["pdf_used"], "무료 PDF 받은 기록")
-    st, r = guest("/api/apply", dict(form, product="career", use_invite=True))
-    ok(not r["free"] and r["amount"] > 0, "친구 무료 PDF는 한 번만")
+    st, r = guest("/api/apply", dict(form, product="full", use_invite=True))
+    ok(not r["free"] and r["amount"] > 0, "친구 무료 기본 리포트는 한 번만")
+    # 메일·PDF·완료 화면의 초대코드 링크(?inv=초대코드): 친구가 와서 사주를 보면 기본 리포트가 자동으로 무료 신청
+    st, r = apply(guest, "career", "추천인")
+    code = r["my_link"].split("?inv=")[1]
+    ok(r["free"] and len(code) == 8, "무료 신청 완료 → 내 초대 링크(?inv=초대코드)")
+    guest("/api/quick", {"birth": B, "inv": code, "vid": "SELF123456"})  # 자기 사주를 자기 링크로
+    mine = lambda: [o for o in machine("/api/admin/orders")[1]["orders"] if o["email"] == "추천인@test.com" and o["product"] == "full"]
+    ok(not mine(), "자기 링크로 자기 사주를 보면 보상 없음")
+    guest("/api/quick", {"birth": dict(B, year=1999), "inv": code, "vid": "FR11223344"})
+    got = mine()
+    ok(len(got) == 1 and got[0]["free_kind"] == "invite" and got[0]["amount"] == 0, "친구가 와서 사주를 보면 기본 리포트 자동 무료 신청")
+    ok(got and machine(f"/api/admin/order?id={got[0]['id']}")[1]["order"]["gen_state"] == "mac_wait", "자동 신청은 바로 풀이 대기열에")
+    guest("/api/consult", dict(body, consent=True, birth=dict(B, year=1985), inv=code, vid="FR99887766"))
+    ok(len(mine()) == 1, "친구가 더 와도 기본 리포트 무료는 한 번만")
     # 비싼 PDF는 친구 할인: 기본 사주·신년운세 10%, 평생 9,900원 (할인은 1인 1회)
     guest("/api/quick", {"birth": dict(B, year=2003), "inv": "PC12345678", "vid": "FF11112222"})
     guest("/api/apply", dict(form, product="counsel", email="pct@test.com", name="퍼센트"))  # 첫 무료를 먼저 써둔다
-    st, r = guest("/api/apply", dict(form, product="full", email="pct@test.com", name="퍼센트", vid="PC12345678"))
-    ok(r["discount"] == 990 and r["amount"] == 9900 - 990, f"기본 사주 친구 할인 10% ({r['amount']:,}원)")
+    st, r = guest("/api/apply", dict(form, product="newyear", email="pct@test.com", name="퍼센트", vid="PC12345678"))
+    ok(r["discount"] == 1490 and r["amount"] == 14900 - 1490, f"신년운세 친구 할인 10% ({r['amount']:,}원)")
     st, r = guest("/api/apply", dict(form, product="life", email="pct@test.com", name="퍼센트", vid="PC12345678"))
-    ok(r["discount"] == 0 and r["amount"] == 34900, "할인은 1인 1회 (평생·기본·신년 중 하나)")
+    ok(r["discount"] == 0 and r["amount"] == 34900, "할인은 1인 1회 (평생·신년 중 하나)")
     # 보안
     ok(guest("/api/admin/orders")[0] == 401, "비로그인 → 관리 화면 차단")
     ok(client({"X-Admin-Key": "wrong-key-0123456789abcdefgh"})("/api/admin/orders")[0] == 401, "틀린 기계 열쇠 차단")
@@ -277,8 +290,8 @@ def main():
     ok(boss("/api/admin/retention/run", {})[1]["followups"] == 0, "안부 메일은 한 번만")
     # 친구 초대: 내 링크로 처음 온 친구가 신청하면 나에게 무료 1회, 다음 신청이 무료
     st, r = apply(guest, "love", "초대자")
-    ref = r["my_link"].split("ref=")[1]
-    ok(r["free"] and "ref=" in r["my_link"] and r["credits"] == 0, "신청하면 나만의 초대 링크")
+    ref = r["my_link"].split("=")[-1]  # 초대코드 (?inv= 링크와 같은 코드)
+    ok(r["free"] and "?inv=" in r["my_link"] and r["credits"] == 0, "신청하면 나만의 초대 링크")
     st, r = apply(guest, "love", "친구1", ref=ref)
     ok(r["free"] and r["referred"], "친구가 초대 링크로 처음 신청 → 친구도 무료")
     st, r = apply(guest, "career", "초대자")

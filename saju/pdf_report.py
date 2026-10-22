@@ -297,12 +297,12 @@ class _Doc(BaseDocTemplate):
 
 
 def _ref_link(url, email):
-    """이 손님만의 친구 추천 링크. 사이트 주소·이메일이 없거나 DB를 못 쓰면 빈 값 (PDF는 그래도 만든다)."""
+    """이 손님만의 친구 초대 링크 (친구가 와서 사주를 보면 기본 리포트 무료 — server.reward_by_link). 사이트 주소·이메일이 없거나 DB를 못 쓰면 빈 값 (PDF는 그래도 만든다)."""
     if not url.startswith("http") or not email:
         return ""
     try:
         import referral
-        return f"{url}/?ref={referral.code_for(email)}"
+        return f"{url}/?inv={referral.code_for(email)}"
     except Exception as e:
         print(f"[pdf] 추천 링크 생략: {e}")
         return ""
@@ -347,7 +347,8 @@ def build(order, chart):
     if ref:  # 친구 추천 부탁 (사장님 결정 2026-10-22: 무료 PDF를 주면서 친구에게 추천해 달라고)
         story += [HRFlowable(width="40%", thickness=0.8, color=GOLD, spaceAfter=10),
                   Paragraph('<font color="#f0d08a">마음에 들었다면, 친구에게도 알려줘라</font>', ST["center"]),
-                  Paragraph("친구도 처음이면 가벼운 풀이 PDF 하나를 무료로 받는다. 이 링크를 그대로 보내면 된다."
+                  Paragraph("이 링크로 친구가 와서 자기 사주를 보면, 고마운 뜻으로 <b>내 사주 기본 리포트</b>를 무료로 하나 더 보내주마. "
+                            "친구도 처음이면 가벼운 풀이 하나를 무료로 받는다."
                             f'<br/><font color="#d9b26a">{_esc(ref)}</font>', ST["center"]),
                   Spacer(1, 10 * mm)]
     story += [HRFlowable(width="40%", thickness=0.8, color=GOLD, spaceAfter=10),
