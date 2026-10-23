@@ -2,6 +2,7 @@
 
 사용법:
   python3 tools/business_card.py [--theme=gold|noir|light] [--name-en="William Cheon"] [--out=폴더이름]   → business/card/<폴더>/
+  python3 tools/business_card.py --theme=gold --strong --out=final-gold   → 사장님 최종 명함
   python3 tools/business_card.py --theme=gold --out=final-gold --menu   → 같은 폴더에 한 장짜리 자동화 메뉴판(A5) menu.png·menu_print.pdf 에 front.png, back.png, card_print.pdf(2쪽), preview.png
   gold(검정+금색만, 사장님 최종 선택 2026-10-23) · noir(검정+보라·청록 빛 번짐) · light(처음 버전, 회백색+초록)
 내용(이름·직업·연락처·QR 주소)은 아래 CARD 에서 고친다. QR 은 segno(pip install --user segno).
@@ -121,7 +122,14 @@ def back():
 FONT_DIR = os.path.join(ROOT, "business", "fonts")
 
 
+# --strong: (2026-10-23 사장님 최종, 고운바탕·나눔명조와 비교 후 노토명조 유지) 글씨를 한 단계 굵고 밝게, 한글 이름을 크게 (검정 바탕에 얇은 글씨는 인쇄하면 잉크가 번져 묻힘)
+STRONG = "--strong" in sys.argv
+BUMP = {"Light": "Regular", "Regular": "Medium", "Medium": "SemiBold", "SemiBold": "Bold"}
+
+
 def serif(size_pt, weight="Light", latin=False):
+    if STRONG and not latin:
+        weight = BUMP.get(weight, weight)
     f = ImageFont.truetype(os.path.join(FONT_DIR, "CormorantGaramond[wght].ttf" if latin else "NotoSerifKR[wght].ttf"), round(size_pt * DPI / 72))
     f.set_variation_by_name(weight)
     return f
@@ -146,7 +154,9 @@ PALETTES = {
     "gold": {"bg": (9, 9, 10), "ivory": "#E8D7A6", "muted": "#9E8B5E", "gold": "#C9A45C", "line": "#3A3426",
              "glow_f": [(0.85, 0.10, 0.30, (26, 22, 15))], "glow_b": [(0.15, 0.90, 0.30, (26, 22, 15))]},
 }
-NOIR = PALETTES.get(THEME, PALETTES["noir"])
+NOIR = dict(PALETTES.get(THEME, PALETTES["noir"]))
+if STRONG and THEME == "gold":
+    NOIR.update(ivory="#F3E6C2", muted="#C9B07A", gold="#D6B46A")
 
 
 def haze(glows, seed):
@@ -170,9 +180,15 @@ def front_noir():
     x, y = SAFE + round(1 * MM), SAFE + round(0.2 * MM)
     spaced(d, (x, y), CARD["title_en"], serif(6.2, "SemiBold", latin=True), NOIR["gold"], 0.7)
     y += round(5.6 * MM)
-    d.text((x, y), CARD["name_en"], font=serif(25, "Light", latin=True), fill=NOIR["ivory"])
+    d.text((x, y), CARD["name_en"], font=serif(25, "Regular" if STRONG else "Light", latin=True), fill=NOIR["ivory"])
     y += round(11.4 * MM)
-    d.text((x, y), f"{CARD['name']}   ·   {CARD['title']}", font=serif(6.6, "Light"), fill=NOIR["muted"])
+    if STRONG:  # 한글 이름을 크게, 직업은 옆에 금색으로
+        fn = serif(10.5, "Regular")
+        d.text((x, y - round(0.8 * MM)), CARD["name"], font=fn, fill=NOIR["ivory"])
+        d.text((x + d.textlength(CARD["name"], font=fn) + round(2.6 * MM), y + round(0.9 * MM)), CARD["title"], font=serif(6.6, "Light"), fill=NOIR["gold"])
+        y += round(0.8 * MM)
+    else:
+        d.text((x, y), f"{CARD['name']}   ·   {CARD['title']}", font=serif(6.6, "Light"), fill=NOIR["muted"])
     y2 = y + round(5.2 * MM)
     d.line([x, y2, x + round(14 * MM), y2], fill=NOIR["gold"], width=2)
     yy = y2 + round(2.6 * MM)
