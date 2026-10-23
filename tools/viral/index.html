@@ -63,6 +63,12 @@
   .day .acts { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
   .logbox { font:12px/1.5 ui-monospace, monospace; white-space:pre-wrap; background:var(--chip); border-radius:10px; padding:10px; max-height:220px; overflow:auto; }
   .narr { white-space:pre-wrap; background:var(--chip); border-radius:10px; padding:12px; font-size:14px; }
+  .idea .fit { font-size:12px; font-weight:600; padding:2px 8px; border-radius:99px; background:var(--chip); white-space:nowrap; }
+  .idea .fit.go { background:var(--ok); color:#fff; } .idea .fit.have { background:#3b6fd8; color:#fff; } .idea .fit.no { color:var(--sub); }
+  .idea table { width:100%; border-collapse:collapse; font-size:14px; } .idea td { border-top:1px solid var(--line); padding:8px 6px; vertical-align:top; }
+  .idea .doubt { color:#b4232a; font-size:13px; } @media (prefers-color-scheme: dark) { .idea .doubt { color:#ff9c9c; } }
+  .exp { background:var(--chip); border-radius:12px; padding:12px 14px; margin-top:12px; } .exp ol { margin:6px 0; padding-left:20px; }
+  .tablewrap { overflow-x:auto; }
   details summary { cursor:pointer; color:var(--sub); font-size:13px; margin-top:10px; }
 </style>
 </head>
@@ -77,6 +83,7 @@
     <button data-tab="link">링크 추가</button>
     <button data-tab="lib">보관함 <span id="libCount"></span></button>
     <button data-tab="tech">연출 기법</button>
+    <button data-tab="ideas">아이디어 검증</button>
   </div>
 </header>
 <main>
@@ -152,6 +159,19 @@
   </section>
 </main>
 
+<section id="tab-ideas" class="hide" style="max-width:1100px;margin:0 auto;padding:0 16px 16px">
+  <div class="panel">
+    <h3 style="margin-top:0">🧪 아이디어 검증</h3>
+    <label>부업·사업 영상이나 글 링크</label>
+    <input id="iurl" placeholder="https://youtu.be/...">
+    <label style="margin-top:12px">메모 또는 글 붙여넣기 (유튜브가 아니면 필수)</label>
+    <textarea id="inote" style="min-height:80px" placeholder="예: 이 중에 템플릿 판매가 우리한테 맞는지 궁금 / 블로그·스레드 글 본문"></textarea>
+    <button class="btn" id="igo" style="margin-top:10px">검증하기 (제미나이 · 1~2분)</button>
+    <p class="note">아이디어를 모으는 곳이 아니라 거르는 곳이에요. 결과는 '이번 주 2시간 실험 1개'. 진행 중인 실험이 있으면 결과를 적어야 새로 검증할 수 있어요.</p>
+  </div>
+  <div id="ideas"></div>
+</section>
+
 <dialog id="dlg"><div class="dh"><h2 id="dt"></h2><button class="btn ghost sm" onclick="dlg.close()">닫기</button></div><div class="db" id="dbody"></div></dialog>
 
 <script>
@@ -175,8 +195,8 @@ async function busy(btn, label, fn) {
 
 document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
   document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("on", x === b));
-  ["daily", "needs", "diary", "search", "link", "lib", "tech"].forEach((t) => $("#tab-" + t).classList.toggle("hide", t !== b.dataset.tab));
-  ({ lib: renderLib, diary: loadDiary, daily: loadDaily, tech: loadTech, needs: loadNeeds })[b.dataset.tab]?.();
+  ["daily", "needs", "diary", "search", "link", "lib", "tech", "ideas"].forEach((t) => $("#tab-" + t).classList.toggle("hide", t !== b.dataset.tab));
+  ({ lib: renderLib, diary: loadDiary, daily: loadDaily, tech: loadTech, needs: loadNeeds, ideas: loadIdeas })[b.dataset.tab]?.();
 });
 
 function card(it, saved) {
@@ -436,6 +456,56 @@ function needCard(x) {
 async function saveNeed(row, btn) {
   await busy(btn, "저장 중…", async () => { await api("/api/needs/update", { row, status: $(`#st-${row}`).value, memo: $(`#mm-${row}`).value }); say("저장했어요 (구글 시트에도 반영)."); loadNeeds(); });
 }
+
+// ---------- 아이디어 검증 ----------
+const FIT = { "이미 하는 중": "have", "바로 가능": "go", "준비 필요": "", "안 맞음": "no" };
+const IST = { "검증됨": "", "실험 중": "wait", "효과 있음": "ok", "접음": "bad" };
+async function loadIdeas() {
+  const list = await api("/api/ideas");
+  const running = list.find((x) => x.status === "실험 중");
+  $("#igo").disabled = !!running;
+  $("#igo").textContent = running ? "진행 중인 실험을 먼저 끝내주세요" : "검증하기 (제미나이 · 1~2분)";
+  const done = list.filter((x) => ["효과 있음", "접음"].includes(x.status));
+  $("#ideas").innerHTML = (done.length ? `<div class="panel"><b>지금까지 실험</b> — 효과 있음 ${done.filter((x) => x.status === "효과 있음").length} · 접음 ${done.filter((x) => x.status === "접음").length}</div>` : "")
+    + (list.map(ideaCard).join("") || '<div class="panel">아직 없어요. 보다가 "이거 해볼까?" 싶은 영상 링크를 넣어보세요.</div>');
+}
+function ideaCard(x) {
+  const r = x.result, e = r.experiment;
+  const btns = x.status === "검증됨" ? `<button class="btn sm" onclick="ideaSet('${x.id}','실험 중',this)">이 실험 시작</button>`
+    : x.status === "실험 중" ? `<button class="btn sm" onclick="ideaSet('${x.id}','효과 있음',this)">효과 있음</button><button class="btn sm ghost" onclick="ideaSet('${x.id}','접음',this)">접음</button>`
+    : `<button class="btn sm ghost" onclick="ideaSet('${x.id}','',this)">결과 메모 저장</button>`;
+  return `<div class="panel idea">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="st ${IST[x.status] || ""}">${esc(x.status)}</span>
+      ${x.url ? `<a href="${esc(x.url)}" target="_blank" style="font-weight:600;color:inherit">${esc(r.title || x.url)}</a>` : `<b>${esc(r.title || "붙여넣은 글")}</b>`}
+      <span class="note" style="margin:0">${esc(r.speaker || "")} · ${esc(x.at.slice(0, 10))}</span></div>
+    <ul style="margin:8px 0 0;padding-left:20px">${(r.summary || []).map((t) => `<li>${esc(t)}</li>`).join("")}</ul>
+    <details ${x.status === "검증됨" ? "open" : ""}><summary>방법 ${r.ideas.length}개 판정 보기</summary><div class="tablewrap"><table>${r.ideas.map((i) => `<tr>
+      <td style="width:1%"><span class="fit ${FIT[i.fit] ?? ""}">${esc(i.fit)}</span></td>
+      <td><b>${esc(i.name)}</b> — ${esc(i.how)}${i.numbers ? `<div class="note" style="margin:2px 0 0">영상 속 숫자: ${esc(i.numbers)}</div>` : ""}
+        ${i.doubt ? `<div class="doubt">⚠ ${esc(i.doubt)}</div>` : ""}<div class="note" style="margin:2px 0 0">→ ${esc(i.fit_reason)}</div></td></tr>`).join("")}</table></div></details>
+    <div class="exp"><b>🧪 이번 주 2시간 실험</b><div style="margin-top:4px">${esc(e.what)}</div>
+      <ol>${e.steps.map((t) => `<li>${esc(t)}</li>`).join("")}</ol>
+      <div class="note" style="margin:0">✅ 계속: ${esc(e.success)}<br>✋ 접기: ${esc(e.kill)}</div></div>
+    ${x.status !== "검증됨" ? `<label style="margin-top:12px">결과 메모</label><textarea id="io-${x.id}" style="min-height:60px">${esc(x.outcome)}</textarea>` : ""}
+    <div class="acts" style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">${btns}<button class="btn sm ghost" onclick="ideaDel('${x.id}')">삭제</button></div>
+  </div>`;
+}
+async function ideaSet(id, status, btn) {
+  await busy(btn, "저장 중…", async () => {
+    const o = document.getElementById("io-" + id);
+    await api("/api/ideas/update", { id, status, outcome: o ? o.value : undefined });
+    say(status === "실험 중" ? "실험 시작! 끝나면 결과 메모를 적고 '효과 있음' 또는 '접음'을 눌러주세요." : "저장했어요.");
+    loadIdeas();
+  });
+}
+async function ideaDel(id) { if (!confirm("삭제할까요?")) return; await api("/api/ideas/delete", { id }); loadIdeas(); }
+$("#igo").onclick = () => busy($("#igo"), "제미나이가 보는 중… (붐비면 몇 분)", async () => {
+  say("");
+  await api("/api/ideas/verify", { url: $("#iurl").value, note: $("#inote").value });
+  $("#iurl").value = ""; $("#inote").value = "";
+  say("검증 끝! 아래에서 판정과 실험을 확인하세요.");
+  loadIdeas();
+});
 
 (async () => {
   loadDaily();

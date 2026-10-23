@@ -22,8 +22,8 @@ OUT = os.path.join(ROOT, "business", "card", OUT_NAME)
 CARD = {
     "name": "천성준",
     "name_en": next((a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--name-en=")), "William Cheon"),
-    "title": "워크플로우 디자이너",
-    "title_en": "WORKFLOW DESIGNER",
+    "title": "워크플로우 디자이너 · 개발자",
+    "title_en": "WORKFLOW DESIGNER & DEVELOPER",
     "tagline": ["사장님이 안 해도 되는 일,", "대신 돌아가게 만듭니다."],
     "contacts": [("T", "010-4763-7063"), ("K", "카카오톡 eager1014"), ("E", "eager1014@gmail.com")],
     "back_title": ["사장님 없으면", "가게가 안 돌아가죠?"],

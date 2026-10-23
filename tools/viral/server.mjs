@@ -12,6 +12,7 @@ import { HERE, DATA_DIR, CODEX, ROOT, GEMINI_MODEL, friendlyError, load, save, u
   setTechnique, addDiary, deleteDiary, addReference, saveSettings, UPLOAD_DIR } from "./core.mjs";
 
 import { readNeeds, updateNeed, NEED_STATUSES } from "../needs_form.mjs";
+import { listIdeas, verifyIdea, setIdea, deleteIdea } from "./ideas.mjs";
 
 const PORT = Number(process.env.VIRAL_PORT || 4600);
 
@@ -99,6 +100,11 @@ const routes = {
   "GET /api/needs": async () => ({ items: (await readNeeds()).reverse(), statuses: NEED_STATUSES,
     sheet: process.env.NEEDS_SHEET_ID ? `https://docs.google.com/spreadsheets/d/${process.env.NEEDS_SHEET_ID}` : "" }),
   "POST /api/needs/update": async (b) => updateNeed(Number(b.row), { status: b.status, memo: b.memo }),
+  // 아이디어 검증 (링크 → 주장·과장·판정 → 2시간 실험 1개)
+  "GET /api/ideas": async () => listIdeas(),
+  "POST /api/ideas/verify": async (b) => verifyIdea(b),
+  "POST /api/ideas/update": async (b) => setIdea(b.id, b),
+  "POST /api/ideas/delete": async (b) => { deleteIdea(b.id); return { ok: true }; },
   // 매일 쇼츠
   "GET /api/daily": async () => dailyList(),
   "POST /api/daily/run": async (b) => startDaily("run", b.date),
