@@ -1,0 +1,97 @@
+[
+ {
+  "file": "music/ep01-calm.mp3",
+  "mood": "calm",
+  "title": "잔잔한 기본곡"
+ },
+ {
+  "file": "music/calm-getaway.mp3",
+  "mood": "calm",
+  "title": "Getaway - Benjamin Andrews (잔잔)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/calm-mediterranean-view.mp3",
+  "mood": "calm",
+  "title": "Mediterranean View - Everet Almond (잔잔)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/calm-moonlight-magic.mp3",
+  "mood": "calm",
+  "title": "Moonlight Magic - Asher Fulero (잔잔)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/hopeful-before-the-loss.mp3",
+  "mood": "hopeful",
+  "title": "Before the Loss - Nathan Moore (희망·위로)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/hopeful-journey-home.mp3",
+  "mood": "hopeful",
+  "title": "Journey Home - Chris Haugen (희망·위로)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/hopeful-morning.mp3",
+  "mood": "hopeful",
+  "title": "Morning - Evening Telecast (희망·위로)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/playful-sneaky-spelunking.mp3",
+  "mood": "playful",
+  "title": "Sneaky Spelunking - Joel Cummins (장난·경쾌)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/playful-suave-sleuth.mp3",
+  "mood": "playful",
+  "title": "Suave Sleuth - Casa Rosa's Tulum Vibes (장난·경쾌)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/playful-toy-store-funk.mp3",
+  "mood": "playful",
+  "title": "Toy Store Funk - Karneef (장난·경쾌)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/sad-a-distant-call.mp3",
+  "mood": "sad",
+  "title": "A Distant Call - Dan _Lebo_ Lebowitz, Tone Seeker (슬픔·여운)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/sad-heartbeat-of-the-wind.mp3",
+  "mood": "sad",
+  "title": "Heartbeat Of The Wind - Asher Fulero (슬픔·여운)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/sad-love-s-aftermath.mp3",
+  "mood": "sad",
+  "title": "Love's Aftermath - Asher Fulero (슬픔·여운)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/tense-moving-in-the-shadows.mp3",
+  "mood": "tense",
+  "title": "Moving In The Shadows - The Soundlings (긴장·위험 신호)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/tense-shady-guise.mp3",
+  "mood": "tense",
+  "title": "Shady Guise - The Soundlings (긴장·위험 신호)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ },
+ {
+  "file": "music/tense-tiptoe.mp3",
+  "mood": "tense",
+  "title": "Tiptoe - Nat Keefe (긴장·위험 신호)",
+  "source": "YouTube 오디오 보관함 (출처 표기 불필요)"
+ }
+]

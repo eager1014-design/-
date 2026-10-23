@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --bg:#f6f5f2; --card:#fff; --ink:#1d1d1f; --mute:#77756f; --line:#e6e3dc; --accent:#2f6f4f; --accent-soft:#e3efe8; --warn:#b4541a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141413; --card:#1f1e1c; --ink:#f1efe9; --mute:#9a978f; --line:#2f2d2a; --accent:#6cc394; --accent-soft:#1e3328; --warn:#f0a06b; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  .wrap { max-width:560px; margin:0 auto; padding:16px 16px 140px; }
+  h1 { font-size:18px; margin:4px 0 12px; display:flex; justify-content:space-between; align-items:center; }
+  h1 a { font-size:13px; font-weight:400; color:var(--accent); text-decoration:none; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; }
+  .stat b { display:block; font-size:16px; font-variant-numeric:tabular-nums; }
+  .stat span { font-size:12px; color:var(--mute); }
+  details { background:var(--card); border:1px solid var(--line); border-radius:12px; margin-top:10px; padding:8px 12px; }
+  summary { cursor:pointer; font-size:14px; color:var(--mute); }
+  .row { display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-top:1px solid var(--line); font-size:14px; }
+  .row:first-of-type { border-top:0; }
+  .row small { color:var(--mute); }
+  .num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  #chat { margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+  .msg { max-width:88%; padding:9px 12px; border-radius:14px; white-space:pre-wrap; word-break:break-word; }
+  .me { align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:4px; }
+  .me img { max-width:160px; border-radius:8px; display:block; }
+  .ai { align-self:flex-start; background:var(--card); border:1px solid var(--line); border-bottom-left-radius:4px; }
+  .ai.err { color:var(--warn); }
+  .plan { margin-top:8px; display:flex; flex-direction:column; gap:4px; }
+  .plan div { background:var(--accent-soft); border-radius:8px; padding:6px 8px; font-size:14px; }
+  .btns { display:flex; gap:8px; margin-top:8px; }
+  button { font:inherit; border:0; border-radius:10px; padding:8px 14px; cursor:pointer; }
+  .ok { background:var(--accent); color:#fff; }
+  .no { background:transparent; color:var(--mute); border:1px solid var(--line); }
+  .bar { position:fixed; left:0; right:0; bottom:0; background:var(--bg); border-top:1px solid var(--line); padding:10px 16px calc(10px + env(safe-area-inset-bottom)); }
+  .bar form { max-width:560px; margin:0 auto; display:flex; gap:8px; align-items:flex-end; }
+  .bar textarea { flex:1; min-width:0; resize:none; font:inherit; font-size:16px; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--ink); max-height:120px; }
+  .icon { width:44px; height:44px; padding:0; display:grid; place-items:center; font-size:20px; flex:none; }
+  .cam { background:var(--card); border:1px solid var(--line); color:var(--ink); }
+  .hint { color:var(--mute); font-size:13px; }
+  /* 그래프 색: 분류마다 고정 (순위가 바뀌어도 색은 그대로) */
+  :root { --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#9b998f; }
+  @media (prefers-color-scheme: dark) { :root { --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#75736b; } }
+  .chart { background:var(--card); border:1px solid var(--line); border-radius:12px; margin-top:10px; padding:12px; position:relative; }
+  .chart h2 { font-size:14px; margin:0 0 8px; display:flex; justify-content:space-between; }
+  .chart h2 span { font-weight:400; color:var(--mute); }
+  .legend { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; color:var(--mute); margin-bottom:6px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px; vertical-align:-1px; }
+  .chart svg { display:block; width:100%; height:auto; overflow:visible; }
+  .chart svg text { fill:var(--mute); font-size:11px; }
+  .chart svg .total { fill:var(--ink); font-weight:600; }
+  .chart svg rect.hit { fill:transparent; cursor:pointer; }
+  .tip { position:absolute; pointer-events:none; background:var(--ink); color:var(--bg); font-size:12px; padding:6px 8px; border-radius:8px; white-space:nowrap; display:none; z-index:2; }
+  .hbar { display:grid; grid-template-columns:auto 1fr auto; gap:6px 8px; align-items:center; font-size:13px; }
+  .hbar .track { height:10px; }
+  .hbar .fill { height:10px; background:var(--s1); border-radius:0 4px 4px 0; min-width:2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>사업 지출 <a id="sheet" target="_blank">시트 열기 ↗</a></h1>
+  <div class="stats">
+    <div class="stat"><span id="mLabel">이번 달</span><b id="mTotal">…</b></div>
+    <div class="stat"><span>이번 달 AI</span><b id="mAi">…</b></div>
+    <div class="stat"><span>매달 고정</span><b id="fixedTotal">…</b></div>
+  </div>
+  <div class="chart" id="monthChart">
+    <h2>월별 지출 <span>최근 6개월 · 원화</span></h2>
+    <div class="legend" id="legend"></div>
+    <div id="monthSvg"></div>
+    <div class="tip" id="tip"></div>
+  </div>
+  <div class="chart">
+    <h2>매달 나가는 AI 구독료 <span id="aiSum"></span></h2>
+    <div class="hbar" id="aiBars"></div>
+  </div>
+  <details><summary>최근 지출</summary><div id="recent"></div></details>
+  <details><summary>고정지출 목록</summary><div id="fixed"></div></details>
+
+  <div id="chat">
+    <div class="msg ai">말로 적거나 📷 로 결제 스샷을 올려주세요.
+<span class="hint">예) 오늘 캔바 15000원 결제
+예) 넷플릭스 매달 17000원 나가
+예) 미드저니 해지했어</span></div>
+  </div>
+</div>
+
+<div class="bar">
+  <form id="f">
+    <button type="button" class="icon cam" id="camBtn" aria-label="스샷 올리기">📷</button>
+    <input type="file" id="file" accept="image/*" hidden>
+    <textarea id="t" rows="1" placeholder="지출을 말로 적어주세요"></textarea>
+    <button class="icon ok" aria-label="보내기">↑</button>
+  </form>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const won = (n) => `${Math.round(n || 0).toLocaleString()}원`;
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const call = (fn, ...args) => new Promise((ok, bad) => google.script.run.withSuccessHandler(ok).withFailureHandler(bad)[fn](...args));
+
+function render(o) {
+  $("sheet").href = o.sheetUrl;
+  $("mLabel").textContent = `${Number(o.month.slice(5))}월 합계`;
+  $("mTotal").textContent = won(o.monthTotal);
+  $("mAi").textContent = won(o.monthAi);
+  $("fixedTotal").textContent = won(o.fixedMonthly);
+  $("recent").innerHTML = o.recent.map((r) => `<div class="row"><span>${esc(r.vendor)} <small>${esc(r.date.slice(5))} · ${esc(r.desc)}</small></span><span class="num">${r.currency === "KRW" ? won(r.amount) : `${esc(r.amount)} ${esc(r.currency)}`}</span></div>`).join("") || '<div class="hint">아직 없음</div>';
+  drawMonths(o.byMonth);
+  drawAi(o.aiFixed);
+  $("fixed").innerHTML = o.fixed.map((r) => `<div class="row"><span>${esc(r.name)} <small>${esc(r.cycle)}${r.status !== "사용중" ? " · " + esc(r.status) : ""}</small></span><span class="num">${r.currency === "KRW" ? won(r.amount) : `${esc(r.amount)} ${esc(r.currency)}`}</span></div>`).join("") || '<div class="hint">아직 없음</div>';
+}
+
+// 분류 → 그래프 묶음. 5개 주요 분류 + 나머지는 "그 외"
+const GROUPS = [
+  { name: "AI 구독", color: "var(--s1)", cats: ["AI 구독"] },
+  { name: "차량·교통", color: "var(--s2)", cats: ["차량·교통"] },
+  { name: "통신비", color: "var(--s3)", cats: ["통신비"] },
+  { name: "서버·도메인", color: "var(--s4)", cats: ["서버·도메인"] },
+  { name: "소프트웨어", color: "var(--s5)", cats: ["소프트웨어·구독"] },
+  { name: "그 외", color: "var(--s6)", cats: null },
+];
+const groupOf = (cat) => GROUPS.find((g) => g.cats?.includes(cat)) || GROUPS[GROUPS.length - 1];
+const short = (n) => (n >= 10000 ? `${(n / 10000).toFixed(n >= 100000 ? 0 : 1)}만` : Math.round(n).toLocaleString());
+
+function drawMonths(byMonth) {
+  const data = byMonth.map((m) => {
+    const v = GROUPS.map(() => 0);
+    for (const [cat, krw] of Object.entries(m.cats)) v[GROUPS.indexOf(groupOf(cat))] += Math.max(0, krw);
+    return { month: m.month, v, total: v.reduce((a, b) => a + b, 0) };
+  });
+  const used = GROUPS.map((g, i) => data.some((d) => d.v[i] > 0));
+  $("legend").innerHTML = GROUPS.filter((_, i) => used[i]).map((g) => `<span><i style="background:${g.color}"></i>${g.name}</span>`).join("");
+  const W = 320, H = 170, top = 18, bottom = 20, max = Math.max(1, ...data.map((d) => d.total));
+  const bw = 30, step = W / data.length, scale = (H - top - bottom) / max;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 6개월 월별 지출">`;
+  svg += `<line x1="0" x2="${W}" y1="${H - bottom}" y2="${H - bottom}" stroke="var(--line)"/>`;
+  data.forEach((d, mi) => {
+    const x = mi * step + (step - bw) / 2;
+    let y = H - bottom;
+    const segs = d.v.map((val, i) => ({ val, i })).filter((s) => s.val > 0);
+    segs.forEach((s, k) => {
+      const h = Math.max(1, s.val * scale - (k < segs.length - 1 ? 2 : 0)); // 칸 사이 2px 틈
+      y -= s.val * scale;
+      const r = k === segs.length - 1 ? 4 : 0;
+      svg += r
+        ? `<path d="M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + bw - r} Q${x + bw},${y} ${x + bw},${y + r} V${y + h} Z" fill="${GROUPS[s.i].color}"/>`
+        : `<rect x="${x}" y="${y + (s.val * scale - h)}" width="${bw}" height="${h}" fill="${GROUPS[s.i].color}"/>`;
+    });
+    if (d.total) svg += `<text class="total" x="${x + bw / 2}" y="${y - 5}" text-anchor="middle">${short(d.total)}</text>`;
+    svg += `<text x="${x + bw / 2}" y="${H - 5}" text-anchor="middle">${Number(d.month.slice(5))}월</text>`;
+    svg += `<rect class="hit" data-i="${mi}" x="${mi * step}" y="0" width="${step}" height="${H}"/>`;
+  });
+  $("monthSvg").innerHTML = svg + "</svg>";
+  const tip = $("tip");
+  $("monthSvg").querySelectorAll(".hit").forEach((el) => {
+    const show = () => {
+      const d = data[el.dataset.i];
+      if (!d.total) return (tip.style.display = "none");
+      tip.innerHTML = `<b>${Number(d.month.slice(5))}월 ${won(d.total)}</b>` + GROUPS.map((g, i) => (d.v[i] ? `<br>${g.name} ${won(d.v[i])}` : "")).join("");
+      tip.style.display = "block";
+      const box = $("monthChart").getBoundingClientRect(), r = el.getBoundingClientRect();
+      tip.style.left = `${Math.min(Math.max(4, r.left - box.left + r.width / 2 - tip.offsetWidth / 2), box.width - tip.offsetWidth - 4)}px`;
+      tip.style.top = `${r.top - box.top + 30}px`;
+    };
+    el.addEventListener("mouseenter", show);
+    el.addEventListener("click", show);
+    el.addEventListener("mouseleave", () => (tip.style.display = "none"));
+  });
+}
+
+function drawAi(list) {
+  const max = Math.max(1, ...list.map((a) => a.krw));
+  $("aiSum").textContent = list.length ? `합계 ${won(list.reduce((s, a) => s + a.krw, 0))}` : "";
+  $("aiBars").innerHTML = list.map((a) => `<span>${esc(a.name)}</span><div class="track"><div class="fill" style="width:${(a.krw / max) * 100}%"></div></div><span class="num">${won(a.krw)}</span>`).join("")
+    || '<span class="hint">아직 없음</span>';
+}
+
+function bubble(cls, html) {
+  const d = document.createElement("div");
+  d.className = `msg ${cls}`;
+  d.innerHTML = html;
+  $("chat").append(d);
+  d.scrollIntoView({ behavior: "smooth", block: "end" });
+  return d;
+}
+
+const describe = (a) => {
+  const money = a.amount ? ` ${a.currency === "KRW" ? won(a.amount) : `${a.amount} ${a.currency}`}` : "";
+  if (a.kind === "add" && a.dup) return `⚠ 이미 있음 · ${a.dup} → 안 넣어요`;
+  if (a.kind === "add") return `➕ 지출 · ${a.date || "오늘"} · ${a.vendor}${money}${a.description ? ` (${a.description})` : ""}`;
+  if (a.kind === "fixed") return `🔁 고정지출 · ${a.vendor}${money}${a.cycle === "yearly" ? " / 매년" : " / 매월"}`;
+  return `✖ 해지 · ${a.vendor}`;
+};
+
+async function handle(promise) {
+  const wait = bubble("ai", "읽는 중…");
+  try {
+    const r = await promise;
+    if (!r.actions.length) { wait.textContent = r.reply; return; }
+    // 전부 이미 있는 결제면 넣기 버튼 없이 알려만 준다
+    if (r.actions.every((a) => a.dup)) {
+      wait.innerHTML = `${esc(r.reply)}<div class="plan">${r.actions.map((a) => `<div>${esc(describe(a))}</div>`).join("")}</div><div class="hint" style="margin-top:6px">따로 한 번 더 결제된 거면 "한 번 더 결제됐어"라고 말해주세요.</div>`;
+      return;
+    }
+    wait.innerHTML = `${esc(r.reply)}<div class="plan">${r.actions.map((a) => `<div>${esc(describe(a))}</div>`).join("")}</div><div class="btns"><button class="ok">넣기</button><button class="no">취소</button></div>`;
+    const [ok, no] = wait.querySelectorAll("button");
+    no.onclick = () => { wait.querySelector(".btns").remove(); bubble("ai", "취소했어요."); };
+    ok.onclick = async () => {
+      wait.querySelector(".btns").remove();
+      try {
+        const res = await call("apply", r.actions);
+        bubble("ai", `✓ ${res.done.map(esc).join("\n✓ ")}`);
+        render(res.overview);
+      } catch (e) { bubble("ai err", esc(e.message)); }
+    };
+  } catch (e) { wait.className = "msg ai err"; wait.textContent = e.message; }
+}
+
+$("f").onsubmit = (e) => {
+  e.preventDefault();
+  const text = $("t").value.trim();
+  if (!text) return;
+  $("t").value = "";
+  $("t").style.height = "";
+  bubble("me", esc(text));
+  handle(call("parseText", text));
+};
+$("t").addEventListener("input", (e) => { e.target.style.height = ""; e.target.style.height = `${e.target.scrollHeight}px`; });
+$("t").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing && matchMedia("(pointer:fine)").matches) { e.preventDefault(); $("f").requestSubmit(); } });
+
+// 스샷은 폰에서 줄여서(긴 쪽 1600px) 보낸다 — 빠르고 AI 비용도 줄어든다
+$("camBtn").onclick = () => $("file").click();
+$("file").onchange = async () => {
+  const file = $("file").files[0];
+  $("file").value = "";
+  if (!file) return;
+  const img = await createImageBitmap(file);
+  const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.width * scale);
+  c.height = Math.round(img.height * scale);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  const url = c.toDataURL("image/jpeg", 0.85);
+  const note = $("t").value.trim();
+  $("t").value = "";
+  bubble("me", `<img src="${url}">${note ? esc(note) : ""}`);
+  handle(call("parseImage", url.split(",")[1], "image/jpeg", note));
+};
+
+call("overview").then(render).catch((e) => bubble("ai err", esc(e.message)));
+</script>
+</body>
+</html>

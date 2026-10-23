@@ -1,0 +1,769 @@
+{
+  "title": "거리 안 두면 생기는 예민한 사람의 비극 | 쇼펜하우어 #shorts",
+  "format": "short",
+  "style": "punchy",
+  "pace": {
+    "speed": 1.1,
+    "trim": true
+  },
+  "frame": {
+    "title": [
+      "거리 안 두면 생기는",
+      "예민한 사람의 비극"
+    ],
+    "brand": "예민한자립가"
+  },
+  "music": "music/calm-getaway.mp3",
+  "musicStart": "s02",
+  "musicVolume": 0.14,
+  "voice": {
+    "provider": "elevenlabs",
+    "id": "vithIMnhyN3GwRbVmrZt",
+    "name": "천성준"
+  },
+  "scenes": [
+    {
+      "id": "s01",
+      "type": "hook",
+      "narration": "예민한 사람이 아무나 곁에 두면, 반드시 이런 비극이 와요.",
+      "lines": [
+        {
+          "text": "아무나 곁에 두면\n**반드시 오는 비극**",
+          "cue": "예민한"
+        }
+      ],
+      "kicker": "예민한 사람 주의",
+      "sfx": [
+        {
+          "name": "drum",
+          "ext": "mp3",
+          "cue": "비극이"
+        }
+      ],
+      "keywords": [
+        "비극",
+        "곁에"
+      ],
+      "face": [
+        {
+          "at": "예민한",
+          "is": "serious"
+        },
+        {
+          "at": "반드시",
+          "is": "worried"
+        }
+      ],
+      "gesture": [
+        {
+          "at": "반드시",
+          "is": "point"
+        }
+      ],
+      "cast": "center",
+      "audio": "episodes/daily-261023/s01.wav",
+      "audioDuration": 6.73,
+      "audioStart": 0,
+      "playbackRate": 1,
+      "audioSource": "voice_full.mp3",
+      "charTimes": [
+        0.13,
+        0.31,
+        0.49,
+        0.68,
+        0.88,
+        1.07,
+        1.26,
+        1.46,
+        1.64,
+        1.83,
+        2.02,
+        2.31,
+        2.6,
+        2.86,
+        3.25,
+        3.64,
+        3.91,
+        4.28,
+        4.59,
+        5.08,
+        5.49,
+        5.9,
+        6.51
+      ]
+    },
+    {
+      "id": "s02",
+      "type": "photo",
+      "narration": "결혼하지 않고 혼자 지낸 철학자가 있어요. 쇼펜하우어예요.",
+      "person": "Arthur Schopenhauer",
+      "name": "쇼펜하우어",
+      "years": "1788–1860",
+      "lines": [
+        {
+          "text": "결혼 안 하고\n**혼자 지낸 철학자**",
+          "cue": "결혼하지"
+        }
+      ],
+      "circle": {
+        "at": "쇼펜하우어예요",
+        "x": 0.5,
+        "y": 0.28,
+        "r": 0.16
+      },
+      "sfx": [
+        {
+          "name": "pageturn",
+          "ext": "mp3",
+          "cue": "철학자가"
+        }
+      ],
+      "keywords": [
+        "철학자",
+        "혼자"
+      ],
+      "cast": "off",
+      "image": "episodes/daily-261023/img/arthur-schopenhauer_1.jpg",
+      "aspect": 0.783,
+      "audio": "episodes/daily-261023/s02.wav",
+      "audioDuration": 4.37,
+      "audioStart": 6.728,
+      "playbackRate": 1,
+      "audioSource": "voice_full.mp3",
+      "charTimes": [
+        0.02,
+        0.21,
+        0.35,
+        0.52,
+        0.68,
+        0.85,
+        1.01,
+        1.18,
+        1.34,
+        1.52,
+        1.69,
+        1.86,
+        1.99,
+        2.15,
+        2.27,
+        2.33,
+        2.4,
+        2.77,
+        3.14,
+        3.51,
+        3.71,
+        3.9,
+        4.1,
+        4.3
+      ]
+    },
+    {
+      "id": "s03",
+      "type": "photo",
+      "narration": "그는 소음을 유난히 못 견뎌서, 소음에 대한 글까지 남겼어요. 말년엔 푸들과 조용히 살았대요.",
+      "person": "Arthur Schopenhauer",
+      "name": "쇼펜하우어",
+      "years": "1788–1860",
+      "lines": [
+        {
+          "text": "소음을 **못 견뎌**\n글까지 남김",
+          "cue": "그는"
+        },
+        {
+          "text": "말년엔\n**푸들과 조용히**",
+          "cue": "말년엔"
+        }
+      ],
+      "circle": {
+        "at": "그는",
+        "x": 0.5,
+        "y": 0.28,
+        "r": 0.16
+      },
+      "comments": [
+        {
+          "text": "저도 소리에 예민해요",
+          "at": "소음을",
+          "emoji": "😳"
+        }
+      ],
+      "sfx": [
+        {
+          "name": "glitch",
+          "ext": "mp3",
+          "cue": "소음을"
+        }
+      ],
+      "keywords": [
+        "소음",
+        "푸들"
+      ],
+      "cast": "off",
+      "image": "episodes/daily-261023/img/arthur-schopenhauer_2.jpg",
+      "aspect": 0.782,
+      "audio": "episodes/daily-261023/s03.wav",
+      "audioDuration": 7.92,
+      "audioStart": 11.102,
+      "playbackRate": 1,
+      "audioSource": "voice_full.mp3",
+      "charTimes": [
+        0.28,
+        0.47,
+        0.65,
+        0.88,
+        1.08,
+        1.31,
+        1.5,
+        1.68,
+        1.88,
+        2.04,
+        2.2,
+        2.37,
+        2.74,
+        2.86,
+        3.06,
+        3.26,
+        3.47,
+        3.66,
+        3.86,
+        4.05,
+        4.27,
+        4.41,
+        5.14,
+        5.14,
+        5.43,
+        5.63,
+        5.82,
+        6.01,
+        6.2,
+        6.4,
+        6.57,
+        6.75,
+        6.94,
+        7.12,
+        7.33,
+        7.55,
+        7.77
+      ]
+    },
+    {
+      "id": "s04",
+      "type": "story",
+      "narration": "그가 남긴 고슴도치 이야기가 있어요. 추운 겨울, 꼭 붙었다가 가시에 찔려 흩어진 고슴도치들.",
+      "lines": [
+        {
+          "text": "추운 겨울\n**꼭 붙은 고슴도치들**",
+          "cue": "추운"
+        },
+        {
+          "text": "가시에 **찔려\n흩어졌다**",
+          "cue": "찔려"
+        }
+      ],
+      "sfx": [
+        {
+          "name": "thud",
+          "ext": "mp3",
+          "cue": "찔려"
+        }
+      ],
+      "keywords": [
+        "고슴도치",
+        "가시"
+      ],
+      "face": [
+        {
+          "at": "그가",
+          "is": "kind"
+        },
+        {
+          "at": "찔려",
+          "is": "surprised"
+        }
+      ],
+      "gesture": [
+        {
+          "at": "그가",
+          "is": "explain"
+        }
+      ],
+      "cast": "off",
+      "art": "눈 내리는 추운 겨울 밤, 고슴도치 몇 마리가 서로 붙었다가 가시에 찔려 살짝 떨어지는 모습을 나(캐릭터)가 목도리를 두르고 쪼그려 앉아 조용히 바라본다",
+      "image": "episodes/daily-261023/art/s04.png",
+      "textSide": "left",
+      "motion": "zoomIn",
+      "focusX": 0.7,
+      "audio": "episodes/daily-261023/s04.wav",
+      "audioDuration": 8.41,
+      "audioStart": 19.018,
+      "playbackRate": 1,
+      "audioSource": "voice_full.mp3",
+      "charTimes": [
+        0.33,
+        0.52,
+        0.72,
+        0.9,
+        1.13,
+        1.3,
+        1.48,
+        1.69,
+        1.93,
+        2.1,
+        2.28,
+        2.41,
+        3.26,
+        3.26,
+        3.26,
+        3.42,
+        3.62,
+        3.84,
+        4.05,
+        4.28,
+        4.59,
+        4.82,
+        5.04,
+        5.23,
+        5.54,
+        5.78,
+        6.02,
+        6.27,
+        6.53,
+        6.78,
+        7.03,
+        7.24,
+        7.45,
+        7.75,
+        8.06,
+        8.26,
+        8.34
+      ]
+    },
+    {
+      "id": "s05",
+      "type": "compare",
+      "narration": "너무 붙으면 찔리고, 너무 멀면 얼어요. 결국 서로 찌르지 않을 만큼의 거리를 찾았대요.",
+      "title": "고슴도치의 거리",
+      "left": {
+        "title": "너무 가까이",
+        "emoji": "🦔",
+        "cue": "너무 붙으면",
+        "items": [
+          "가시에 찔림",
+          "서로 상처"
+        ]
+      },
+      "right": {
+        "title": "적당한 거리",
+        "emoji": "🦔",
+        "cue": "결국",
+        "items": [
+          "찔리지 않음",
+          "온기는 유지"
+        ]
+      },
+      "comments": [
+        {
+          "text": "딱 제 인간관계네요",
+          "at": "결국",
+          "emoji": "🥲"
+        }
+      ],
+      "sfx": [
+        {
+          "name": "bell",
+          "ext": "mp3",
+          "cue": "결국"
+        }
+      ],
+      "keywords": [
+        "거리",
+        "찔리고"
+      ],
+      "face": [
+        {
+          "at": "너무",
+          "is": "worried"
+        },
+        {
+          "at": "결국",
+          "is": "smile"
+        }
+      ],
+      "gesture": [
+        {
+          "at": "결국",
+          "is": "idea"
+        }
+      ],
+      "cast": "off",
+      "audio": "episodes/daily-261023/s05.wav",
+      "audioDuration": 8.04,
+      "audioStart": 27.429,
+      "playbackRate": 1,
+      "audioSource": "voice_full.mp3",
+      "charTimes": [
+        0.33,
+        0.56,
+        0.82,
+        1.04,
+        1.25,
+        1.48,
+        1.7,
+        1.93,
+        2.25,
+        2.49,
+        2.7,
+        2.92,
+        3.13,
+        3.85,
+        3.85,
+        3.99,
+        4.13,
+        4.5,
+        4.67,
+        4.86,
+        5.05,
+        5.25,
+        5.49,
+        5.69,
+        5.96,
+        6.17,
+        6.36,
+        6.66,
+        6.72,
+        6.79,
+        7.08,
+        7.5,
+        7.77,
+        8.04
+      ]
+    },
+    {
+      "id": "s06",
+      "type": "statement",
+      "narration": "예민한 사람은 그 가시가 더 아파요. 거리 두기는 차가움이 아니라 나를 지키는 기술이에요.",
+      "kicker": "고슴도치의 교훈",
+      "text": "거리 두기는\n차가움이 아니라\n**나를 지키는 기술**",
+      "cue": "예민한",
+      "musicDrop": {
+        "at": "나를 지키는",
+        "level": 0
+      },
+      "keywords": [
+        "거리 두기",
+        "기술"
+      ],
+      "face": [
+        {
+          "at": "예민한",
+          "is": "serious"
+        },
+        {
+          "at": "나를",
+          "is": "kind"
+        }
+      ],
+      "gesture": [
+        {
+          "at": "거리",
+          "is": "explain"
+        }
+      ],
+      "cast": [
+        {
+          "at": "예민한",
+          "pos": "left"
+        }
+      ],
+      "audio": "episodes/daily-261023/s06.wav",
+      "audioDuration": 7.64,
+      "audioStart": 35.47,
+      "playbackRate": 1,
+      "audioSource": "voice_full.mp3",
+      "charTimes": [
+        0.22,
+        0.44,
+        0.66,
+        0.91,
+        1.15,
+        1.42,
+        1.63,
+        1.92,
+        2.22,
+        2.36,
+        2.79,
+        3.07,
+        3.22,
+        3.57,
+        3.74,
+        3.89,
+        4.05,
+        4.21,
+        4.34,
+        4.6,
+        4.78,
+        4.94,
+        5.11,
+        5.31,
+        5.48,
+        5.64,
+        5.9,
+        6.07,
+        6.23,
+        6.41,
+        6.59,
+        6.74,
+        7.04,
+        7.13,
+        7.32,
+        7.5
+      ]
+    },
+    {
+      "id": "s07",
+      "type": "photo",
+      "narration": "그는 혼자 있을 줄 알아야 자유롭다는 생각을 남겼어요.",
+      "person": "Arthur Schopenhauer",
+      "name": "쇼펜하우어",
+      "years": "1788–1860",
+      "lines": [
+        {
+          "text": "혼자 있을 줄 알아야\n**자유롭다**",
+          "cue": "혼자"
+        }
+      ],
+      "circle": {
+        "at": "그는",
+        "x": 0.5,
+        "y": 0.28,
+        "r": 0.16
+      },
+      "sfx": [
+        {
+          "name": "sparkle",
+          "ext": "mp3",
+          "cue": "자유롭다는"
+        }
+      ],
+      "keywords": [
+        "혼자",
+        "자유"
+      ],
+      "cast": "off",
+      "image": "episodes/daily-261023/img/arthur-schopenhauer_3.jpg",
+      "aspect": 0.865,
+      "audio": "episodes/daily-261023/s07.wav",
+      "audioDuration": 5.08,
+      "audioStart": 43.113,
+      "playbackRate": 1,
+      "audioSource": "voice_full.mp3",
+      "charTimes": [
+        0.32,
+        0.5,
+        0.81,
+        0.97,
+        1.15,
+        1.36,
+        1.57,
+        1.75,
+        1.89,
+        2.21,
+        2.37,
+        2.68,
+        2.86,
+        3.04,
+        3.25,
+        3.42,
+        3.54,
+        3.67,
+        4.09,
+        4.36,
+        4.91,
+        4.92
+      ]
+    },
+    {
+      "id": "s08",
+      "type": "story",
+      "narration": "오늘은 하나만 해봐요. 만나고 나면 유독 따가운 사람과 반 걸음만 떨어지기.",
+      "lines": [
+        {
+          "text": "오늘 할 **한 가지**",
+          "cue": "오늘은"
+        },
+        {
+          "text": "따가운 사람과\n**반 걸음** 떨어지기",
+          "cue": "만나고"
+        }
+      ],
+      "comments": [
+        {
+          "text": "반 걸음부터 해볼게요",
+          "at": "반 걸음만",
+          "emoji": "🙂"
+        }
+      ],
+      "sfx": [
+        {
+          "name": "kaching",
+          "ext": "mp3",
+          "cue": "반 걸음만"
+        }
+      ],
+      "keywords": [
+        "반 걸음",
+        "따가운"
+      ],
+      "face": [
+        {
+          "at": "오늘은",
+          "is": "smile"
+        },
+        {
+          "at": "만나고",
+          "is": "kind"
+        }
+      ],
+      "gesture": [
+        {
+          "at": "오늘은",
+          "is": "point"
+        }
+      ],
+      "cast": "off",
+      "art": "모임 자리에서 나(캐릭터)가 웃으며 한 사람과 반 걸음 떨어져 서 있다. 발밑에 반 걸음 간격이 점선으로 보이고, 표정은 편안하다",
+      "image": "episodes/daily-261023/art/s08.png",
+      "textSide": "left",
+      "motion": "zoomIn",
+      "focusX": 0.7,
+      "audio": "episodes/daily-261023/s08.wav",
+      "audioDuration": 7.24,
+      "audioStart": 48.195,
+      "playbackRate": 1,
+      "audioSource": "voice_full.mp3",
+      "charTimes": [
+        0,
+        0.19,
+        0.42,
+        0.66,
+        0.9,
+        1.21,
+        1.52,
+        1.71,
+        1.91,
+        2.03,
+        2.23,
+        2.43,
+        2.66,
+        2.87,
+        3.09,
+        3.26,
+        3.44,
+        3.65,
+        3.84,
+        4.03,
+        4.21,
+        4.63,
+        4.8,
+        5.09,
+        5.45,
+        5.63,
+        5.82,
+        5.84,
+        6.46,
+        7.08
+      ]
+    },
+    {
+      "id": "s09",
+      "type": "outro",
+      "narration": "당신 곁에 유독 따가운 사람, 누구인가요? 댓글로 남겨주세요. 다음 위인도 들고 올게요.",
+      "question": "**유독 따가운** 사람,\n누구인가요?",
+      "cue": "당신",
+      "channelCue": "다음 위인도",
+      "channel": "다음 위인 → 구독",
+      "sfx": [
+        {
+          "name": "chime",
+          "ext": "wav",
+          "cue": "댓글로"
+        }
+      ],
+      "keywords": [
+        "댓글",
+        "따가운"
+      ],
+      "face": [
+        {
+          "at": "당신",
+          "is": "kind"
+        },
+        {
+          "at": "다음",
+          "is": "laugh"
+        }
+      ],
+      "gesture": [
+        {
+          "at": "댓글로",
+          "is": "point"
+        }
+      ],
+      "cast": [
+        {
+          "at": "당신",
+          "pos": "center"
+        }
+      ],
+      "audio": "episodes/daily-261023/s09.wav",
+      "audioDuration": 6.45,
+      "audioStart": 55.433,
+      "playbackRate": 1,
+      "audioSource": "voice_full.mp3",
+      "charTimes": [
+        0,
+        0.16,
+        0.37,
+        0.59,
+        0.79,
+        1.01,
+        1.22,
+        1.43,
+        1.64,
+        2.09,
+        2.15,
+        2.28,
+        2.5,
+        2.65,
+        3.29,
+        3.29,
+        3.37,
+        3.54,
+        3.7,
+        3.9,
+        4.1,
+        4.21,
+        4.26,
+        4.3,
+        4.89,
+        5.02,
+        5.18,
+        5.35,
+        5.49,
+        5.64,
+        5.8,
+        5.96,
+        6.12,
+        6.29
+      ]
+    }
+  ],
+  "presenter": true,
+  "layout": "one",
+  "voiceFull": {
+    "hash": "2179b9f5d510",
+    "voice": "vithIMnhyN3GwRbVmrZt",
+    "model": "eleven_v3",
+    "recorded_at": "2026-10-23T13:41:40.920Z"
+  }
+}

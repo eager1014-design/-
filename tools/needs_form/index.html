@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  :root { --bg:#F4F6F9; --paper:#FFFFFF; --ink:#14233A; --muted:#56657A; --line:#D6DDE7; --accent:#1C3D6E; --soft:#E4EBF5; --mark:#EAD9A2; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 "IBM Plex Sans KR", "Apple SD Gothic Neo", sans-serif; }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 32px 16px 56px; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--accent); }
+  h1 { font-family: "Black Han Sans", sans-serif; font-weight: 400; font-size: 32px; line-height: 1.2; margin: 6px 0 10px; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  form { display: grid; gap: 22px; }
+  fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 10px; }
+  legend, label.q { font-weight: 700; font-size: 17px; margin-bottom: 6px; padding: 0; }
+  .hint { font-weight: 400; color: var(--muted); font-size: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips label { display: inline-flex; align-items: center; gap: 6px; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 15px; cursor: pointer; }
+  .chips input { accent-color: var(--accent); }
+  .chips label:has(input:checked) { background: var(--soft); border-color: var(--accent); }
+  .group { font-size: 13px; color: var(--muted); margin: 6px 0 -2px; }
+  select, textarea, input[type=text] { width: 100%; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
+  textarea { min-height: 120px; resize: vertical; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--muted); background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .consent input { margin-top: 4px; accent-color: var(--accent); }
+  button { font: inherit; font-weight: 700; font-size: 17px; color: #fff; background: var(--accent); border: 0; border-radius: 12px; padding: 15px; cursor: pointer; }
+  button:disabled { opacity: .5; }
+  .msg { padding: 14px; border-radius: 10px; }
+  .err { background: #FDE8E8; color: #9B1C1C; }
+  .done { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 28px 20px; text-align: center; }
+  .done h2 { font-family: "Black Han Sans", sans-serif; font-weight: 400; font-size: 26px; margin: 0 0 8px; }
+  .hp { position: absolute; left: -9999px; }
+  .who { margin-top: 28px; font-size: 13px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">WORKFLOW DESIGNER · 천성준 William Cheon</div>
+  <h1>사장님 없으면<br>가게가 안 돌아가죠?</h1>
+  <p class="lead">사장님이 꼭 직접 안 해도 되는 일을 찾아 줄여 드립니다. 귀찮은 일을 알려주시면 방법을 찾아 연락드릴게요. 1분이면 끝나요.</p>
+
+  <form id="f">
+    <fieldset>
+      <legend>어떤 가게인가요?</legend>
+      <select name="industry" id="industry">
+        <option value="">고르기</option>
+        <option>식당·카페</option><option>옷가게·소품샵</option><option>미용실·네일·속눈썹</option><option>학원·레슨·공방</option>
+        <option>온라인 판매</option><option>기타</option>
+      </select>
+    </fieldset>
+
+    <fieldset>
+      <legend>"이거 내 얘기다" 싶은 걸 모두 골라주세요 <span class="hint">(여러 개 가능)</span></legend>
+      <div class="chips" id="pains"></div>
+    </fieldset>
+
+    <fieldset>
+      <label class="q" for="detail">구체적으로 어떤 점이 힘드세요? <span class="hint">(선택)</span></label>
+      <textarea name="detail" id="detail" placeholder="예: 매일 밤 포스 매출이랑 배민 정산을 엑셀에 옮기는데 30분씩 걸려요"></textarea>
+    </fieldset>
+
+    <div class="row">
+      <fieldset>
+        <label class="q" for="hours">이 일에 일주일에 몇 시간?</label>
+        <select name="hours" id="hours"><option value="">고르기</option><option>1시간 미만</option><option>1~3시간</option><option>3~5시간</option><option>5시간 이상</option></select>
+      </fieldset>
+      <fieldset>
+        <label class="q" for="budget">대신 해준다면 한 달에?</label>
+        <select name="budget" id="budget"><option value="">고르기</option><option>무료면 써볼게요</option><option>3만 원 이하</option><option>3~10만 원</option><option>10만 원 이상</option><option>잘 모르겠어요</option></select>
+      </fieldset>
+    </div>
+
+    <div class="row">
+      <fieldset>
+        <label class="q" for="shop">가게 이름 <span class="hint">(선택)</span></label>
+        <input type="text" name="shop" id="shop" maxlength="60">
+      </fieldset>
+      <fieldset>
+        <label class="q" for="contact">연락처 <span class="hint">(선택)</span></label>
+        <input type="text" name="contact" id="contact" maxlength="80" placeholder="전화번호나 카톡 ID">
+      </fieldset>
+    </div>
+    <label class="consent"><input type="checkbox" name="consent" id="consent">
+      <span>연락처를 남기는 경우: 답변 연락을 위해 가게 이름·연락처를 받고 1년 동안 보관한 뒤 지웁니다. 동의하지 않으셔도 되며, 그 경우 연락처는 비워두세요. 언제든 삭제를 요청하실 수 있습니다.</span></label>
+
+    <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <div id="msg" class="msg err" hidden></div>
+    <button id="go" type="button">보내기</button>
+  </form>
+
+  <div id="done" class="done" hidden>
+    <h2>고맙습니다!</h2>
+    <p>적어주신 일을 줄일 방법을 찾아볼게요.<br>연락처를 남기셨다면 곧 연락드립니다.</p>
+  </div>
+  <p class="who">천성준 · 워크플로우 디자이너 · 010-4763-7063 · 카톡 eager1014</p>
+</div>
+<script>
+  // 사장님 말로 쓴 고충 목록 — 포트폴리오의 진단 카드와 같은 key (포트폴리오에서 ?pick=excel,review 로 넘어오면 미리 체크)
+  // 실제로 만들어 드릴 수 있는 것만 (2026-10-23 사장님 요청). 문자 자동 발송·예약 카톡·DM 자동 답장처럼 외부 계약이 필요한 건 뺐다
+  const PAINS = [
+    ["excel", "마감 후 또 켜는 엑셀·장부"], ["settle", "들어온 돈이 맞는지 모를 배달앱·카드 정산"], ["receipt", "세금 신고 때 영수증 찾기"],
+    ["review", "하나에 10분 걸리는 리뷰 답글"], ["sns", "오늘은 뭘 올리지? 인스타·블로그"], ["newitem", "신상·메뉴 사진 올릴 때마다 설명 쓰기"],
+    ["staff", "알바에게 같은 걸 또 설명하기"], ["schedule", "근무표 짜고 급여 계산하기"], ["stock", "몇 개 남았는지 헷갈리는 재고·발주"],
+    ["history", "“지난번에 뭐 했더라?” 손님 기록"], ["revisit", "다시 올 때 된 손님 챙기기"], ["unpaid", "수강료·외상 미납 챙기기"],
+    ["shipping", "주문 정리와 송장 입력"], ["grant", "있는 줄도 몰랐던 지원금·정책자금"],
+  ];
+  const box = document.getElementById("pains");
+  // 글자를 속성에 직접 넣지 않고 DOM 으로 만든다 (따옴표가 든 항목이 빈칸으로 저장되던 버그, 2026-10-23)
+  for (const [k, t] of PAINS) {
+    const label = document.createElement("label");
+    const input = Object.assign(document.createElement("input"), { type: "checkbox", name: "tasks", value: t });
+    input.dataset.key = k;
+    label.append(input, t);
+    box.append(label);
+  }
+  google.script.url.getLocation((loc) => {
+    const pick = String((loc.parameter || {}).pick || "").split(",");
+    box.querySelectorAll("input").forEach((i) => { if (pick.includes(i.dataset.key)) i.checked = true; });
+    const ind = (loc.parameter || {}).industry;
+    if (ind) [...document.getElementById("industry").options].forEach((o) => { if (o.value === ind || o.text === ind) o.selected = true; });
+    // 고른 것을 맨 앞으로 (포트폴리오에서 넘어왔을 때 바로 보이게)
+    [...box.querySelectorAll("label")].filter((l) => l.querySelector("input").checked).reverse().forEach((l) => box.prepend(l));
+  });
+  const f = document.getElementById("f");
+  // 버튼 클릭으로 바로 보낸다 (구글 앱 화면에서는 버튼 → 양식 제출이 막히는 경우가 있어 2026-10-23 터치 시험에서 실패했음)
+  f.addEventListener("submit", (e) => { e.preventDefault(); send(); });
+  document.getElementById("go").addEventListener("click", send);
+  function send() {
+    if (document.getElementById("go").disabled) return;
+    const fd = new FormData(f);
+    const data = Object.fromEntries(fd.entries());
+    data.tasks = fd.getAll("tasks");
+    data.consent = document.getElementById("consent").checked;
+    const msg = document.getElementById("msg");
+    msg.hidden = true;
+    const btn = document.getElementById("go");
+    btn.disabled = true; btn.textContent = "보내는 중…";
+    google.script.run
+      .withSuccessHandler(() => { f.hidden = true; document.getElementById("done").hidden = false; window.scrollTo(0, 0); })
+      .withFailureHandler((err) => { msg.textContent = (err && err.message || "보내지 못했어요. 잠시 뒤 다시 눌러주세요.").replace(/^Error:\s*/, ""); msg.hidden = false; btn.disabled = false; btn.textContent = "보내기"; })
+      .submit(data);
+  }
+</script>
+</body>
+</html>

@@ -56,9 +56,11 @@ async function videoPart(ai, source, log) {
 
 // 제미나이가 영상을 보고 답한다. schema 를 주면 그 모양의 JSON 으로 답하게 한다.
 // 돌려주는 값: { text, tokens } — tokens 는 실제로 쓴 토큰 수(요금 기준).
-export async function watchVideo(source, prompt, { schema, log = () => {} } = {}) {
+// clip: { start, end } (초) — 긴 영상은 일부 구간만 보내서 토큰을 아낀다
+export async function watchVideo(source, prompt, { schema, log = () => {}, clip } = {}) {
   const ai = gemini();
   const part = await videoPart(ai, source, log);
+  if (clip) part.videoMetadata = { startOffset: `${clip.start}s`, endOffset: `${clip.end}s` };
   const config = schema ? { responseMimeType: "application/json", responseSchema: schema } : undefined;
   const res = await ai.models.generateContent({
     model: GEMINI_MODEL,

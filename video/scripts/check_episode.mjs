@@ -36,8 +36,32 @@ ep.scenes.forEach((s, i) => {
     const wait = (before / plain) * voiceSeconds(s);
     if (wait > 2.5) problems.push(`${where}: 첫 화면 요소가 ${wait.toFixed(1)}초 뒤에 나와 화면이 비어 보임 → kicker(머리글)를 넣거나 cue 를 앞 단어로`);
   }
+  // 말하는 캐릭터: 표정·손짓 이름과 바뀌는 단어 확인
+  for (const [k, dir] of [["face", "faces"], ["gesture", "poses"]]) {
+    const v = s[k];
+    if (!v) continue;
+    for (const x of typeof v === "string" ? [{ is: v }] : v) {
+      if (x.at && !(s.narration || "").includes(x.at)) problems.push(`${where}: ${k} 바뀌는 단어 "${x.at}" 가 내레이션에 없음`);
+      if (x.is !== "none" && !fs.existsSync(new URL(`../public/characters/main/${dir}/${x.is}.png`, import.meta.url))) problems.push(`${where}: ${k} "${x.is}" 그림이 없음 (characters/main/${dir}/)`);
+    }
+  }
+  for (const c of typeof s.cast === "string" ? [{ pos: s.cast }] : s.cast || []) {
+    if (c.at && !(s.narration || "").includes(c.at)) problems.push(`${where}: cast 바뀌는 단어 "${c.at}" 가 내레이션에 없음`);
+    if (!["right", "left", "center", "corner", "off"].includes(c.pos)) problems.push(`${where}: cast 자리 "${c.pos}" 를 모름 (right·left·center·corner·off)`);
+  }
+  for (const c of s.comments || []) {
+    if (c.at && !(s.narration || "").includes(c.at)) problems.push(`${where}: 댓글 나타나는 단어 "${c.at}" 가 내레이션에 없음`);
+    if ((c.text || "").length > 24) problems.push(`${where}: 댓글 "${c.text}" 이 너무 김 (24자 이내)`);
+  }
   if (s.audio && !fs.existsSync(new URL(`../public/${s.audio}`, import.meta.url))) problems.push(`${where}: 목소리 파일 없음 (${s.audio})`);
 });
+// 제목 띠 쇼츠: 위 제목은 2줄, 한 줄 14자 이내 (넘으면 화면 밖으로 나감)
+if (ep.frame) {
+  const t = ep.frame.title || [];
+  if (ep.format !== "short") problems.push(`frame(제목 띠)은 세로 쇼츠 전용 → "format": "short" 로`);
+  if (t.length !== 2) problems.push(`frame.title 은 2줄이어야 함 (지금 ${t.length}줄)`);
+  t.forEach((l, i) => l.length > 14 && problems.push(`frame.title ${i + 1}째 줄 "${l}" 이 ${l.length}자 → 14자 이내로`));
+}
 const secs = totalFrames(ep.scenes) / FPS;
 const voiced = ep.scenes.filter((s) => s.audioDuration).length;
 console.log(`\n🎬 ${ep.title}`);

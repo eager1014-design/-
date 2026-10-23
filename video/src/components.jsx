@@ -4,15 +4,32 @@ import { AbsoluteFill, Audio, Img, Sequence, interpolate, spring, staticFile, us
 import { COLORS, FONT } from "./theme.js";
 import { captionChunks } from "./timing.js";
 
+// 장면을 그릴 크기를 영상 크기와 다르게 정할 때 (제목 띠 쇼츠: 세로 영상 가운데 칸에 장면을 가로 배치로 그림).
+// 값: { width, height } 또는 null(영상 크기 그대로)
+export const SizeContext = createContext(null);
+// 제목 띠 쇼츠에서 가운데 칸의 축소 비율(scale)과 칸 안 글씨·도형 확대(boost). null 이면 보통 영상
+export const FrameContext = createContext(null);
+// 자막 아래 여백을 직접 정할 때 (px). 진행자 쇼츠 무대에서는 캐릭터 얼굴을 가리지 않게 머리 위로 올린다
+export const CaptionBottomContext = createContext(null);
+// 띠 쇼츠(band.jsx): 자막 전용 줄 { top, height, size, chunk } — 이 줄 가운데에 한 줄로만 나온다
+export const CaptionBandContext = createContext(null);
+
+export function useSceneSize() {
+  const video = useVideoConfig();
+  return useContext(SizeContext) || video;
+}
+
 // 화면 크기에 비례하는 단위. 가로(1920×1080)와 세로(1080×1920) 모두 짧은 변 1080 = 1080u.
 // 세로(쇼츠)는 휴대폰으로 보니까 글씨를 15% 키운다.
 export function useUnit() {
-  const { width, height } = useVideoConfig();
-  return (Math.min(width, height) / 1080) * (height > width ? 1.15 : 1);
+  const { width, height } = useSceneSize();
+  const fr = useContext(FrameContext);
+  // 제목 띠 쇼츠: 가로 장면을 작은 칸에 줄여 넣으니 칸 안 요소를 키워서 휴대폰에서 읽히게
+  return (Math.min(width, height) / 1080) * (height > width ? 1.15 : 1) * (fr?.boost || 1);
 }
 
 export function useIsShort() {
-  const { width, height } = useVideoConfig();
+  const { width, height } = useSceneSize();
   return height > width;
 }
 
@@ -96,28 +113,35 @@ export function Rich({ text, at = 0, color = COLORS.amber, style }) {
 // 하단 자막. 내레이션을 조각내서 말하는 속도에 맞춰 보여준다.
 export function Captions({ scene }) {
   const frame = useCurrentFrame();
-  const u = useUnit();
-  const short = useIsShort();
+  const fr = useContext(FrameContext);
+  const unit = useUnit();
+  // 제목 띠 쇼츠: 가운데 칸 안에 그리지만, 휴대폰 화면에서 쇼츠 자막 크기로 보이게 축소 비율만큼 키운다
+  const u = fr ? 1.15 / fr.scale : unit;
+  const short = useIsShort() || !!fr;
   const punchy = usePunchy();
-  const chunks = captionChunks(scene, short ? 15 : 24);
+  const bottomPx = useContext(CaptionBottomContext);
+  const band = useContext(CaptionBandContext);
+  const chunks = captionChunks(scene, band ? band.chunk : short ? 15 : 24);
   const now = chunks.find((c) => frame >= c.from && frame < c.to);
   if (!now) return null;
   const keys = punchy ? keywordsOf(scene) : [];
   const pop = punchy ? spring({ frame: frame - now.from, fps: 30, config: { damping: 10, mass: 0.4 } }) : 1;
   return (
-    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: (short ? 330 : 60) * u, pointerEvents: "none" }}>
+    <AbsoluteFill style={band ? { top: band.top, height: band.height, justifyContent: "center", alignItems: "center", pointerEvents: "none" }
+      : { justifyContent: "flex-end", alignItems: "center", paddingBottom: bottomPx ?? (fr ? 40 : short ? 330 : 60) * u, pointerEvents: "none" }}>
       <div
         style={{
           fontFamily: FONT,
           fontWeight: punchy ? 800 : 700,
-          fontSize: (short ? 56 : 46) * (punchy ? 1.12 : 1) * u,
+          fontSize: band ? band.size : (short ? 56 : 46) * (punchy ? 1.12 : 1) * u,
           color: "#FFFFFF",
-          WebkitTextStroke: `${(punchy ? 10 : 7) * u}px ${COLORS.ink}`,
+          WebkitTextStroke: band && !band.paper ? "none" : `${band ? 7 : (punchy ? 10 : 7) * u}px ${COLORS.ink}`,
           transform: `scale(${0.85 + 0.15 * pop})`,
           paintOrder: "stroke fill",
           letterSpacing: "-0.01em",
           textAlign: "center",
-          maxWidth: "88%",
+          maxWidth: band ? "96%" : "88%",
+          whiteSpace: band ? "nowrap" : undefined,
           lineHeight: 1.3,
         }}
       >

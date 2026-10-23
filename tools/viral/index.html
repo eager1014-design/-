@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>떡상 소싱</title>
+<style>
+  :root { --bg:#f6f5f2; --card:#fff; --ink:#1d1d1f; --sub:#6b6b70; --line:#e4e2dc; --accent:#e5484d; --ok:#2f9e6b; --chip:#f0eee8; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#151517; --card:#1f1f22; --ink:#ececee; --sub:#9a9aa1; --line:#2e2e33; --chip:#2a2a2e; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system, "Apple SD Gothic Neo", "Pretendard", sans-serif; }
+  header { position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--line); padding:14px 16px 0; }
+  h1 { margin:0 0 10px; font-size:20px; } h1 span { color:var(--accent); }
+  .tabs { display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; } .tabs button { white-space:nowrap; } .tabs button { border:0; background:none; padding:10px 14px; font:inherit; color:var(--sub); border-bottom:3px solid transparent; cursor:pointer; }
+  .tabs button.on { color:var(--ink); border-color:var(--accent); font-weight:600; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:16px; }
+  label { display:block; font-size:13px; color:var(--sub); margin:0 0 4px; }
+  input, select, textarea { width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  textarea { min-height:110px; resize:vertical; }
+  .row { display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); margin-bottom:12px; }
+  .btn { border:0; background:var(--accent); color:#fff; font:inherit; font-weight:600; padding:10px 16px; border-radius:10px; cursor:pointer; }
+  .btn.ghost { background:var(--chip); color:var(--ink); } .btn:disabled { opacity:.5; cursor:wait; }
+  .btn.sm { padding:6px 10px; font-size:13px; }
+  .note { font-size:13px; color:var(--sub); margin:8px 0 0; }
+  .plat { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .plat span { font-size:13px; padding:5px 10px; border-radius:99px; background:var(--chip); }
+  .plat .on { background:var(--ok); color:#fff; }
+  .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
+  .card img { width:100%; aspect-ratio:16/9; object-fit:cover; background:var(--chip); display:block; }
+  .card .body { padding:10px 12px; flex:1; display:flex; flex-direction:column; gap:6px; }
+  .card .t { font-weight:600; font-size:14px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .card .a { font-size:12px; color:var(--sub); }
+  .stats { display:flex; gap:10px; font-size:13px; flex-wrap:wrap; } .stats b { font-variant-numeric:tabular-nums; }
+  .card .acts { display:flex; gap:6px; margin-top:auto; padding-top:6px; flex-wrap:wrap; }
+  .tag { font-size:11px; padding:2px 7px; border-radius:99px; background:var(--chip); color:var(--sub); align-self:flex-start; }
+  .tag.done { background:var(--ok); color:#fff; }
+  .msg { padding:12px 14px; border-radius:10px; margin-bottom:14px; background:var(--chip); }
+  .msg.err { background:#fde8e8; color:#9b1c1c; } @media (prefers-color-scheme: dark) { .msg.err { background:#3b1618; color:#ffb4b4; } }
+  dialog { width:min(860px, 100vw - 24px); max-height:92vh; border:0; border-radius:16px; padding:0; background:var(--card); color:var(--ink); }
+  dialog::backdrop { background:rgba(0,0,0,.45); }
+  .dh { position:sticky; top:0; background:var(--card); padding:14px 16px; border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:start; z-index:2; }
+  .dh h2 { margin:0; font-size:17px; flex:1; } .db { padding:16px; }
+  .sec h3 { font-size:15px; margin:18px 0 6px; } .sec p, .sec li { margin:4px 0; }
+  .formula { background:var(--chip); border-radius:10px; padding:12px; white-space:pre-wrap; }
+  .md table { border-collapse:collapse; width:100%; font-size:13px; display:block; overflow-x:auto; }
+  .md th, .md td { border:1px solid var(--line); padding:6px 8px; vertical-align:top; text-align:left; }
+  .md h2 { font-size:15px; margin:16px 0 6px; }
+  .script { border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin:12px 0; }
+  .spin { display:inline-block; width:14px; height:14px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:s .8s linear infinite; vertical-align:-2px; margin-right:6px; }
+  @keyframes s { to { transform:rotate(360deg); } }
+  .hide { display:none !important; }
+  .stat { display:grid; grid-template-columns: 1fr auto; gap:4px 10px; font-size:14px; }
+  .bar { grid-column: 1 / -1; height:6px; border-radius:3px; background: var(--chip); overflow:hidden; } .bar i { display:block; height:100%; background: var(--accent); }
+  .need { display:grid; gap:8px; } .need .top { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; }
+  .need .tasks { display:flex; flex-wrap:wrap; gap:6px; } .need .tasks span { font-size:13px; background: var(--chip); border-radius:99px; padding:3px 10px; }
+  .need .meta { font-size:13px; color: var(--sub); } .need textarea { min-height:60px; }
+  .filters { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; } .filters button { border:1px solid var(--line); background: var(--card); color: var(--ink); border-radius:99px; padding:6px 12px; font:inherit; font-size:13px; cursor:pointer; } .filters button.on { background: var(--ink); color: var(--card); }
+  .st { font-size:12px; font-weight:600; padding:3px 9px; border-radius:99px; background:var(--chip); }
+  .st.ok { background:var(--ok); color:#fff; } .st.wait { background:#f5b740; color:#3a2a00; } .st.bad { background:var(--accent); color:#fff; }
+  .day video { width:100%; max-width:320px; aspect-ratio:9/16; background:#000; border-radius:12px; display:block; margin:10px 0; }
+  .day .acts { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .logbox { font:12px/1.5 ui-monospace, monospace; white-space:pre-wrap; background:var(--chip); border-radius:10px; padding:10px; max-height:220px; overflow:auto; }
+  .narr { white-space:pre-wrap; background:var(--chip); border-radius:10px; padding:12px; font-size:14px; }
+  details summary { cursor:pointer; color:var(--sub); font-size:13px; margin-top:10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔥 떡상 <span>소싱</span></h1>
+  <div class="tabs">
+    <button data-tab="daily" class="on">오늘의 영상</button>
+    <button data-tab="needs">고객 고충 <span id="needCount"></span></button>
+    <button data-tab="diary">일기장</button>
+    <button data-tab="search">찾기</button>
+    <button data-tab="link">링크 추가</button>
+    <button data-tab="lib">보관함 <span id="libCount"></span></button>
+    <button data-tab="tech">연출 기법</button>
+  </div>
+</header>
+<main>
+  <div id="msg" class="msg hide"></div>
+
+  <section id="tab-daily"><div id="daily"></div></section>
+  <section id="tab-needs" class="hide"><div id="needs"></div></section>
+
+  <section id="tab-diary" class="hide">
+    <div class="panel">
+      <label>오늘의 일기</label>
+      <textarea id="dtext" style="min-height:180px" placeholder="오늘 있었던 일, 든 생각, 예민해서 힘들었던 순간, 누군가와의 대화… 편하게 쓰세요. 새벽 5시에 이 일기로 영상 아이디어를 만듭니다."></textarea>
+      <div class="row" style="margin-top:10px;margin-bottom:0">
+        <div><label>사진·캡처 (선택, 여러 장)</label><input id="dfiles" type="file" accept="image/*" multiple></div>
+        <div><label>링크 (선택)</label><input id="dlinks" placeholder="참고한 영상·글 링크"></div>
+      </div>
+      <button class="btn" id="dsave" style="margin-top:10px">일기 저장</button>
+      <p class="note">일기에 없는 경험은 영상에서 지어내지 않아요. 영상에 쓰인 일기는 표시됩니다.</p>
+    </div>
+    <div id="diaryList"></div>
+  </section>
+
+  <section id="tab-search" class="hide">
+    <div class="panel">
+      <div class="plat" id="plat"></div>
+      <div class="row">
+        <div style="grid-column:span 2"><label>키워드</label><input id="kw" placeholder="예: 퇴사, 사주, 다이어트 꿀팁" autofocus></div>
+        <div><label>기간</label><select id="since"><option value="week">최근 1주</option><option value="month">최근 1달</option><option value="quarter" selected>최근 3달</option><option value="year">최근 1년</option><option value="all">전체</option></select></div>
+        <div><label>종류</label><select id="shorts"><option value="1" selected>쇼츠만</option><option value="0">긴 영상 포함</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>조회수 이상</label><input id="minV" type="number" value="90000"></div>
+        <div><label>좋아요 이상</label><input id="minL" type="number" value="5000"></div>
+        <div><label>댓글 이상</label><input id="minC" type="number" value="50"></div>
+        <div><label>얼마나 많이 훑을까</label><select id="pages"><option value="1">50개 (100점)</option><option value="2" selected>100개 (200점)</option><option value="4">200개 (400점)</option></select></div>
+      </div>
+      <button class="btn" id="go">찾기</button>
+      <p class="note">유튜브 무료 한도는 하루 10,000점입니다 (검색 1번에 100~400점). 넘어도 요금은 안 나가요.</p>
+    </div>
+    <div id="results"></div>
+  </section>
+
+  <section id="tab-link" class="hide">
+    <div class="panel">
+      <label>링크 (틱톡·인스타·스레드·유튜브)</label>
+      <input id="lurl" placeholder="https://www.tiktok.com/@.../video/...">
+      <div class="row" style="margin-top:12px">
+        <div><label>조회수 (아는 경우)</label><input id="lv" inputmode="numeric"></div>
+        <div><label>좋아요</label><input id="ll" inputmode="numeric"></div>
+        <div><label>댓글</label><input id="lc" inputmode="numeric"></div>
+      </div>
+      <label>글 내용 또는 영상 자막·내용 메모</label>
+      <textarea id="ltext" placeholder="스레드 글은 본문을 통째로, 틱톡·릴스는 자막이나 '첫 장면에 ~가 나오고 ~라고 말함' 식으로 적어주세요. 분석은 이걸 보고 합니다."></textarea>
+      <p class="note">유튜브는 링크만 넣으면 숫자를 자동으로 가져오고 영상을 직접 봅니다. 틱톡·인스타·스레드는 공식으로 영상을 볼 수 없어서, 붙여넣은 글을 보고 분석해요.</p>
+      <button class="btn" id="ladd" style="margin-top:8px">보관함에 넣기</button>
+    </div>
+  </section>
+
+  <section id="tab-lib" class="hide"><div id="lib"></div></section>
+  <section id="tab-tech" class="hide">
+    <div class="panel">
+      <h3 style="margin-top:0">🎬 연출 요청하기</h3>
+      <label>어떤 연출을 원하세요? (말로 설명)</label>
+      <textarea id="rnote" placeholder="예: 캐릭터가 동그라미 안에서 이야기하게 / 종이가 찢어지면서 다음 장면 / 1분 20초쯤 판다가 햇빛 영상 위에 겹쳐서 바라보는 거"></textarea>
+      <label style="margin-top:12px">참고 링크 (유튜브·쇼츠는 영상을 직접 봅니다)</label>
+      <input id="rurl" placeholder="https://youtu.be/... 또는 인스타·틱톡 링크">
+      <label style="margin-top:12px">스크린샷 또는 화면 녹화 (인스타·틱톡은 이걸로)</label>
+      <input id="rfiles" type="file" accept="image/*,video/*" multiple>
+      <button class="btn" id="rgo" style="margin-top:12px">요청 보내기 (제미나이가 분석)</button>
+      <p class="note">설명하신 연출을 중심으로 분석해서 아래 '만들 차례'에 올립니다. 지금 장면으로 되는 건 바로 매일 영상에 쓰고, 새 기능이 필요한 건 클로드에게 "연출 요청 만들어줘"라고 하시면 영상 공장에 만들어 넣어요. 긴 영상은 앞부분만 보니, 원하는 장면 시간을 적어주시면 더 정확해요.</p>
+    </div>
+    <div id="tech"></div>
+  </section>
+</main>
+
+<dialog id="dlg"><div class="dh"><h2 id="dt"></h2><button class="btn ghost sm" onclick="dlg.close()">닫기</button></div><div class="db" id="dbody"></div></dialog>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s = "") => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (n) => n == null ? "?" : n >= 1e8 ? (n / 1e8).toFixed(1) + "억" : n >= 1e4 ? (n / 1e4).toFixed(n >= 1e5 ? 0 : 1) + "만" : n.toLocaleString();
+const PLAT = { youtube: "유튜브", tiktok: "틱톡", instagram: "인스타", threads: "스레드", screenshot: "스크린샷", other: "기타" };
+let library = [], lastHits = [];
+
+async function api(p, body) {
+  const r = await fetch(p, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || "오류");
+  return d;
+}
+function say(text, err) { const m = $("#msg"); m.textContent = text; m.className = "msg" + (err ? " err" : ""); if (!text) m.classList.add("hide"); else window.scrollTo({ top: 0, behavior: "smooth" }); }
+async function busy(btn, label, fn) {
+  const old = btn.innerHTML; btn.disabled = true; btn.innerHTML = `<span class="spin"></span>${label}`;
+  try { return await fn(); } catch (e) { say(e.message, true); } finally { btn.disabled = false; btn.innerHTML = old; }
+}
+
+document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("on", x === b));
+  ["daily", "needs", "diary", "search", "link", "lib", "tech"].forEach((t) => $("#tab-" + t).classList.toggle("hide", t !== b.dataset.tab));
+  ({ lib: renderLib, diary: loadDiary, daily: loadDaily, tech: loadTech, needs: loadNeeds })[b.dataset.tab]?.();
+});
+
+function card(it, saved) {
+  const done = library.find((x) => x.id === it.id);
+  return `<div class="card">
+    ${it.thumb ? `<a href="${esc(it.url)}" target="_blank"><img src="${esc(it.thumb)}" loading="lazy"></a>` : ""}
+    <div class="body">
+      <span class="tag">${PLAT[it.platform] || it.platform}${it.duration ? ` · ${it.duration}초` : ""}${it.publishedAt ? ` · ${it.publishedAt.slice(0, 10)}` : ""}</span>
+      <a class="t" href="${esc(it.url)}" target="_blank" style="color:inherit;text-decoration:none">${esc(it.title)}</a>
+      <div class="a">${esc(it.author || "")}</div>
+      <div class="stats"><span>👀 <b>${fmt(it.views)}</b></span><span>❤️ <b>${fmt(it.likes)}</b></span><span>💬 <b>${fmt(it.comments)}</b></span></div>
+      ${done?.analysis ? `<span class="tag done">분석 완료${done.scripts?.length ? ` · 대본 ${done.scripts.length}개` : ""}</span>` : ""}
+      <div class="acts">
+        ${saved || done ? `<button class="btn sm" onclick="openItem('${esc(it.id)}')">열기</button>` : `<button class="btn sm ghost" onclick="saveHit('${esc(it.id)}', this)">보관</button><button class="btn sm" onclick="saveHit('${esc(it.id)}', this, true)">보관+분석</button>`}
+        ${saved ? `<button class="btn sm ghost" onclick="del('${esc(it.id)}')">삭제</button>` : ""}
+      </div>
+    </div></div>`;
+}
+
+$("#go").onclick = () => busy($("#go"), "찾는 중…", async () => {
+  say("");
+  const r = await api("/api/search", {
+    keyword: $("#kw").value, since: $("#since").value, shorts: $("#shorts").value === "1", pages: +$("#pages").value,
+    min: { views: +$("#minV").value, likes: +$("#minL").value, comments: +$("#minC").value },
+  });
+  lastHits = r.hits;
+  $("#results").innerHTML = `<p class="note" style="margin:0 0 12px">영상 ${r.checked}개를 훑어서 <b>${r.hits.length}개</b>가 조건을 넘었습니다 · 사용 약 ${r.quotaUsed}점</p>` +
+    (r.hits.length ? `<div class="grid">${r.hits.map((h) => card(h)).join("")}</div>` : `<div class="panel">조건을 넘는 영상이 없어요. 기간을 늘리거나, 더 넓은 키워드로 해보세요.</div>`);
+});
+$("#kw").onkeydown = (e) => { if (e.key === "Enter" && !e.isComposing) $("#go").click(); };
+
+async function saveHit(id, btn, andAnalyze) {
+  const item = lastHits.find((h) => h.id === id);
+  await busy(btn, andAnalyze ? "분석 중…" : "", async () => {
+    await api("/api/save", { item });
+    if (andAnalyze) await api("/api/analyze", { id });
+    await loadLib();
+    btn.closest(".acts").innerHTML = `<button class="btn sm" onclick="openItem('${esc(id)}')">열기</button>`;
+    if (andAnalyze) openItem(id);
+  });
+}
+
+$("#ladd").onclick = () => busy($("#ladd"), "넣는 중…", async () => {
+  const it = await api("/api/link", { url: $("#lurl").value, text: $("#ltext").value, views: $("#lv").value, likes: $("#ll").value, comments: $("#lc").value });
+  ["#lurl", "#ltext", "#lv", "#ll", "#lc"].forEach((s) => $(s).value = "");
+  await loadLib(); say("보관함에 넣었습니다."); openItem(it.id);
+});
+
+async function loadLib() { library = await api("/api/library"); $("#libCount").textContent = library.length ? `(${library.length})` : ""; }
+function renderLib() {
+  $("#lib").innerHTML = library.length ? `<div class="grid">${library.map((i) => card(i, true)).join("")}</div>` : `<div class="panel">아직 비어 있어요. '찾기'나 '링크 추가'로 넣어보세요.</div>`;
+}
+async function del(id) { if (!confirm("보관함에서 지울까요? (분석·대본도 같이 지워집니다)")) return; await api("/api/delete", { id }); await loadLib(); renderLib(); }
+
+// 아주 간단한 마크다운 → HTML (제목·표·목록·굵게)
+function md(src) {
+  const lines = esc(src).split("\n"); let out = "", i = 0;
+  const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^\s*\|/.test(l)) {
+      const rows = []; while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(lines[i++]);
+      const cells = (r) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => inline(c.trim()));
+      const body = rows.filter((r) => !/^\s*\|[\s:|-]+\|\s*$/.test(r));
+      out += `<table><tr>${cells(body[0]).map((c) => `<th>${c}</th>`).join("")}</tr>${body.slice(1).map((r) => `<tr>${cells(r).map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</table>`;
+      continue;
+    }
+    const h = l.match(/^#{1,4}\s+(.*)/);
+    out += h ? `<h2>${inline(h[1])}</h2>` : l.trim() ? `<p>${inline(l)}</p>` : "";
+    i++;
+  }
+  return out;
+}
+
+function openItem(id) {
+  const it = library.find((x) => x.id === id); if (!it) return;
+  $("#dt").textContent = it.title;
+  const a = it.analysis;
+  $("#dbody").innerHTML = `
+    <div class="stats" style="margin-bottom:8px"><span>${PLAT[it.platform]}</span><span>👀 <b>${fmt(it.views)}</b></span><span>❤️ <b>${fmt(it.likes)}</b></span><span>💬 <b>${fmt(it.comments)}</b></span><a href="${esc(it.url)}" target="_blank">원본 보기 ↗</a></div>
+    ${a ? `<div class="sec">
+      <h3>💡 한 줄 요약</h3><p><b>${esc(a.one_line)}</b></p>
+      <h3>🎣 훅 (첫 3초)</h3><p>${esc(a.hook || "")}</p>
+      <h3>🧱 구조</h3><ul>${(a.structure || []).map((s) => `<li><b>${esc(s.part)}</b> — ${esc(s.what)}</li>`).join("")}</ul>
+      <h3>🔥 떡상 요인</h3><ul>${(a.why_viral || []).map((w) => `<li>${esc(w)}</li>`).join("")}</ul>
+      ${a.comment_reaction ? `<h3>💬 댓글 반응</h3><p>${esc(a.comment_reaction)}</p>` : ""}
+      <h3>🎬 형식</h3><p>${esc(a.format || "")}</p>
+      <h3>🧪 써먹을 공식</h3><div class="formula">${esc(a.reusable_formula || "")}</div>
+      ${a.caution ? `<h3>⚠️ 주의</h3><p>${esc(a.caution)}</p>` : ""}
+      <p class="note">분석: 제미나이${it.analysisTokens ? ` · ${it.analysisTokens.toLocaleString()} 토큰` : ""}</p>
+      <button class="btn" onclick="remakeWith('${esc(it.id)}', this)">🎬 이걸로 오늘 영상 다시 만들기</button>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <h3 style="margin-top:0">✍️ 이 공식으로 새 대본 쓰기</h3>
+      <div class="row">
+        <div style="grid-column:span 2"><label>내가 만들 주제</label><input id="sTopic" placeholder="비워두면 같은 분야에서 새 각도로 써줍니다"></div>
+        <div><label>길이</label><select id="sLen"><option>30</option><option selected>60</option><option>90</option></select></div>
+      </div>
+      <label>말투·분위기 (선택)</label><input id="sTone" placeholder="예: 담담한 반말, 친구한테 말하듯">
+      <button class="btn" id="sGo" style="margin-top:12px">대본 쓰기 (챗GPT 구독)</button>
+      <p class="note">30초~1분 정도 걸려요. 원본을 베끼지 않고 구조만 빌립니다.</p>
+    </div>
+    ${(it.scripts || []).slice().reverse().map((s) => `<div class="script"><div class="note" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(s.topic || "주제 자유")} · ${s.length}초 · ${s.at.slice(0, 16).replace("T", " ")}</span><button class="btn sm ghost" onclick="copyText(this)">복사</button></div><div class="md">${md(s.text)}</div><textarea class="hide">${esc(s.text)}</textarea></div>`).join("")}
+    ` : `<p>${it.text ? "붙여넣은 글을 보고" : it.platform === "youtube" ? "제미나이가 영상을 직접 보고" : ""} 왜 떴는지 분석합니다.</p>
+      ${it.platform !== "youtube" && !it.text ? `<p class="msg err">틱톡·인스타·스레드는 글이나 자막을 붙여넣어야 분석할 수 있어요. 링크 추가 탭에서 같은 링크로 다시 넣어주세요.</p>` : ""}
+      <button class="btn" id="aGo">분석하기 (제미나이)</button>`}`;
+  if ($("#aGo")) $("#aGo").onclick = () => busy($("#aGo"), "영상 보는 중… (30초~1분)", async () => { await api("/api/analyze", { id }); await loadLib(); openItem(id); });
+  if ($("#sGo")) $("#sGo").onclick = () => busy($("#sGo"), "대본 쓰는 중… (30초~1분)", async () => {
+    await api("/api/script", { id, topic: $("#sTopic").value, length: $("#sLen").value, tone: $("#sTone").value }); await loadLib(); openItem(id);
+  });
+  if (!dlg.open) dlg.showModal();
+}
+function copyText(btn) { navigator.clipboard.writeText(btn.closest(".script").querySelector("textarea").value); btn.textContent = "복사됨"; }
+
+
+// ---------- 오늘의 영상 ----------
+const ST = { running: ["만드는 중", "wait"], voicing: ["목소리 입히는 중", "wait"], uploading: ["올리는 중", "wait"], draft_ready: ["초안 확인 대기", "ok"], final_ready: ["완성 · 업로드 대기", "ok"], uploaded: ["비공개 업로드 완료", ""], failed: ["멈춤", "bad"] };
+const kst = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+let dailyTimer;
+async function loadDaily() {
+  const days = await api("/api/daily");
+  const t = kst();
+  const busyNow = days.some((d) => ["running", "voicing", "uploading"].includes(d.status));
+  const look = (await api("/api/settings")).look || "one"; // (아래 settings 와 같은 값)
+  const looks = { one: "한 배경 + 서 있는 캐릭터", circle: "한 배경 + 동그라미 창 캐릭터", band: "검은 띠 (예전)" };
+  const settings = await api("/api/settings");
+  $("#daily").innerHTML = `<div class="panel"><h3 style="margin-top:0">🎯 다음 영상 주제</h3>
+    <textarea id="topicText" style="min-height:80px" placeholder="예: 쇼펜하우어 — 혼자가 편한 예민한 사람 이야기 / 칼 융이 말한 거리 둬야 할 사람">${esc(settings.topic || "")}</textarea>
+    <div class="acts" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn ghost" onclick="setTopic(false, this)">저장 (내일 새벽 5시)</button>
+      <button class="btn" onclick="setTopic(true, this)">지금 바로 만들기</button>
+    </div>
+    <p class="note">비워두면 일기·떡상 분석으로 알아서 정합니다. 일기장은 '내 이야기', 여기는 '이 주제로 만들어'예요.${settings.lastTopic ? ` 지난 주제: ${esc(settings.lastTopic.text)} (${settings.lastTopic.usedOn})` : ""}</p></div>
+    <div class="panel" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label style="margin:0">화면 스타일</label>
+    <select style="width:auto" onchange="api('/api/settings',{look:this.value}).then(()=>say('다음 영상부터 바뀝니다. 지금 영상은 [다시 쓰기]로 바꿀 수 있어요.'))">
+    ${Object.entries(looks).map(([k, v]) => `<option value="${k}" ${k === look ? "selected" : ""}>${v}</option>`).join("")}</select></div>` + (days[0]?.date !== t ? `<div class="panel"><b>${t}</b> 오늘 영상은 아직 없어요. 매일 새벽 5시에 자동으로 만들어집니다.<div class="acts" style="margin-top:10px"><button class="btn" onclick="daily('run','${t}',this)">지금 만들기</button></div><p class="note">일기를 먼저 써두시면 그 이야기로 만들어요. 10~20분 걸립니다.</p></div>` : "") +
+    (days.map(dayCard).join("") || "");
+  clearTimeout(dailyTimer);
+  if (busyNow && !$("#tab-daily").classList.contains("hide")) dailyTimer = setTimeout(loadDaily, 5000);
+}
+function dayCard(d) {
+  const [label, cls] = ST[d.status] || [d.status, ""];
+  const busy = ["running", "voicing", "uploading"].includes(d.status);
+  const vid = d.final || d.draft;
+  const yt = d.youtube || {};
+  return `<div class="panel day">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${d.date}</b><span class="st ${cls}">${busy ? '<span class="spin"></span>' : ""}${label}</span></div>
+    ${d.idea ? `<h3 style="margin:10px 0 4px">${esc(d.idea.title)}</h3><p class="note" style="margin:0">${esc(d.idea.why || "")}</p>` : ""}
+    ${d.error ? `<p class="msg err" style="margin-top:10px">${esc(d.error)}</p>` : ""}
+    ${busy ? `<p class="note">${esc((d.log || []).slice(-1)[0] || "")}</p>` : ""}
+    ${vid && !busy ? `<video controls playsinline preload="metadata" src="/video?p=${encodeURIComponent(vid)}"></video><p class="note" style="margin:0">${d.final ? "완성본 (천성준 목소리)" : "초안 — 목소리 없음, 장면 길이는 어림값"}</p>` : ""}
+    ${yt.title ? `<p style="margin:10px 0 0"><b>유튜브 제목</b> ${esc(yt.title)}</p>` : ""}
+    ${d.idea?.narration ? `<details><summary>대본 보기 (${d.idea.chars}자)</summary><div class="narr">${esc(d.idea.narration)}</div>${yt.description ? `<p class="note"><b>설명란</b><br>${esc(yt.description).replace(/\n/g, "<br>")}</p>` : ""}</details>` : ""}
+    ${d.youtubeUrl ? `<p><a href="${esc(d.youtubeUrl)}" target="_blank">유튜브에서 보기 ↗</a> — 스튜디오에서 공개로 바꿔주세요</p>` : ""}
+    ${!busy ? `<div class="acts">
+      ${d.status === "draft_ready" ? `<button class="btn" onclick="daily('voice','${d.date}',this,'일레븐랩스 천성준 목소리로 녹음합니다 (${d.idea?.chars ?? "?"}자 ≈ 크레딧 ${d.idea?.chars ?? "?"}). 진행할까요?')">🎙 목소리 입히고 완성</button>` : ""}
+      ${d.status === "final_ready" ? `<button class="btn" onclick="daily('upload','${d.date}',this,'유튜브에 비공개로 올립니다. 진행할까요?')">⬆️ 유튜브에 비공개로 올리기</button>` : ""}
+      ${d.status === "failed" ? `<button class="btn" onclick="daily('run','${d.date}',this)">이어서 다시 시도</button>` : ""}
+    </div>
+    ${["draft_ready", "final_ready", "failed"].includes(d.status) && d.idea ? `<details><summary>✏️ 고칠 점 적고 대본 다시 쓰기</summary><textarea id="fb-${d.date}" placeholder="예: 첫 문장을 더 세게, 연애 이야기로 바꿔줘, 너무 길어"></textarea><button class="btn ghost" style="margin-top:8px" onclick="daily('redo','${d.date}',this)">다시 쓰기</button><p class="note">목소리를 이미 입혔다면 다시 녹음해야 해요 (크레딧).</p></details>` : ""}` : ""}
+    ${d.log?.length ? `<details><summary>진행 기록</summary><div class="logbox">${esc(d.log.join("\n"))}</div></details>` : ""}
+  </div>`;
+}
+async function setTopic(now, btn) {
+  const text = $("#topicText").value;
+  if (now && !confirm("이 주제로 오늘 영상을 바로 만들까요? (대본·초안만, 무료 · 1~3분)")) return;
+  await busy(btn, now ? "시작…" : "저장 중…", async () => { await api("/api/topic", { text, now }); say(now ? "만들기 시작했어요. 이 화면에서 진행 상황이 보입니다." : "저장했어요. 내일 새벽 5시에 이 주제로 만듭니다."); setTimeout(loadDaily, 800); });
+}
+async function daily(cmd, date, btn, ask) {
+  if (ask && !confirm(ask)) return;
+  const feedback = cmd === "redo" ? $(`#fb-${date}`)?.value : undefined;
+  await busy(btn, "시작…", async () => { await api(`/api/daily/${cmd}`, { date, feedback }); setTimeout(loadDaily, 800); });
+}
+
+// ---------- 일기장 ----------
+async function loadDiary() {
+  const list = await api("/api/diary");
+  $("#diaryList").innerHTML = list.map((d) => `<div class="panel">
+    <div style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span class="note" style="margin:0">${d.at.slice(0, 16).replace("T", " ")}${d.usedIn?.length ? ` · <span class="st ok">영상에 씀 ${d.usedIn.join(", ")}</span>` : ""}</span><button class="btn sm ghost" onclick="delDiary('${d.id}')">삭제</button></div>
+    <p style="white-space:pre-wrap;margin:8px 0 0">${esc(d.text)}</p>
+    ${(d.files || []).map((f) => `<img src="/upload?p=${encodeURIComponent(f)}" style="max-width:120px;max-height:160px;border-radius:8px;margin:8px 8px 0 0">`).join("")}
+    ${d.links ? `<p class="note">🔗 ${esc(d.links)}</p>` : ""}${d.photoNote ? `<details><summary>사진에서 읽은 내용</summary><p class="note">${esc(d.photoNote)}</p></details>` : ""}</div>`).join("");
+}
+// 고른 파일 → [{ name, data(base64) }] (맥북 안에서만 오가므로 그대로 보냄)
+async function readFiles(input) {
+  return Promise.all([...input.files].map((f) => new Promise((ok, no) => {
+    if (f.size > 150e6) return no(new Error(`${f.name} 이 너무 커요 (150MB 이하)`));
+    const r = new FileReader();
+    r.onload = () => ok({ name: f.name, data: String(r.result).split(",")[1] });
+    r.onerror = () => no(new Error(`${f.name} 을 읽지 못했어요`));
+    r.readAsDataURL(f);
+  })));
+}
+$("#dsave").onclick = () => busy($("#dsave"), "저장 중…", async () => {
+  await api("/api/diary", { text: $("#dtext").value, files: await readFiles($("#dfiles")), links: $("#dlinks").value });
+  ["#dtext", "#dfiles", "#dlinks"].forEach((x) => $(x).value = ""); say("일기를 저장했어요."); loadDiary();
+});
+$("#rgo").onclick = () => busy($("#rgo"), "분석 중… (30초~2분)", async () => {
+  if (!$("#rnote").value.trim()) throw new Error("어떤 연출을 원하시는지 한 줄이라도 적어주세요.");
+  const it = await api("/api/reference", { url: $("#rurl").value, files: await readFiles($("#rfiles")), note: $("#rnote").value, request: true });
+  ["#rurl", "#rfiles", "#rnote"].forEach((x) => $(x).value = ""); await loadLib(); loadTech(); openItem(it.id);
+});
+async function remakeWith(id, btn) {
+  if (!confirm("이 참고 자료의 구조·연출로 오늘 영상을 다시 만들까요? (대본·초안만, 무료)")) return;
+  await busy(btn, "시작…", async () => {
+    await api("/api/daily/redo", { date: kst(), ref: id, feedback: "사장님이 고른 참고 자료의 구조와 연출을 따라서 새로 기획" });
+    dlg.close(); document.querySelector('.tabs button[data-tab=daily]').click();
+  });
+}
+async function delDiary(id) { if (!confirm("이 일기를 지울까요?")) return; await api("/api/diary/delete", { id }); loadDiary(); }
+
+// ---------- 연출 기법 ----------
+async function loadTech() {
+  const list = await api("/api/techniques");
+  const group = (title, note, items, btns) => items.length ? `<h3>${title}</h3><p class="note">${note}</p>${items.map((t) => `<div class="panel"><b>${esc(t.name)}</b> <span class="tag">${esc(t.our_scene)}</span><p style="margin:6px 0">${esc(t.what)}</p>${t.why ? `<p class="note" style="margin:0">왜: ${esc(t.why)}</p>` : ""}<p class="note">입히는 법: ${esc(t.how_to_copy)}</p><div class="acts" style="display:flex;gap:6px">${btns(t)}</div></div>`).join("")}` : "";
+  const by = (st) => list.filter((t) => t.status === st);
+  $("#tech").innerHTML = (list.length ? "" : `<div class="panel">아직 분석한 연출이 없어요. 영상을 분석하면 여기에 쌓입니다.</div>`) +
+    group("🆕 새 기능이 필요한 기법", "👍를 누르고 클로드에게 \"좋아요 누른 연출 기법 만들어줘\"라고 말하면 영상 공장에 만들어 넣습니다.", by("candidate"), (t) => `<button class="btn sm" onclick="tech('${esc(t.id)}','liked')">👍 만들어줘</button><button class="btn sm ghost" onclick="tech('${esc(t.id)}','skip')">안 씀</button>`) +
+    group("👍 만들 차례", "클로드에게 \"연출 요청 만들어줘\"라고 하시면 만들고 '자동 적용'으로 옮깁니다.", by("liked"), (t) => `<button class="btn sm ghost" onclick="tech('${esc(t.id)}','candidate')">취소</button>`) +
+    group("✅ 매일 영상에 자동 적용", "지금 장면으로 흉내 낼 수 있어서 매일 대본에 섞어 씁니다.", [...by("auto"), ...by("done")], (t) => `<button class="btn sm ghost" onclick="tech('${esc(t.id)}','skip')">빼기</button>`) +
+    group("🚫 안 쓰는 기법", "", by("skip"), (t) => `<button class="btn sm ghost" onclick="tech('${esc(t.id)}','${t.our_scene === "new" ? "candidate" : "auto"}')">다시 쓰기</button>`);
+}
+async function tech(id, status) { await api("/api/technique", { id, status }); loadTech(); }
+
+// ---------- 고객 고충 (포트폴리오에서 사장님들이 적은 것) ----------
+let needsData = null, needFilter = "전체";
+async function loadNeeds() {
+  try { needsData = await api("/api/needs"); } catch (e) { $("#needs").innerHTML = `<div class="msg err">${esc(e.message)}${/만료|로그인/.test(e.message) ? "<br>맥북 tools 폴더의 finance_login.command 를 더블클릭해 구글 로그인을 다시 해주세요 (7일마다)." : ""}</div>`; return; }
+  const items = needsData.items;
+  const fresh = items.filter((x) => x.status === "새로 들어옴").length;
+  $("#needCount").textContent = fresh ? `(${fresh})` : "";
+  const count = (arr) => Object.entries(arr.reduce((m, k) => (k && (m[k] = (m[k] || 0) + 1), m), {})).sort((a, b) => b[1] - a[1]);
+  const byInd = count(items.map((x) => x.industry || "업종 안 고름"));
+  const byTask = count(items.flatMap((x) => x.tasks ? x.tasks.split(", ") : []));
+  const max = (l) => Math.max(1, ...l.map((x) => x[1]));
+  const statBlock = (title, list) => `<div class="panel"><h3 style="margin-top:0">${title}</h3>${list.length ? list.slice(0, 8).map(([k, n]) => `<div class="stat"><span>${esc(k)}</span><b>${n}</b><div class="bar"><i style="width:${(n / max(list)) * 100}%"></i></div></div>`).join("") : '<p class="note">아직 없어요</p>'}</div>`;
+  const shown = needFilter === "전체" ? items : items.filter((x) => x.status === needFilter);
+  $("#needs").innerHTML = `
+    <div class="panel"><b>들어온 고충 ${items.length}건</b> · 새로 들어옴 ${fresh}건
+      ${needsData.sheet ? ` · <a href="${esc(needsData.sheet)}" target="_blank">구글 시트로 보기 ↗</a>` : ""}
+      <p class="note">포트폴리오에서 가게 사장님들이 적은 내용입니다. 처리 단계와 메모는 시트에도 같이 저장돼요.</p></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">${statBlock("🔥 가장 많이 고른 고충 (= 팔 것)", byTask)}${statBlock("🏪 업종", byInd)}</div>
+    <div class="filters">${["전체", ...needsData.statuses].map((s) => `<button class="${s === needFilter ? "on" : ""}" onclick="needFilter='${s}';loadNeeds()">${s} ${s === "전체" ? items.length : items.filter((x) => x.status === s).length}</button>`).join("")}</div>
+    ${shown.map(needCard).join("") || '<div class="panel">아직 없어요. 포트폴리오 링크나 명함 QR을 사장님들께 보여드리면 여기에 쌓입니다.</div>'}`;
+}
+function needCard(x) {
+  return `<div class="panel need">
+    <div class="top"><b>${esc(x.shop || "가게 이름 없음")}</b><span class="tag">${esc(x.industry || "업종 안 고름")}</span><span class="note" style="margin:0">${esc(x.at)}</span></div>
+    ${x.tasks ? `<div class="tasks">${x.tasks.split(", ").map((t) => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
+    ${x.detail ? `<div style="white-space:pre-wrap">${esc(x.detail)}</div>` : ""}
+    <div class="meta">일주일에 ${esc(x.hours || "?")} · 한 달에 ${esc(x.budget || "?")}${x.contact ? ` · 연락처 <b style="user-select:all">${esc(x.contact)}</b> (${esc(x.consent || "동의 기록 없음")})` : " · 연락처 없음"}</div>
+    <div class="row" style="margin:0"><div><label>처리 단계</label><select id="st-${x.row}">${needsData.statuses.map((s) => `<option ${s === x.status ? "selected" : ""}>${s}</option>`).join("")}</select></div></div>
+    <label>메모 (통화 내용, 다음 할 일)</label><textarea id="mm-${x.row}">${esc(x.memo)}</textarea>
+    <div><button class="btn sm" onclick="saveNeed(${x.row}, this)">저장</button></div>
+  </div>`;
+}
+async function saveNeed(row, btn) {
+  await busy(btn, "저장 중…", async () => { await api("/api/needs/update", { row, status: $(`#st-${row}`).value, memo: $(`#mm-${row}`).value }); say("저장했어요 (구글 시트에도 반영)."); loadNeeds(); });
+}
+
+(async () => {
+  loadDaily();
+  api("/api/needs").then((d) => { const n = d.items.filter((x) => x.status === "새로 들어옴").length; $("#needCount").textContent = n ? `(${n})` : ""; }).catch(() => {});
+  const s = await api("/api/status");
+  $("#plat").innerHTML = [["유튜브 자동 검색", s.youtube], ["인스타 (링크)", true], ["틱톡 (링크)", true], ["스레드 (링크)", true], ["분석: 제미나이", s.gemini], ["대본: 챗GPT 구독", s.codex]]
+    .map(([n, ok]) => `<span class="${ok ? "on" : ""}">${ok ? "✓" : "✕"} ${n}</span>`).join("");
+  await loadLib();
+})();
+</script>
+</body>
+</html>

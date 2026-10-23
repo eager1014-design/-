@@ -20,6 +20,8 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
 - `tools/video_batch.mjs`, ai-bridge `gemini_watch_video` — 같은 주제의 잘된 영상 분석, `--mode=blueprint` 로 참고 영상 설계도 (유료, 승인 후)
 - ai-bridge `ask_chatgpt` — 사실 교차 확인, 제목 아이디어 (사장님 ChatGPT 구독·코덱스 경유, API 요금 없음)
 - `tools/gpt_image.mjs` — 챗GPT 그림 (코덱스 경유. **ChatGPT 무료 계정은 그림 기능이 잠겨 있음** → Plus 결제 후 사용, 캔바 대신)
+  - 2026-10-22 사장님 플러스 가입 → 코덱스 다시 로그인 필요했음: `codex login --device-auth` (코드 입력 방식이 확실함). 요금제 확인은 ~/.codex/auth.json 의 id_token 안 chatgpt_plan_type
+  - `--ref` 기준 그림을 쓰면 요청 글이 `-i` 에 먹히던 버그 고침 (글을 -i 앞에)
 - `video/scripts/check_episode.mjs` — 대본 검사 (무료)
 - `tools/tts.mjs` — AI 목소리 (유료, 제미나이 `gemini-3.8-flash-tts`)
 - `video/` — Remotion 영상 공장 (무료, 내 컴퓨터에서 렌더링)
@@ -100,6 +102,30 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
    - 썸네일 실패 = 채널 전화번호 인증 안 됨 → 사장님이 youtube.com/verify 에서 인증
    - Claude in Chrome·앱 브라우저로 스튜디오에 직접 올리는 건 파일 선택 창이 막혀서 안 됨 → 도구를 쓸 것
 
+## 매일 쇼츠 (2026-10-23, 자동)
+사장님이 앱 일기장에 쓴 이야기 + 떡상 쇼츠 연출 분석 → 매일 1편. 앱: http://localhost:4600 (`tools/viral/`, launchd `com.yeminhan.viral-app` 로 늘 켜짐, 바로가기 `tools/viral_start.command`)
+- 새벽 5시 launchd `com.yeminhan.daily-short` → `node tools/daily_short.mjs run`
+  1. 소싱: 키워드 10개 중 3개씩 돌아가며 유튜브 쇼츠 검색 (조회 9만·좋아요 5천·댓글 50 이상, 300점)
+  2. 분석: 제미나이가 각 1편씩 → 보관함 + '연출 기법' (우리 장면으로 되면 auto, 아니면 candidate)
+  3. 기획·대본: `claude -p` (구독) — 안 쓴 일기, 분석 공식, auto 기법, 최근 기획 목록을 넣고 episode.json + youtube.json. check_episode 통과할 때까지 최대 3번
+  4. 목소리 없는 초안 렌더 → 맥 알림
+- 목소리·업로드는 **사장님이 앱 버튼을 눌러야만**: `voice <날짜>`(일레븐랩스 천성준 narrate --yes → split_voice → final 렌더), `upload <날짜>`(비공개). 다시 쓰기: `redo <날짜> "고칠 점"`
+- 편 폴더 `video/public/episodes/daily-YYMMDD/`, 상태 `tools/viral/data/daily/<날짜>.json`, 기록 `.tmp/daily_short.out`
+- 규칙(프롬프트 안): 일기에 없는 경험·숫자 금지, 연구 인용은 Assary 2020 47%만, 그림 없음(story 는 emoji), 6~9장면·250~400자, 일기 없는 날은 심리학 + 연애·관계
+- 사장님이 연출 기법에 👍(liked) 누르면 → 클로드가 장면 종류/효과를 영상 공장에 만들고 status 를 done 으로 (tools/viral/data/library.json 의 techniques)
+- **띠 쇼츠 `"layout": "band"`** (2026-10-23, 사장님: "자막이 모션그래픽에 겹친다·글씨 작다"): 위 제목 / 16:9 그래픽 칸(boost 1.9) / 자막 전용 줄 / 아래 캐릭터(흰 몸 fill) + 반대쪽 댓글 말풍선. 위치는 `src/band.jsx` 의 `BAND`. cast 는 오른쪽·왼쪽·퇴장만(center·corner → 오른쪽)
+- **한 배경 쇼츠 `"layout": "one"`** (2026-10-23 오후, 사장님: "검은 배경·초록 배경 나누지 말고 자연스럽게", 참고 너진똑 https://youtu.be/a4D5wX01vV0): band 와 같은 자리 배치지만 종이 배경 한 장, 제목 글씨 먹색, 캐릭터는 선화 그대로 배경 안에 섬. `"castLook": "circle"` 이면 동그라미 창(지름 280, 자막 아래) 안에서 말함. 매일 쇼츠 기본 = one (앱 '화면 스타일'에서 one·circle·band)
+- **효과음 다양화**: Freesound CC0 14개 추가(correct·wrong·scratch·boing·gasp·sigh·slidewhistle·thud·drum·glitch·pageturn·bell·kaching·tick) — 대본 작가가 장면마다 0~2개 고름 (daily_short 규칙 11)
+- **배경음악 돌려쓰기**: `video/public/music/index.json` [{file, mood, title}] — 대본이 music_mood 를 고르면 최근 3편에 안 쓴 곡 중에서. 2026-10-23 유튜브 오디오 보관함에서 15곡(calm·sad·tense·playful·hopeful 각 3곡, 유튜브 라이선스 = 출처 표기 불필요). 받는 법: Playwright 브라우저(구글 로그인돼 있음, 채널 UCuE2…=주니가족이야기 계정 — 예민한자립가 채널 권한은 없지만 보관함 음악은 어느 채널에나 사용 가능) → studio …/music → 검색칸 클릭 → '값' 입력 → [적용] → 줄에 마우스 → [오프라인 저장] 버튼으로 다운로드
+- **철학자·위인 시리즈 (2026-10-23 사장님 결정, 하루 한 명 천천히)**: 장면 `"type": "photo"` — 위키미디어 저작권 풀린 사진(`tools/commons.mjs`, PD·CC0 우선, CC BY(-SA) 는 출처 표기)을 액자처럼 + 천천히 확대 + 얼굴에 빨간 점선 원(`circle.at`, 위치는 제미나이 `locateFace`, 실패 시 0.5/0.28). 대본에는 `person`(영문 이름)만 쓰면 daily_short 의 `fillPhotos` 가 사진·얼굴·출처(설명란)를 채움. 뉴스 사진·방송 클립·살아 있는 유명인 사진은 쓰지 않는다(저작권·초상권). 명언·일화는 확실한 것만(PEOPLE_GUIDE)
+- **챗GPT 삽화 (2026-10-23, 플러스 구독·추가 비용 0)**: 대본의 story 장면에 `"art": "장면 설명"` → daily_short `fillArt` 가 `tools/gpt_image.mjs`(채널 캐릭터 기준 그림 --ref, 16:9, 수채화 배경, 왼쪽 40% 비움)로 그려 image·textSide left·cast off 로 바꿈. 한 장 약 1분, 한 편 최대 4장. 실패하면 이모지 유지. 대본 검사를 통과한 뒤에만 그림. 다시 채우기: `node tools/daily_short.mjs photos <날짜>`
+- **오늘 주제 칸** (앱 '오늘의 영상' 맨 위): settings.topic → 다음 새벽 5시 run 이 가져가 쓰고 비움. [지금 바로 만들기] = `redo <오늘> … --topic=…`
+- **댓글 말풍선** 장면 칸 `"comments": [{"text", "at", "emoji", "real", "name"}]` — real 이 아니면 이름 자리에 "예시" (가짜 후기 금지). 효과음 bubble.mp3
+- **주제 조사(2026-10-23)**: 쇼츠 떡상 수 — 손절·가스라이팅·사주 궁합·직장 거리두기·회피형이 강함, 번아웃·생각 많음·연락 불안 등 '내 마음 돌보기'는 0개 → daily_short.mjs 의 `TOPIC_GUIDE`
+- 참고 자료: 앱 '연출 기법' 탭에 링크·스크린샷·화면 녹화 → 제미나이 분석 → [이걸로 오늘 영상 다시 만들기] (`redo <날짜> --ref=<id>`)
+- 폰: 같은 와이파이에서 http://<맥 IP>:4600 + `.env` 의 VIRAL_PASSWORD
+- 첫 시험(2026-10-23, 일기·분석 없이): 클로드 46초 + 렌더 48초, '거절 민감성' 7장면 369자, 검사 1번에 통과
+
 ## 장면 종류 (video/src/scenes.jsx)
 | type | 쓰는 곳 | 주요 칸 |
 |---|---|---|
@@ -112,19 +138,31 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
 | `compare` | 좌우 비교 (세로 영상은 위아래) | title, left/right{title, emoji, cue, items[]}, leftColor |
 | `checklist` | 체크 표시 목록 | title, items[] |
 | `bars` | 막대 차트 (실제 데이터만!) | title, bars[{label, value, color}], unit, source |
-| `story` | 이야기 장면 (이미지·영상 있으면 천천히 확대, 없으면 이모지) | image / video / emoji, lines[] |
-| `outro` | 마무리 댓글 질문 | question, cue, channelCue |
+| `story` | 이야기 장면 (이미지·영상 있으면 천천히 확대, 없으면 이모지) | image / video / emoji, lines[], `fit:"contain"`(쇼츠에서 가로로 긴 그림을 자르지 않고 통째로 — 말풍선 있는 웹툰 컷용. 정사각·세로 그림에 쓰면 아래 글씨가 안전 영역 밖으로 나감), `speaker:"guest"`(다른 사람이 말하는 장면 → 우리 캐릭터 입 다묾) |
+| `outro` | 마무리 댓글 질문 | question, cue, channelCue, channel(아래 작은 글씨) |
+| `pillars` | 사주 = 네 기둥 × 두 글자 = 팔자 (초등학생 설명) | cue(기둥 등장), countCue("4×2=8글자"), meCue(일간 칸만 빛남), me{char, name, desc, element}, meText, countText, chars(8글자 다 보일 때만) |
+| `elements` | 오행 다섯 원 + "서로 키워준다" 화살표 | cue(원 등장), cycleCue(화살표), focus("water" 등), focusCue, focusText, cycleText |
 
 편 전체 칸 (빠른 쇼츠 느낌, 2026-10-19 참고 영상 분석에서):
 - `"style": "punchy"` — 글씨·카드가 통 튀어나오는 등장, 굵은 자막, 자막 속 키워드 노란색 (기본은 `"calm"`)
 - `"pace": {"speed": 1.1, "trim": true}` — 장면 앞뒤 쉼을 잘라내고 목소리를 1.1배로 (녹음 다시 안 해도 됨, 받아쓰기 시각이 있는 장면만 자름)
 - `"steps": ["사람","깊이","쉼"]` + 장면마다 `"step": 1~3` — 쇼츠 위쪽 단계 막대. step 없는 장면은 막대 숨김
 - 장면 `"keywords": ["단어", …]` — 자막에서 노란색으로 칠할 말 (화면 글씨의 `**강조**` 는 자동 포함). 조사는 달라도 맞춰짐
+- `"presenter": true` — **캐릭터가 장면 안에 들어와 설명** (2026-10-22, 사장님 요청 "화면 나누지 말고 같이", 너진똑식). 쇼츠는 `frame`(위 제목)과 같이 쓰면 제목 아래 전체가 무대. 입은 목소리 크기만큼 열림, 깜빡임·숨쉬기·끄덕임 (`src/presenter.jsx` 의 `Cast`)
+  - 장면 `"cast"`: 자리 — `right`(오른쪽에서 설명, 가리키기는 왼쪽 글자로) · `left`(좌우 반전) · `center`(글씨는 위, 캐릭터는 아래에서 나를 보며) · `corner`(구석에 작게) · `off`(퇴장). 문자열 또는 `[{"at": "단어", "pos": "right"}]`. 캐릭터 자리만큼 장면이 비켜서고 작아짐, 장면 사이는 앞 장면 끝 자리에서 이어짐
+  - 같은 자리만 계속 쓰면 지루함 → 훅은 center, 숫자는 right→corner, 그림 설명은 off→right(point), 챕터는 off, 결론 한 줄은 center 처럼 섞기
+  - 쇼츠 무대에서는 자막이 캐릭터 머리 바로 위 줄에 나오고, 장면은 늘 그 위로 올려 둔다 (자막이 글씨·얼굴을 가리지 않게)
+  - 장면 `"face"`: `smile`(기본)·`surprised`·`serious`·`laugh`·`worried`·`kind` — 문자열 또는 `[{"at": "단어", "is": "surprised"}]`
+  - 장면 `"gesture"`: `idea`(손가락 위)·`point`(화면 가리킴)·`think`(턱)·`explain`(두 손 펼침), `"none"` 이면 손짓 끝. 손짓 중엔 손짓 그림(미소)이 보임
+  - 그림 만들기: 챗GPT(코덱스, 플러스 필요)로 **표정 시트 한 장**(격자, 같은 얼굴) → `python3 scripts/cut_sheet.py <시트> <열> <행> <이름들> public/characters/main/faces` (머리 위치·크기 맞춤 + 선만 남긴 투명 그림) → `python3 scripts/face_rig.py public/characters/main` (눈·입 위치표 rig.json). 표정을 한 장씩 따로 그리면 얼굴이 매번 달라짐
+- `"style": "punchy"` 장면 전환: 오른쪽 밀기 → 아래서 올라오기 → 닦아내기 → 왼쪽 밀기를 돌아가며 (calm 은 부드러운 겹침)
+- `"frame": {"title": ["줄1", "줄2"], "brand": "예민한자립가"}` — **제목 띠 쇼츠** (2026-10-22, 채널 최고 쇼츠 '뇌를 찍어봤더니' 틀): 검은 바탕 + 위 고정 제목 2줄(둘째 줄 빨간 띠, 줄당 14자 이내) + 가운데 16:9 칸에 장면을 가로 배치로 + 칸 아래쪽 자막 + 맨 아래 채널명. `"format": "short"` 전용. 가로용 그림(16:9)을 자르지 않고 그대로 씀. 위치·색·칸 안 확대(boost)는 `theme.js` 의 `FRAME`
 
 공통 칸: `narration`(필수), `direction`(목소리 말투 지시, 영어), `captions`(false 로 자막 끄기), `musicMute`(true 면 이 장면에서 배경음악 끔).
 `chapters`(상단 진행 표시 이름, 짧게), `music`(public 안 음악 파일 경로), `voice`({name, speed, style}).
 
 ## 디자인 규칙
+- **쇼츠·릴스 안전 영역**: [safe_zone.md](safe_zone.md) — 세로 영상에서 글씨·자막·제목·캐릭터 얼굴은 x 51~1029, y 193~1399 안에만 (아래 521px 은 앱 화면이 덮음)
 - 색·글꼴은 `video/src/theme.js` 한 곳에서만 바꾼다 (크림·세이지·호박색, Pretendard)
 - 효과음은 `video/scripts/make_sfx.mjs` 가 코드로 만든 것 (저작권 없음). 배경음악은 사장님이 고른 저작권 없는 파일만 `video/public/music/`
 - 다른 유튜버 영상은 자료화면으로 쓰지 않는다
@@ -149,6 +187,9 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
 - 장면 종류 추가 시: `src/scenes.jsx` 의 SCENES 와 `scripts/scene-types.mjs` 둘 다 고칠 것
 
 ## 변경 기록
+- 2026-10-23: 매일 쇼츠 자동(daily_short.mjs) + 떡상 소싱 앱(tools/viral: 일기장·오늘의 영상·연출 기법)
+- 2026-10-22: 말하는 캐릭터(presenter·face·gesture), 표정/손짓 시트 도구(cut_sheet·face_rig), punchy 장면 전환, gpt_image --ref 버그 수정
+- 2026-10-22: 제목 띠 쇼츠(`frame`), 사주 설명 장면(`pillars`·`elements`) 추가. 채널 방향 = HSP × 사주 시리즈 (1편 ep02 계수)
 - 2026-10-19: 효과음 늘리기(6-5) — 사장님이 무료 사이트에서 직접 받아 sfx 폴더에 넣는 방식
 - 2026-10-19: 챗GPT 질문을 API 키 → 구독(코덱스)으로 변경, 분담 원칙 추가, 코덱스 그림 도구(gpt_image) 추가
 - 2026-10-19: 빠른 스타일(`style: punchy`, `pace`, `steps`, `keywords`) 추가. VS Code 안에서 mp4를 열면 소리가 안 나옴 → 맥 기본 플레이어로 확인

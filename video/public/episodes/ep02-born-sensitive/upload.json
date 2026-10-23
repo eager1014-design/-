@@ -1,0 +1,45 @@
+{
+  "video": "out/ep02_final.mp4",
+  "keywords_from": ".tmp/youtube_keywords_20261022T054035.json",
+  "title_options": [
+    "예민한 사주는 따로 있다? HSP 특징이 내 계수 일간에 다 있었다",
+    "HSP 특징, 사주로 보니 이해됐다 | 예민함은 47% 타고난다 (계수 일간)",
+    "예민한 성격, 고칠 게 아니었다 | 쌍둥이 연구와 내 사주가 같은 말을 했다"
+  ],
+  "title": "예민한 사주는 따로 있다? HSP 특징이 내 계수 일간에 다 있었다",
+  "description": "예민한 사주, 정말 따로 있을까요? 예민한 거 제 성격 탓인 줄 알았는데,\n쌍둥이 2,868명 연구와 제 사주(계수 일간)가 같은 대답을 했어요. HSP 특징이 '물'로 보니 이해됐습니다.\n\n00:00 예민한 거, 성격 탓일까\n00:27 예민함은 얼마나 타고날까 (쌍둥이 연구)\n00:59 사주, 30초 만에 이해하기\n01:51 물로 태어난 나 (계수 일간)\n02:34 물로 사는 법\n\n🌧️ 내 일간은 뭘까? 생년월일만 넣으면 무료로 타고난 성향을 볼 수 있게 직접 만들었어요 (처음이면 풀이 PDF 1개 무료)\nhttps://ai-production-1a94.up.railway.app/?src=youtube\n\n당신의 일간은 나무·불·흙·쇠·물 중 무엇인가요? 하나만 댓글로 남겨주세요.\n\n📚 출처\nAssary, E. 외 (2020). Genetic architecture of Environmental Sensitivity reflects multiple heritable components: a twin study with adolescents. Molecular Psychiatry. https://doi.org/10.1038/s41380-020-0783-8\n※ 사주 부분은 과학 연구가 아니라, 제가 제 사주를 보고 알게 된 것을 정리한 참고용 경험 이야기입니다.\n\n#예민한사주 #HSP #계수일간",
+  "tags": [
+    "예민한 사주",
+    "HSP 특징",
+    "계수 일간",
+    "계수일간",
+    "예민한 성격",
+    "예민한 사람",
+    "HSP",
+    "사주",
+    "일간",
+    "오행",
+    "사주팔자",
+    "예민함 유전",
+    "초민감자",
+    "예민한 사람 특징"
+  ],
+  "made_for_kids": false,
+  "altered_content": true,
+  "altered_content_reason": "AI 복제 목소리(일레븐랩스, 사장님 본인 목소리 복제)로 내레이션",
+  "visibility": "public",
+  "thumbnail": {
+    "format": "long",
+    "kicker": "쌍둥이 2,868명 × 내 사주",
+    "lines": [
+      "예민함은",
+      "**47% 타고난다**"
+    ],
+    "scene": {
+      "image": "episodes/ep02-born-sensitive/img/a_alone.png",
+      "focusX": 0.66,
+      "focusY": 0.42,
+      "zoom": 1.35
+    }
+  }
+}

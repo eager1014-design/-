@@ -1,0 +1,22 @@
+{
+  "created_at": "2026-10-22T10:24:57.803Z",
+  "model": "gemini-3.8-flash",
+  "mode": "blueprint",
+  "inputs": [
+    "https://youtube.com/shorts/G_5qiT9RkYs"
+  ],
+  "results": [
+    {
+      "url": "https://www.youtube.com/watch?v=G_5qiT9RkYs",
+      "title": "국민들만 몰랐던 국대 내부 실태 이름 대신 7번이라 불린 손흥민",
+      "channel": "낭만피플",
+      "published": "2026-10-22",
+      "views": 123163,
+      "duration": "0:54",
+      "analyzed_at": "2026-10-22T10:24:57.803Z",
+      "error": "fetch failed"
+    }
+  ],
+  "prompt_extra": "특히 자세히: 화면 구도(위·가운데·아래 무엇이 있는지), 글씨 크기와 위치, 그림/사진 사용 방식, 캐릭터 유무와 움직임, 장면 전환 속도와 효과, 자막 스타일, 첫 2초 훅, 음악·효과음 사용. 우리 채널(예민한 사람 × 사주, 말하는 캐릭터)이 따라 할 점을 구체적으로.",
+  "updated_at": "2026-10-22T10:29:58.571Z"
+}

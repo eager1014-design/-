@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>삼감 모닝</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <p class="date" id="today"></p>
+      <h1>삼감 모닝</h1>
+      <p class="sub">감사 · 감동 · 감탄, 그리고 오늘의 한 가지</p>
+    </header>
+
+    <section class="card start">
+      <button class="btn-start" type="button" disabled aria-disabled="true">
+        오늘의 모닝 루틴 시작
+      </button>
+      <span class="badge">준비 중 · 다음 단계에서 구현</span>
+    </section>
+
+    <section class="card">
+      <div class="progress-head">
+        <h2>진행 상태</h2>
+        <span class="progress-time">0분 / 20분</span>
+      </div>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0">
+        <span class="seg s-gratitude"  style="flex:3"></span>
+        <span class="seg s-moved"      style="flex:10"></span>
+        <span class="seg s-wonder"     style="flex:4"></span>
+        <span class="seg s-action"     style="flex:3"></span>
+      </div>
+      <p class="note">아직 시작 전이에요. 타이머는 다음 단계에서 연결됩니다.</p>
+    </section>
+
+    <section class="card">
+      <h2>오늘의 순서</h2>
+      <ol class="steps">
+        <li><span class="dot s-gratitude"></span><b>감사</b><em>3분</em></li>
+        <li><span class="dot s-moved"></span><b>감동</b><em>10분</em></li>
+        <li><span class="dot s-wonder"></span><b>감탄</b><em>4분</em></li>
+        <li><span class="dot s-action"></span><b>오늘의 실행</b><em>3분</em></li>
+      </ol>
+    </section>
+
+    <section class="card">
+      <h2>재생 조작</h2>
+      <div class="controls">
+        <button type="button" disabled>재생</button>
+        <button type="button" disabled>일시정지</button>
+        <button type="button" disabled>다음 단계</button>
+      </div>
+      <p class="note">준비 중 · 음악/영상 연결과 함께 구현됩니다.</p>
+    </section>
+
+    <section class="card">
+      <h2>단계별 콘텐츠</h2>
+      <p class="empty">아직 등록된 음악이나 영상이 없어요.<br>
+        콘텐츠 등록 기능은 준비 중입니다. 등록 전에는 임의의 영상을 틀지 않아요.</p>
+    </section>
+
+    <footer class="foot">
+      첫 화면 버전 · 회색 버튼과 “준비 중” 표시는 아직 작동하지 않는 기능입니다.
+    </footer>
+  </main>
+
+  <script>
+    document.getElementById('today').textContent =
+      new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
+  </script>
+</body>
+</html>

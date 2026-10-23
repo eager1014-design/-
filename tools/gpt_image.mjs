@@ -67,8 +67,10 @@ console.log("🎨 ChatGPT로 그리는 중... (보통 30초~2분)");
 const res = await run("codex", [
   "exec", "--json", "--skip-git-repo-check", "--ephemeral",
   "-s", "read-only", "-C", path.dirname(out),
-  ...refs.flatMap((r) => ["-i", r]),
+  // 요청 글은 반드시 -i 보다 앞에: -i 는 뒤에 오는 값을 전부 그림 파일로 먹어서, 글이 뒤에 있으면
+  // "No prompt provided via stdin" 으로 실패한다 (2026-10-22 --ref 쓸 때 실제로 터짐)
   instruction,
+  ...refs.flatMap((r) => ["-i", r]),
 ]);
 
 if (res.code === -1) die("codex 프로그램을 못 찾았습니다. 설치: npm install -g --prefix ~/.local @openai/codex");

@@ -9,6 +9,7 @@
 //   --sort   : views(조회수 높은 순, 기본) / date(최신 순) / as-is(넣은 순서)
 //   --prompt : 기본 분석 항목에 더해 따로 물어볼 것 (예: "HSP 채널에 적용할 점도 알려줘")
 //   --mode   : analysis(기본, 여러 영상 비교용) / blueprint(영상 1개의 뼈대를 우리 장면 틀에 맞춘 설계도로)
+//   --clip   : 긴 영상은 일부 구간만 분석 (초). 예: --clip=0-240 → 처음 4분만. 토큰이 그만큼 줄어든다
 //   --out    : 결과 파일. 같은 파일로 다시 돌리면 이미 끝난 영상은 건너뛴다.
 //              안 주면 JSON 하나를 넣었을 때는 .tmp/video_analysis_<그 파일 이름>.json, 아니면 시각으로 정한다.
 //
@@ -218,13 +219,18 @@ const done = new Map((previous?.results || []).filter((r) => r.analysis).map((r)
 const todo = items.filter((v) => !done.has(v.url));
 
 // 미리보기: 목록·길이·예상 토큰
-const secs = todo.map((v) => seconds(v.duration));
+const clip = flags.clip ? (() => {
+  const [a, b] = String(flags.clip).split("-").map(Number);
+  if (!(b > a && a >= 0)) die("--clip 은 '시작초-끝초' 입니다. 예: --clip=0-240");
+  return { start: a, end: b };
+})() : null;
+const secs = todo.map((v) => (clip ? Math.min(clip.end, seconds(v.duration) ?? clip.end) - clip.start : seconds(v.duration)));
 const known = secs.filter((s) => s !== null);
 const totalSec = known.reduce((a, s) => a + s, 0);
 console.log(`\n🎬 분석할 영상 ${todo.length}개${done.size ? ` (이미 끝난 ${done.size}개는 건너뜀)` : ""} · 모델 ${GEMINI_MODEL}`);
 todo.forEach((v, i) => console.log(`${String(i + 1).padStart(2)}. ${v.title || v.url} · ${v.duration || "길이 모름"} · 조회 ${fmt(v.views)}\n    ${v.url}`));
 const mins = Math.round(totalSec / 60);
-console.log(`\n⏱  길이 합계 약 ${mins}분${known.length < todo.length ? ` (길이를 모르는 영상 ${todo.length - known.length}개 제외)` : ""}`);
+console.log(`\n⏱  ${clip ? `구간 ${clip.start}~${clip.end}초만 · ` : ""}길이 합계 약 ${mins}분${known.length < todo.length ? ` (길이를 모르는 영상 ${todo.length - known.length}개 제외)` : ""}`);
 console.log(`💰 예상 토큰 약 ${fmt(totalSec * TOKENS_PER_SECOND)} (영상 1초 ≈ ${TOKENS_PER_SECOND}토큰, 어림값)`);
 console.log(`💾 결과 파일: ${path.relative(ROOT, mdOut || out)}`);
 
@@ -253,7 +259,7 @@ for (const [i, v] of todo.entries()) {
     for (let attempt = 1; ; attempt++) {
       try {
         const prompt = mode === "blueprint" ? blueprintPrompt(v, flags.prompt) : promptFor(v, flags.prompt);
-        result = await watchVideo(v.url, prompt, { schema: mode === "blueprint" ? BLUEPRINT_SCHEMA : SCHEMA, log: (...a) => process.stdout.write(`${a.join(" ")} … `) });
+        result = await watchVideo(v.url, prompt, { clip, schema: mode === "blueprint" ? BLUEPRINT_SCHEMA : SCHEMA, log: (...a) => process.stdout.write(`${a.join(" ")} … `) });
         break;
       } catch (e) {
         if (attempt < 2 && !/limit: 0|PerDay|quota exceeded/i.test(e.message) && /\b(503|429)\b|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand/i.test(e.message)) {

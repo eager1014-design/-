@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 매일 새벽 5시 예민한자립가 쇼츠 초안 만들기 (tools/daily_short.mjs run). 맥북이 잠자고 있었으면 깨어난 뒤 실행됨.
+     설치:  cp tools/daily_short.plist ~/Library/LaunchAgents/com.yeminhan.daily-short.plist
+            launchctl load ~/Library/LaunchAgents/com.yeminhan.daily-short.plist
+     끄기:  launchctl unload ~/Library/LaunchAgents/com.yeminhan.daily-short.plist -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.yeminhan.daily-short</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/mac/ai/tools/daily_short.mjs</string>
+    <string>run</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/mac/ai</string>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>5</integer><key>Minute</key><integer>0</integer></dict>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/Users/mac/.local/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+  <key>StandardOutPath</key><string>/Users/mac/ai/.tmp/daily_short.out</string>
+  <key>StandardErrorPath</key><string>/Users/mac/ai/.tmp/daily_short.out</string>
+</dict>
+</plist>

@@ -12,6 +12,36 @@ export const COLORS = {
   terracotta: "#C8745A", // 경고·대비 (나쁜 환경, 하지 말 것)
 };
 
+// 제목 띠 쇼츠 (episode.json 의 "frame"): 검은 바탕 + 위 2줄 제목(둘째 줄 빨간 띠) — 채널 최고 쇼츠 '뇌를 찍어봤더니' 틀
+export const FRAME = {
+  bg: "#0B0B0C",
+  title: "#FFFFFF",
+  red: "#E0242E", // 둘째 줄 띠
+  brand: "#E8E4DC",
+  boxTop: 640, // 가운데 장면 칸 위치 (1080×1920 기준). 칸 크기는 1080×608 (16:9)
+  boost: 1.45, // 가운데 칸 안의 글씨·도형 확대 (가로 장면을 0.56배로 줄여 넣으므로)
+  // 진행자(말하는 캐릭터)를 쓰면: 제목을 위로 올리고, 장면 칸 아래 전체를 캐릭터 자리로 (참고 쇼츠: 위 그래픽 + 아래 화자)
+  presenterTitleTop: 215, // 안전 영역(y 193~1399, .claude/skills/video-production/safe_zone.md) 안으로
+  presenterBoxTop: 500,
+  presenterScale: 1.0, // 캐릭터 크기 (그림 900×1100 기준)
+  // 가로 롱폼: 오른쪽 띠에 캐릭터, 장면은 왼쪽으로 (손짓 '가리키기'는 장면 쪽으로 팔이 들어감)
+  longPresenterWidth: 440,
+  longPresenterTop: 250,
+  longPresenterScale: 0.75,
+};
+
+// 사주 설명 장면 (pillars·elements): 오행 다섯 색 — 채널 톤에 맞춰 채도를 낮춤
+export const ELEMENTS = {
+  wood: { name: "나무", emoji: "🌳", hanja: "木", color: "#6E9A63" },
+  fire: { name: "불", emoji: "🔥", hanja: "火", color: "#D9714F" },
+  earth: { name: "흙", emoji: "⛰️", hanja: "土", color: "#C9A25A" },
+  metal: { name: "쇠", emoji: "⚙️", hanja: "金", color: "#9A9A94" },
+  water: { name: "물", emoji: "💧", hanja: "水", color: "#4C7DA8" },
+};
+
+// 쇼츠·릴스 안전 영역 (1080×1920): 글씨·자막·제목·캐릭터 얼굴은 이 안에만 — 사장님 기준 그림 (2026-10-22)
+export const SAFE = { left: 51, top: 193, right: 1029, bottom: 1399 };
+
 export const FONT = "Pretendard";
 
 export const FPS = 30;

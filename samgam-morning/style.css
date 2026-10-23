@@ -1,0 +1,97 @@
+:root {
+  --navy: #0f1b2d;
+  --navy-2: #172740;
+  --line: #24385a;
+  --sky: #9cc7e6;
+  --gold: #d9b26f;
+  --text: #e8eef6;
+  --muted: #8ea2bd;
+
+  /* 단계별 색 */
+  --c-gratitude: #d9b26f; /* 감사: 금색 */
+  --c-moved: #9cc7e6;     /* 감동: 하늘색 */
+  --c-wonder: #b9a7e0;    /* 감탄: 연보라 */
+  --c-action: #7fc8a9;    /* 실행: 연녹색 */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(ellipse at top, #1a2c4a 0%, var(--navy) 60%);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  line-height: 1.6;
+}
+
+.wrap { max-width: 560px; margin: 0 auto; padding: 48px 16px 64px; }
+
+.hero { text-align: center; margin-bottom: 28px; }
+.date { color: var(--muted); margin: 0 0 6px; font-size: 14px; }
+h1 { margin: 0; font-size: 44px; font-weight: 700; color: var(--gold); letter-spacing: 2px; }
+.sub { margin: 8px 0 0; color: var(--sky); }
+
+.card {
+  background: var(--navy-2);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+h2 { margin: 0 0 12px; font-size: 16px; color: var(--sky); font-weight: 600; }
+
+.start { text-align: center; }
+.btn-start {
+  width: 100%;
+  padding: 18px;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1px dashed var(--muted);
+  background: transparent;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.badge {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--navy);
+  background: var(--muted);
+}
+
+.progress-head { display: flex; justify-content: space-between; align-items: baseline; }
+.progress-time { color: var(--gold); font-variant-numeric: tabular-nums; }
+.bar { display: flex; gap: 3px; height: 10px; }
+.seg { border-radius: 4px; opacity: 0.25; }
+
+.s-gratitude { background: var(--c-gratitude); }
+.s-moved     { background: var(--c-moved); }
+.s-wonder    { background: var(--c-wonder); }
+.s-action    { background: var(--c-action); }
+
+.steps { list-style: none; margin: 0; padding: 0; }
+.steps li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.steps li:first-child { border-top: 0; }
+.steps b { font-weight: 600; }
+.steps em { margin-left: auto; font-style: normal; color: var(--muted); }
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+
+.controls { display: flex; gap: 8px; }
+.controls button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  cursor: not-allowed;
+}
+
+.note { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+.empty { margin: 0; color: var(--muted); text-align: center; }
+.foot { text-align: center; font-size: 12px; color: var(--muted); margin-top: 24px; }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 떡상 소싱 앱(tools/viral/server.mjs)을 늘 켜 둔다 → http://localhost:4600 . 꺼지면 자동으로 다시 켜짐.
+     설치:  cp tools/viral_app.plist ~/Library/LaunchAgents/com.yeminhan.viral-app.plist
+            launchctl load ~/Library/LaunchAgents/com.yeminhan.viral-app.plist
+     끄기:  launchctl unload ~/Library/LaunchAgents/com.yeminhan.viral-app.plist -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.yeminhan.viral-app</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/mac/ai/tools/viral/server.mjs</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/mac/ai</string>
+  <key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/Users/mac/.local/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+  <key>StandardOutPath</key><string>/Users/mac/ai/.tmp/viral_app.out</string>
+  <key>StandardErrorPath</key><string>/Users/mac/ai/.tmp/viral_app.out</string>
+</dict>
+</plist>

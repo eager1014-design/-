@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 매일 아침 8:10 지메일 영수증 + 스샷 폴더를 읽어 "사업 지출 관리" 시트에 넣기 (tools/finance_daily.sh).
+     맥북이 잠자고 있었으면 깨어난 뒤 실행됨.
+     설치:  cp tools/finance_daily.plist ~/Library/LaunchAgents/com.ungyeol.finance-daily.plist
+            launchctl load ~/Library/LaunchAgents/com.ungyeol.finance-daily.plist
+     끄기:  launchctl unload ~/Library/LaunchAgents/com.ungyeol.finance-daily.plist -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.ungyeol.finance-daily</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>/Users/mac/ai/tools/finance_daily.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>10</integer></dict>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/usr/local/bin:/usr/bin:/bin</string></dict>
+  <key>StandardOutPath</key><string>/Users/mac/ai/.tmp/finance/daily.log</string>
+  <key>StandardErrorPath</key><string>/Users/mac/ai/.tmp/finance/daily.log</string>
+</dict>
+</plist>

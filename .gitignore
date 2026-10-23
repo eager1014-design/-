@@ -2,6 +2,7 @@
 .env
 credentials.json
 token.json
+token_finance.json
 
 # 임시 작업 공간
 .tmp/*
@@ -36,3 +37,10 @@ video/sfx/**
 !video/sfx/*/
 !video/sfx/index.json
 .playwright-mcp/
+
+# 떡상 소싱 앱 보관함 (분석·대본)
+tools/viral/data/
+
+# 명함 결과물(다시 뽑을 수 있음, 연락처 포함)·받은 글꼴(24MB)
+business/card/
+business/fonts/

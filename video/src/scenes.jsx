@@ -1,10 +1,11 @@
 // 장면 틀 모음. 대본(episode.json)의 각 장면 "type" 이 아래 이름 중 하나다.
 // 모든 장면은 { scene } 을 받고, 화면 요소의 등장 시점은 timing.revealFrames 로 내레이션에 맞춘다.
-import React from "react";
+import React, { useContext } from "react";
 import { AbsoluteFill, Img, OffthreadVideo, interpolate, staticFile, useCurrentFrame } from "remotion";
-import { COLORS } from "./theme.js";
-import { revealFrames } from "./timing.js";
-import { Card, Rich, Rise, Sfx, text, useAppear, useIsShort, useUnit } from "./components.jsx";
+import { COLORS, ELEMENTS } from "./theme.js";
+import { cueFrame, revealFrames } from "./timing.js";
+import { Dialogue } from "./presenter.jsx";
+import { Card, FrameContext, Rich, Rise, Sfx, text, useAppear, useIsShort, useSceneSize, useUnit } from "./components.jsx";
 
 const Center = ({ children, style }) => {
   const u = useUnit();
@@ -337,8 +338,26 @@ function Story({ scene, frames }) {
   const lines = lineItems(scene, "lines");
   const at = revealFrames(scene, lines);
   const media = scene.image || scene.video;
+  // fit: "contain" — 세로 쇼츠에서 가로 그림을 자르지 않고 폭에 맞춰 통째로 (위아래는 어두운 여백, 글씨는 그림 아래)
+  //   말풍선이 그려진 웹툰 컷처럼 잘리면 안 되는 그림에 쓴다
+  if (short && scene.image && scene.fit === "contain") {
+    return (
+      <AbsoluteFill style={{ background: "#0B0B0C", justifyContent: "flex-start", alignItems: "center", paddingTop: 70 * u }}>
+        <Sfx at={at} />
+        <div style={{ width: "100%", overflow: "hidden" }}>
+          <Img src={staticFile(scene.image)} style={{ width: "100%", display: "block", transform: `scale(${1 + (cam.scale - 1) * 0.5})`, transformOrigin: "50% 50%" }} />
+        </div>
+        {lines.map((l, i) => (
+          <Rise key={i} at={at[i]} style={{ marginTop: 26 * u, textAlign: "center", maxWidth: "88%" }}>
+            <Rich text={l.text} at={at[i]} style={text(u, 56, 800, COLORS.card)} />
+          </Rise>
+        ))}
+      </AbsoluteFill>
+    );
+  }
   const side = short ? (media ? "top" : "center") : scene.textSide || "center";
   const align = side === "left" ? "flex-start" : side === "right" ? "flex-end" : "center";
+  const emojiRow = !media && !short;
   return (
     <AbsoluteFill>
       <Sfx at={at} />
@@ -366,23 +385,91 @@ function Story({ scene, frames }) {
           />
         </AbsoluteFill>
       ) : (
+        emojiRow ? (
+          // 가로 화면(띠 쇼츠 칸 포함)에서 그림 없는 이야기: 이모지는 왼쪽, 글씨는 오른쪽 (가운데에 겹치지 않게)
+          <AbsoluteFill style={{ justifyContent: "center", alignItems: "flex-start", paddingLeft: 110 * u }}>
+            <div style={{ fontSize: 190 * u, transform: `scale(${cam.scale})`, filter: "drop-shadow(0 12px 18px rgba(60,50,30,0.18))" }}>{scene.emoji || "🌿"}</div>
+          </AbsoluteFill>
+        ) : (
         <Center style={{ paddingBottom: (short ? 600 : 360) * u }}>
           <div style={{ fontSize: 260 * u, transform: `scale(${cam.scale})`, filter: "drop-shadow(0 12px 18px rgba(60,50,30,0.18))" }}>{scene.emoji || "🌿"}</div>
         </Center>
+        )
       )}
       <AbsoluteFill
-        style={{
+        style={emojiRow ? { justifyContent: "center", alignItems: "flex-start", paddingLeft: 420 * u, paddingRight: 60 * u } : {
           justifyContent: side === "center" ? "flex-end" : side === "top" ? "flex-start" : "center",
           alignItems: side === "top" ? "center" : align,
           padding: side === "center" ? `0 0 ${(short ? 560 : 200) * u}px` : side === "top" ? `${200 * u}px 0 0` : `0 ${120 * u}px`,
         }}
       >
         {lines.map((l, i) => (
-          <Rise key={i} at={at[i]} style={{ marginTop: 14 * u, textAlign: side === "center" || side === "top" ? "center" : side, maxWidth: side === "center" || side === "top" ? "86%" : "46%" }}>
+          <Rise key={i} at={at[i]} style={{ marginTop: 14 * u, textAlign: emojiRow ? "left" : side === "center" || side === "top" ? "center" : side, maxWidth: emojiRow ? "100%" : side === "center" || side === "top" ? "86%" : "46%" }}>
             <Rich text={l.text} at={at[i]} style={{ ...text(u, 62, 800, media ? COLORS.card : COLORS.ink), textShadow: media ? `0 ${2 * u}px ${14 * u}px rgba(0,0,0,0.35)` : "none" }} />
           </Rise>
         ))}
       </AbsoluteFill>
+    </AbsoluteFill>
+  );
+}
+
+// 위인 사진 장면 (2026-10-23, 철학자·위인 시리즈): 저작권 풀린 실제 사진(tools/commons.mjs)을 액자처럼 왼쪽에 두고 천천히 확대,
+// 얼굴에 빨간 점선 원이 그려지며(circle.at 단어) 오른쪽에 글씨. 세로 화면이면 사진 위·글씨 아래.
+// 칸: image, aspect(가로/세로), name("아르투어 쇼펜하우어"), years("1788–1860"), lines[{text, cue}],
+//     circle: { x, y, r (사진 기준 0~1), at: "단어" } — 얼굴 위치는 daily_short 가 제미나이로 찾음
+function Photo({ scene, frames }) {
+  const u = useUnit();
+  const frame = useCurrentFrame();
+  const short = useIsShort();
+  const lines = lineItems(scene, "lines");
+  const at = revealFrames(scene, lines);
+  const aspect = Math.min(1.6, Math.max(0.55, scene.aspect || 0.78));
+  // 사진 크기는 장면 칸에 맞춘다 (가로 칸: 높이 80%·폭 50% 안, 세로 화면: 높이 45%·폭 86% 안)
+  const size = useSceneSize();
+  const maxH = size.height * (short ? 0.45 : 0.74), maxW = size.width * (short ? 0.86 : 0.5);
+  const H = Math.min(maxH, maxW / aspect);
+  const W = H * aspect;
+  const c = scene.circle;
+  const k = Math.min(1, frame / Math.max(1, frames));
+  const zoom = 1 + 0.1 * k;
+  const origin = c ? `${c.x * 100}% ${c.y * 100}%` : "50% 35%";
+  const cAt = c ? (c.at ? cueFrame(scene, c.at) ?? 20 : 20) : 0;
+  const draw = c ? Math.min(1, Math.max(0, (frame - cAt) / 14)) : 0;
+  const enter = Math.min(1, frame / 10);
+  const R = c ? c.r * Math.max(W, H) : 0;
+  const photo = (
+    <div style={{ position: "relative", flex: "none", width: W, height: H, padding: 14 * u, background: "#FFFDF8",
+      boxShadow: `0 ${14 * u}px ${40 * u}px rgba(60,50,30,0.28)`, transform: `rotate(-1.5deg) scale(${0.92 + 0.08 * enter})`, opacity: enter }}>
+      <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, transform: `scale(${zoom})`, transformOrigin: origin }}>
+          <Img src={staticFile(scene.image)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: scene.color ? undefined : "grayscale(0.15) contrast(1.05)" }} />
+          {c && draw > 0 && (
+            <svg style={{ position: "absolute", inset: 0, overflow: "visible" }} width="100%" height="100%">
+              <circle cx={`${c.x * 100}%`} cy={`${c.y * 100}%`} r={R * (1 + 0.5 * (1 - draw))} fill="none" stroke="#E0242E" strokeWidth={7 * u}
+                strokeDasharray={`${18 * u} ${12 * u}`} strokeDashoffset={-(frame - cAt) * 1.2 * u} opacity={draw} />
+            </svg>
+          )}
+        </div>
+      </div>
+      {scene.name && (
+        <div style={{ position: "absolute", left: "50%", top: "100%", marginTop: -14 * u, transform: "translateX(-50%) rotate(1.5deg)", whiteSpace: "nowrap", width: "max-content",
+          background: COLORS.ink, padding: `${6 * u}px ${18 * u}px`, borderRadius: 8 * u, ...text(u, 24, 700, "#FFFDF8") }}>
+          {scene.name}{scene.years ? <span style={{ opacity: 0.7, fontWeight: 500 }}> · {scene.years}</span> : null}
+        </div>
+      )}
+    </div>
+  );
+  return (
+    <AbsoluteFill style={{ flexDirection: short ? "column" : "row", justifyContent: "center", alignItems: "center", gap: (short ? 50 : 50) * u, padding: `0 ${50 * u}px` }}>
+      <Sfx at={[...at, ...(c ? [cAt] : [])]} />
+      {photo}
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 * u, flex: short ? "none" : 1, minWidth: 0, maxWidth: short ? "88%" : undefined, textAlign: short ? "center" : "left" }}>
+        {lines.map((l, i) => (
+          <Rise key={i} at={at[i]}>
+            <Rich text={l.text} at={at[i]} style={text(u, i === 0 ? 56 : 46, 800)} />
+          </Rise>
+        ))}
+      </div>
     </AbsoluteFill>
   );
 }
@@ -407,6 +494,127 @@ function Outro({ scene }) {
   );
 }
 
+// 12) 사주 = 네 기둥 × 두 글자 = 여덟 글자(팔자). 초등학생도 알게.
+//  cue: 기둥들이 하나씩 내려앉는 순간 · countCue: "4 × 2 = 8글자" · meCue: '나'를 뜻하는 칸(일간)만 빛남
+//  me: { char: "癸", name: "계수", desc: "비·이슬·우물물", element: "water" } — 나머지 칸은 "?" (개인 생년월일 없이)
+//  chars: 8글자를 다 보여줄 때만 [년간,년지,월간,월지,일간,일지,시간,시지]
+// 사주 장면 크기는 제목 띠 쇼츠의 가운데 칸 기준. 칸이 없는 영상(가로 롱폼 등)에서는 1.4배로 키운다
+const useSajuUnit = () => useUnit() * (useContext(FrameContext) ? 1 : 1.4);
+
+function Pillars({ scene }) {
+  const u = useSajuUnit();
+  const frame = useCurrentFrame();
+  const [at, countAt, meAt] = revealFrames(scene, [{ cue: scene.cue }, { cue: scene.countCue }, { cue: scene.meCue }]);
+  const cols = [["태어난 해", 0], ["태어난 달", 2], ["태어난 날", 4], ["태어난 시", 6]];
+  const me = scene.me || {};
+  const el = ELEMENTS[me.element] || ELEMENTS.water;
+  const focus = scene.meCue ? interpolate(frame, [meAt, meAt + 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;
+  const cell = (ch, isMe, delay) => {
+    const p = useAppear(at + delay);
+    const glow = isMe ? focus : 0;
+    return (
+      <div style={{ width: 120 * u, height: 120 * u, borderRadius: 22 * u, display: "flex", alignItems: "center", justifyContent: "center",
+        background: glow ? el.color : COLORS.card, border: `${4 * u}px solid ${glow ? el.color : COLORS.bgDeep}`,
+        boxShadow: `0 ${8 * u}px ${18 * u}px rgba(60,50,30,${0.08 + 0.2 * glow})`,
+        transform: `translateY(${(1 - p) * -120 * u}px) scale(${(0.8 + 0.2 * Math.min(1, p)) * (1 + 0.22 * glow)})`, opacity: Math.min(1, p) * (isMe ? 1 : 1 - 0.65 * focus),
+        ...text(u, 68, 800, glow ? "#FFFFFF" : COLORS.inkSoft), zIndex: isMe ? 2 : 1 }}>{ch}</div>
+    );
+  };
+  return (
+    <Center>
+      <Sfx at={[at, countAt, meAt].filter((x, i) => i === 0 || [scene.countCue, scene.meCue][i - 1])} />
+      {scene.kicker && <Kicker>{scene.kicker}</Kicker>}
+      <div style={{ display: "flex", gap: 30 * u, alignItems: "flex-end" }}>
+        {cols.map(([label, k], ci) => (
+          <div key={ci} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 * u }}>
+            {cell(scene.chars?.[k] ?? (k === 4 ? me.char || "?" : "?"), k === 4, ci * 7)}
+            {cell(scene.chars?.[k + 1] ?? "?", false, ci * 7 + 4)}
+            <div style={{ ...text(u, 26, 700, COLORS.inkSoft), marginTop: 2 * u, opacity: Math.min(1, useAppear(at + ci * 7 + 8)) * (1 - 0.5 * focus) }}>{label}</div>
+          </div>
+        ))}
+      </div>
+      {scene.countCue && (
+        <Rise at={countAt} style={{ marginTop: 26 * u, opacity: 1 - focus }}>
+          <Rich text={scene.countText || "기둥 4개 × 2글자 = **여덟 글자(팔자)**"} at={countAt} style={text(u, 42, 700)} />
+        </Rise>
+      )}
+      {scene.meCue && (
+        <Rise at={meAt + 8} style={{ marginTop: scene.countCue ? -52 * u : 26 * u, textAlign: "center" }}>
+          <Rich text={scene.meText || `이 한 글자가 **'나'**: ${me.char || ""} ${me.name || ""}${me.desc ? ` · ${me.desc}` : ""}`} at={meAt + 8} style={text(u, 44, 800)} />
+        </Rise>
+      )}
+    </Center>
+  );
+}
+
+// 13) 오행: 다섯 기운(나무·불·흙·쇠·물)이 둥글게 → 화살표로 "키워준다" 흐름 → focus 하나만 남김
+//  cue: 다섯 원 등장 · cycleCue: 화살표가 그려짐 · focus: "water" 등, focusCue: 나머지가 흐려지고 focus 가 커짐
+function Elements({ scene }) {
+  const u = useSajuUnit();
+  const frame = useCurrentFrame();
+  const [at, cycleAt, focusAt] = revealFrames(scene, [{ cue: scene.cue }, { cue: scene.cycleCue }, { cue: scene.focusCue }]);
+  const keys = ["wood", "fire", "earth", "metal", "water"];
+  const R = 130 * u;
+  const pos = keys.map((_, i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+    return [Math.cos(a) * R, Math.sin(a) * R];
+  });
+  const draw = scene.cycleCue ? interpolate(frame, [cycleAt, cycleAt + 40], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;
+  const focus = scene.focusCue ? interpolate(frame, [focusAt, focusAt + 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;
+  const W = 460 * u, H = 360 * u, cx = W / 2, cy = H / 2 + 12 * u, r = 54 * u;
+  return (
+    <Center>
+      <Sfx at={[at, cycleAt, focusAt].filter((x, i) => i === 0 || [scene.cycleCue, scene.focusCue][i - 1])} />
+      {scene.kicker && <Kicker>{scene.kicker}</Kicker>}
+      <div style={{ position: "relative", width: W, height: H, flexShrink: 0 }}>
+        <svg width={W} height={H} style={{ position: "absolute", inset: 0, opacity: 1 - 0.7 * focus }}>
+          <defs>
+            <marker id="el-arrow" markerWidth="10" markerHeight="10" refX="6" refY="5" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill={COLORS.inkSoft} />
+            </marker>
+          </defs>
+          {pos.map(([x1, y1], i) => {
+            const [x2, y2] = pos[(i + 1) % 5];
+            const len = Math.hypot(x2 - x1, y2 - y1);
+            const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+            const sx = cx + x1 + ux * (r + 12 * u), sy = cy + y1 + uy * (r + 12 * u);
+            const ex = cx + x2 - ux * (r + 22 * u), ey = cy + y2 - uy * (r + 22 * u);
+            const seg = Math.min(1, Math.max(0, draw * 5 - i));
+            if (seg <= 0) return null;
+            return <line key={i} x1={sx} y1={sy} x2={sx + (ex - sx) * seg} y2={sy + (ey - sy) * seg}
+              stroke={COLORS.inkSoft} strokeWidth={5 * u} strokeLinecap="round" markerEnd={seg > 0.95 ? "url(#el-arrow)" : undefined} />;
+          })}
+        </svg>
+        {keys.map((k, i) => {
+          const e = ELEMENTS[k];
+          const p = useAppear(at + i * 6);
+          const isF = k === scene.focus;
+          const grow = isF ? 1 + 0.35 * focus : 1;
+          return (
+            <div key={k} style={{ position: "absolute", left: cx + pos[i][0] - r, top: cy + pos[i][1] - r, width: 2 * r, height: 2 * r, borderRadius: "50%",
+              background: e.color, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              transform: `scale(${Math.min(1.1, p) * grow})`, opacity: Math.min(1, p) * (isF || !scene.focus ? 1 : 1 - 0.75 * focus),
+              boxShadow: `0 ${8 * u}px ${20 * u}px rgba(60,50,30,0.15)`, zIndex: isF ? 2 : 1 }}>
+              <div style={{ fontSize: 40 * u, lineHeight: 1 }}>{e.emoji}</div>
+              <div style={{ ...text(u, 26, 800, "#FFFFFF"), marginTop: 2 * u }}>{e.name}</div>
+            </div>
+          );
+        })}
+        {scene.cycleCue && (
+          <div style={{ position: "absolute", left: 0, right: 0, top: cy - 20 * u, textAlign: "center", opacity: draw * (1 - focus), ...text(u, 26, 700, COLORS.inkSoft) }}>
+            {scene.cycleText || "서로 키워준다"}
+          </div>
+        )}
+      </div>
+      {scene.focusText && (
+        <Rise at={focusAt + 8} style={{ marginTop: 10 * u, textAlign: "center" }}>
+          <Rich text={scene.focusText} at={focusAt + 8} style={text(u, 44, 800)} />
+        </Rise>
+      )}
+    </Center>
+  );
+}
+
 export const SCENES = {
   hook: Hook,
   statement: Statement,
@@ -418,5 +626,9 @@ export const SCENES = {
   checklist: Checklist,
   bars: Bars,
   story: Story,
+  photo: Photo,
   outro: Outro,
+  pillars: Pillars,
+  elements: Elements,
+  dialogue: Dialogue,
 };
