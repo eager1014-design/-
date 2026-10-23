@@ -142,6 +142,7 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
 | `outro` | 마무리 댓글 질문 | question, cue, channelCue, channel(아래 작은 글씨) |
 | `pillars` | 사주 = 네 기둥 × 두 글자 = 팔자 (초등학생 설명) | cue(기둥 등장), countCue("4×2=8글자"), meCue(일간 칸만 빛남), me{char, name, desc, element}, meText, countText, chars(8글자 다 보일 때만) |
 | `elements` | 오행 다섯 원 + "서로 키워준다" 화살표 | cue(원 등장), cycleCue(화살표), focus("water" 등), focusCue, focusText, cycleText |
+| `screen` | 실제 화면 보여주기 (자동화 사례 홍보) — 왼쪽 글씨, 오른쪽 브라우저 창/휴대폰 | image 또는 video, device(`browser`·`phone`), url(주소창 글씨), kicker, title, cue, before/beforeCue, after/afterCue, scroll(0~1), example(true면 '예시 화면' 표시 — 개인 금액 대신 예시 숫자 화면일 때 꼭) |
 
 편 전체 칸 (빠른 쇼츠 느낌, 2026-10-19 참고 영상 분석에서):
 - `"style": "punchy"` — 글씨·카드가 통 튀어나오는 등장, 굵은 자막, 자막 속 키워드 노란색 (기본은 `"calm"`)
@@ -157,6 +158,8 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
   - 그림 만들기: 챗GPT(코덱스, 플러스 필요)로 **표정 시트 한 장**(격자, 같은 얼굴) → `python3 scripts/cut_sheet.py <시트> <열> <행> <이름들> public/characters/main/faces` (머리 위치·크기 맞춤 + 선만 남긴 투명 그림) → `python3 scripts/face_rig.py public/characters/main` (눈·입 위치표 rig.json). 표정을 한 장씩 따로 그리면 얼굴이 매번 달라짐
 - `"style": "punchy"` 장면 전환: 오른쪽 밀기 → 아래서 올라오기 → 닦아내기 → 왼쪽 밀기를 돌아가며 (calm 은 부드러운 겹침)
 - `"frame": {"title": ["줄1", "줄2"], "brand": "예민한자립가"}` — **제목 띠 쇼츠** (2026-10-22, 채널 최고 쇼츠 '뇌를 찍어봤더니' 틀): 검은 바탕 + 위 고정 제목 2줄(둘째 줄 빨간 띠, 줄당 14자 이내) + 가운데 16:9 칸에 장면을 가로 배치로 + 칸 아래쪽 자막 + 맨 아래 채널명. `"format": "short"` 전용. 가로용 그림(16:9)을 자르지 않고 그대로 씀. 위치·색·칸 안 확대(boost)는 `theme.js` 의 `FRAME`
+
+편 전체 `"palette"`: {bg, bgDeep, card, ink, inkSoft, sage, sageDeep, amber, terracotta} — 채널이 아닌 영상(예: 자동화 사례 홍보 = 포트폴리오 남색·금색)의 색. outro 의 `kicker` 로 '💬 댓글로 알려주세요' 문구를 바꿀 수 있음.
 
 공통 칸: `narration`(필수), `direction`(목소리 말투 지시, 영어), `captions`(false 로 자막 끄기), `musicMute`(true 면 이 장면에서 배경음악 끔).
 `chapters`(상단 진행 표시 이름, 짧게), `music`(public 안 음악 파일 경로), `voice`({name, speed, style}).
@@ -187,6 +190,7 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
 - 장면 종류 추가 시: `src/scenes.jsx` 의 SCENES 와 `scripts/scene-types.mjs` 둘 다 고칠 것
 
 ## 변경 기록
+- 2026-10-24: 자동화 사례 홍보 영상(promo-automation) — `screen` 장면, 편별 `palette`, outro `kicker`. 실제 화면은 Playwright 로 찍되 개인 정보(지출 금액·손님)는 예시 숫자 + '예시 화면' 표시. 다른 사람 썸네일이 보이는 화면(보관함)은 쓰지 않음
 - 2026-10-23: 매일 쇼츠 자동(daily_short.mjs) + 떡상 소싱 앱(tools/viral: 일기장·오늘의 영상·연출 기법)
 - 2026-10-22: 말하는 캐릭터(presenter·face·gesture), 표정/손짓 시트 도구(cut_sheet·face_rig), punchy 장면 전환, gpt_image --ref 버그 수정
 - 2026-10-22: 제목 띠 쇼츠(`frame`), 사주 설명 장면(`pillars`·`elements`) 추가. 채널 방향 = HSP × 사주 시리즈 (1편 ep02 계수)

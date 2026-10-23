@@ -483,7 +483,7 @@ function Outro({ scene }) {
       <Sfx at={[qAt, chAt]} />
       <Rise at={qAt}>
         <Card style={{ textAlign: "center", borderTop: `${12 * u}px solid ${COLORS.amber}` }}>
-          <div style={{ ...text(u, 30, 800, COLORS.sageDeep), marginBottom: 16 * u }}>💬 댓글로 알려주세요</div>
+          <div style={{ ...text(u, 30, 800, COLORS.sageDeep), marginBottom: 16 * u }}>{scene.kicker || "💬 댓글로 알려주세요"}</div>
           <Rich text={scene.question} at={qAt} style={text(u, 62, 800)} />
         </Card>
       </Rise>
