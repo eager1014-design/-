@@ -28,7 +28,8 @@ CARD = {
     "contacts": [("T", "010-4763-7063"), ("K", "카카오톡 eager1014"), ("E", "eager1014@gmail.com")],
     "back_title": ["사장님 없으면", "가게가 안 돌아가죠?"],
     # 사장님 입에서 나오는 말 + 실제로 만들어 드릴 수 있는 것만 (2026-10-23 사장님: "키워드가 안 와닿는다")
-    "back_items": ["마감 후 또 켜는 엑셀·장부", "하나에 10분 걸리는 리뷰 답글", "신상·메뉴 사진마다 쓰는 설명 글", "알바에게 같은 걸 또 설명하기", "있는 줄도 몰랐던 지원금"],
+    # 2026-10-24: 엑셀·장부 → 카톡 주문·예약 (매출 장부는 캐시노트 같은 무료 앱이 이미 해 줌 — 이미 있는 프로그램이 못 하는 틈만)
+    "back_items": ["카톡으로 온 주문·예약 옮겨 적기", "하나에 10분 걸리는 리뷰 답글", "신상·메뉴 사진마다 쓰는 설명 글", "알바에게 같은 걸 또 설명하기", "있는 줄도 몰랐던 지원금"],
     "qr_url": "https://claude.ai/artifact/HfrXKBoNL643BggQ1Tpy8n",
     "qr_label": "내 가게 귀찮은 일 골라보기",
     "form_url": "https://script.google.com/macros/s/AKfycbxVgmsZq-YnQhNeOqFIgum5Pz9MyR7ZLxbgQ0hesh_VD8DcrLgYLuL-QdB20gzsBvNp/exec",

@@ -215,7 +215,11 @@ function BandEpisode({ items, style, frame = {}, captions, music, musicStart, mu
   );
 }
 
-export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm", music, musicStart, musicVolume, captions = true, frame, presenter, layout: screen, castLook }) {
+// 편마다 색 바꾸기 ("palette": {bg, card, ink, sage, …}) — 예민한자립가가 아닌 영상(예: 자동화 사례 홍보, 남색·금색)용
+const DEFAULT_COLORS = { ...COLORS };
+
+export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm", music, musicStart, musicVolume, captions = true, frame, presenter, layout: screen, castLook, palette }) {
+  Object.assign(COLORS, DEFAULT_COLORS, palette || {});
   const items = layout(applyPace(scenes, pace), !!steps?.length);
   if (screen === "band" || screen === "one") return <BandEpisode {...{ items, style, frame, captions, music, musicStart, musicVolume, castLook }} paper={screen === "one"} />;
   const bar = steps?.length ? steps : chapters;

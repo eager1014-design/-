@@ -615,6 +615,64 @@ function Elements({ scene }) {
   );
 }
 
+// 실제 화면 보여주기 (자동화 사례 영상, 2026-10-24): 왼쪽 글씨(사례 이름·제목·전에는→지금은) + 오른쪽 브라우저 창/휴대폰 안의 실제 화면
+// image | video, device("browser"|"phone"), url(주소창 글씨), kicker, title, before, after, cue, beforeCue, afterCue,
+// scroll(0~1, 긴 화면을 천천히 내려 보임), example(true 면 "예시 화면" 표시 — 개인 정보 대신 예시 숫자를 넣은 화면)
+function Screen({ scene, frames }) {
+  const u = useUnit();
+  const frame = useCurrentFrame();
+  const [tAt, bAt, aAt] = revealFrames(scene, [{ cue: scene.cue }, { cue: scene.beforeCue }, { cue: scene.afterCue }]);
+  const phone = scene.device === "phone";
+  const t = Math.min(1, frame / Math.max(1, frames));
+  const ease = t * t * (3 - 2 * t);
+  const zoom = 1 + 0.04 * ease;
+  const shift = (scene.scroll || 0) * ease * 100;
+  const media = scene.image ? (
+    <Img src={staticFile(scene.image)} style={{ width: "100%", display: "block", transform: `translateY(-${shift}%)` }} />
+  ) : (
+    <OffthreadVideo src={staticFile(scene.video)} muted style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+  );
+  const shadow = `0 ${30 * u}px ${80 * u}px rgba(20,35,58,0.28)`;
+  const device = phone ? (
+    <div style={{ width: 430 * u, height: 860 * u, borderRadius: 64 * u, background: "#111", padding: 16 * u, boxShadow: shadow }}>
+      <div style={{ width: "100%", height: "100%", borderRadius: 50 * u, overflow: "hidden", background: "#fff" }}>{media}</div>
+    </div>
+  ) : (
+    <div style={{ width: 1040 * u, borderRadius: 18 * u, overflow: "hidden", background: COLORS.card, boxShadow: shadow, border: `1px solid ${COLORS.bgDeep}` }}>
+      <div style={{ height: 52 * u, display: "flex", alignItems: "center", gap: 10 * u, padding: `0 ${20 * u}px`, background: COLORS.bgDeep }}>
+        {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <div key={c} style={{ width: 16 * u, height: 16 * u, borderRadius: 99, background: c }} />)}
+        {scene.url && <div style={{ marginLeft: 20 * u, flex: 1, height: 32 * u, borderRadius: 8 * u, background: COLORS.card, ...text(u, 20, 500, COLORS.inkSoft), lineHeight: `${32 * u}px`, paddingLeft: 16 * u }}>{scene.url}</div>}
+      </div>
+      <div style={{ height: 650 * u, overflow: "hidden" }}>{media}</div>
+    </div>
+  );
+  return (
+    <AbsoluteFill style={{ flexDirection: "row", alignItems: "center", padding: `0 ${110 * u}px 0 ${130 * u}px`, gap: 70 * u }}>
+      <Sfx at={[tAt]} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {scene.kicker && <Rise><div style={{ ...text(u, 28, 800, COLORS.sage), letterSpacing: "0.06em", marginBottom: 18 * u }}>{scene.kicker}</div></Rise>}
+        <Rise at={tAt}><div style={{ ...text(u, 64, 800), lineHeight: 1.22 }}><Rich text={scene.title} at={tAt} /></div></Rise>
+        {scene.before && (
+          <Rise at={bAt} style={{ marginTop: 46 * u }}>
+            <div style={text(u, 24, 700, COLORS.terracotta)}>전에는</div>
+            <div style={{ ...text(u, 34, 500, COLORS.inkSoft), marginTop: 6 * u }}>{scene.before}</div>
+          </Rise>
+        )}
+        {scene.after && (
+          <Rise at={aAt} style={{ marginTop: 30 * u }}>
+            <div style={text(u, 24, 700, COLORS.sage)}>지금은</div>
+            <div style={{ ...text(u, 38, 800), marginTop: 6 * u }}><Rich text={scene.after} at={aAt} /></div>
+          </Rise>
+        )}
+      </div>
+      <Rise at={0} style={{ transform: `scale(${zoom})`, position: "relative" }}>
+        {device}
+        {scene.example && <div style={{ position: "absolute", top: (phone ? 40 : 70) * u, right: (phone ? -20 : 20) * u, ...text(u, 20, 700, "#fff"), background: "rgba(20,35,58,0.75)", padding: `${6 * u}px ${14 * u}px`, borderRadius: 8 * u }}>예시 화면</div>}
+      </Rise>
+    </AbsoluteFill>
+  );
+}
+
 export const SCENES = {
   hook: Hook,
   statement: Statement,
@@ -631,4 +689,5 @@ export const SCENES = {
   pillars: Pillars,
   elements: Elements,
   dialogue: Dialogue,
+  screen: Screen,
 };
