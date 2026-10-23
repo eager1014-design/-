@@ -53,12 +53,17 @@ const prompt = (note) => `너는 냉정한 사업 검토자야. 아래 콘텐츠
 - experiment 는 딱 1개. '바로 가능'이나 '이미 하는 중' 중 사장님에게 가장 돈에 가까운 것으로. 2시간 안에 끝나고, 결과가 숫자로 나와야 한다(예: 3곳 중 2곳이 관심). 만들기보다 진짜 손님 반응을 먼저 보는 실험을 우선.
 ${OWNER}${note ? `\n\n[사장님 메모 / 붙여넣은 글]\n${note.slice(0, 8000)}` : ""}`;
 
-// 제미나이가 붐비면(503) 잠시 쉬고 다시 (2026-10-24, 몇 분씩 붐볐음)
+// 제미나이가 붐비면(503) 잠시 쉬고 다시, 한도(429)면 다른 모델로 (무료 한도는 모델마다 따로)
+// 2026-10-24: 몇 분씩 붐볐고, 긴 영상 분석 뒤 gemini-3.8-flash 하루 한도가 찼음
+const FALLBACK = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash";
 async function retry(fn, tries = 4) {
+  let model = GEMINI_MODEL;
   for (let i = 1; ; i++) {
-    try { return await fn(); } catch (e) {
-      if (i >= tries || !/503|UNAVAILABLE|high demand|overloaded/i.test(e.message)) throw e;
-      await new Promise((r) => setTimeout(r, 30_000));
+    try { return await fn(model); } catch (e) {
+      const busy = /503|UNAVAILABLE|high demand|overloaded/i.test(e.message), limit = /429|RESOURCE_EXHAUSTED|quota/i.test(e.message);
+      if (i >= tries || !(busy || limit) || (limit && model === FALLBACK)) throw e;
+      if (limit) model = FALLBACK;
+      else await new Promise((r) => setTimeout(r, 30_000));
     }
   }
 }
@@ -74,10 +79,10 @@ export async function verifyIdea({ url = "", note = "" }) {
   if (running) throw new Error(`진행 중인 실험이 있어요: "${running.result.experiment.what}" — 결과(효과 있음 / 접음)를 먼저 적어주세요.`);
   const youtube = /youtu\.?be/.test(url);
   if (url && !youtube && !note) throw new Error("유튜브가 아닌 링크는 내용을 직접 못 봅니다. 글이나 자막을 아래 칸에 붙여넣어주세요.");
-  const r = await retry(async () => {
-    if (youtube) return watchVideo(url, prompt(note), { schema: SCHEMA });
+  const r = await retry(async (model) => {
+    if (youtube) return watchVideo(url, prompt(note), { schema: SCHEMA, model });
     const res = await gemini().models.generateContent({
-      model: GEMINI_MODEL,
+      model,
       contents: [{ role: "user", parts: [{ text: prompt(note) + (url ? `\n\n[링크] ${url}` : "") }] }],
       config: { responseMimeType: "application/json", responseSchema: SCHEMA },
     });
