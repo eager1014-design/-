@@ -647,7 +647,8 @@ function Screen({ scene, frames }) {
     </div>
   );
   return (
-    <AbsoluteFill style={{ flexDirection: "row", alignItems: "center", padding: `0 ${110 * u}px 0 ${130 * u}px`, gap: 70 * u }}>
+    // 진행자 캐릭터가 구석(cast "corner")에 있으면 오른쪽을 비워 화면과 겹치지 않게
+    <AbsoluteFill style={{ flexDirection: "row", alignItems: "center", padding: `0 ${(scene.cast === "corner" ? 330 : 110) * u}px 0 ${130 * u}px`, gap: 60 * u }}>
       <Sfx at={[tAt]} />
       <div style={{ flex: 1, minWidth: 0 }}>
         {scene.kicker && <Rise><div style={{ ...text(u, 28, 800, COLORS.sage), letterSpacing: "0.06em", marginBottom: 18 * u }}>{scene.kicker}</div></Rise>}
