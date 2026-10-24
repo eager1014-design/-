@@ -11,7 +11,7 @@ import { FONT, FRAME, SIZES, SKINS, TRANSITION_FRAMES } from "./theme.js";
 import { applyPace, cueFrame, sceneFrames, voiceSeconds } from "./timing.js";
 import { Background, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, Stickers, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
 import { SCENES } from "./scenes.jsx";
-import { Cast, castTimeline } from "./presenter.jsx";
+import { Cast, castTimeline, setCharacter } from "./presenter.jsx";
 import { BAND, BandCast, Comments } from "./band.jsx";
 import { COLORS } from "./theme.js";
 
@@ -224,7 +224,8 @@ function useSkinFont(skin) {
   if (font && !loadedSkins.has(skin)) { loadedSkins.add(skin); loadFont({ family: "SkinFont", url: staticFile(font), weight: "100 900" }); }
 }
 
-export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm", music, musicStart, musicVolume, captions = true, frame, presenter, layout: screen, castLook, palette, skin }) {
+export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm", music, musicStart, musicVolume, captions = true, frame, presenter, layout: screen, castLook, palette, skin, character }) {
+  setCharacter(character);
   Object.assign(COLORS, DEFAULT_COLORS, SKINS[skin]?.colors || {}, palette || {});
   useSkinFont(skin);
   const items = layout(applyPace(scenes, pace), !!steps?.length);

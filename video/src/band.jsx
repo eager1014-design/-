@@ -8,7 +8,7 @@ import React from "react";
 import { Audio, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { COLORS, FONT } from "./theme.js";
 import { cueFrame } from "./timing.js";
-import { Character, castTimeline, useLoudnessAudio, useLoudnessFake } from "./presenter.jsx";
+import { Character, bandScale, castTimeline, useLoudnessAudio, useLoudnessFake } from "./presenter.jsx";
 
 export const BAND = {
   titleTop: 205,
@@ -66,7 +66,7 @@ function BandCharacter({ scene, start, loud, look }) {
   }
   return (
     <div style={{ position: "absolute", left: cx * 1080, top: BAND.castTop, width: 0, height: 0 }}>
-      <div style={{ position: "absolute", transform: `translateX(-50%) scale(${BAND.castScale}) ${flip ? "scaleX(-1)" : ""}`, transformOrigin: "50% 0%" }}>
+      <div style={{ position: "absolute", transform: `translateX(-50%) scale(${BAND.castScale * bandScale()}) ${flip ? "scaleX(-1)" : ""}`, transformOrigin: "50% 0%" }}>
         <div style={{ position: "relative", width: 900, height: 1100 }}>
           <Character scene={scene} loud={loud} anchored fill={look === "dark"} />
         </div>

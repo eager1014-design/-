@@ -14,9 +14,20 @@ import { AbsoluteFill, Img, spring, staticFile, useCurrentFrame, useVideoConfig 
 import { useAudioData } from "@remotion/media-utils";
 import { COLORS } from "./theme.js";
 import { cueFrame, voiceSeconds } from "./timing.js";
-import rig from "../public/characters/main/rig.json";
+import rigMain from "../public/characters/main/rig.json";
+import rigRound from "../public/characters/round/rig.json";
 
-const BASE = "characters/main";
+// 캐릭터 고르기: 편의 "character" 칸 (기본 round = 2026-10-24 새 동그란 안경 캐릭터, main = 예전 곱슬머리 선화)
+// round 는 scripts/align_by_eyes.py 로 눈동자 기준 정렬 — 눈동자가 커서 깜빡임 덮개도 크다
+const CHARS = {
+  main: { base: "characters/main", rig: rigMain, lid: [12, 19] },
+  round: { base: "characters/round", rig: rigRound, lid: [19, 26], bandScale: 1.35 }, // 전신이라 쇼츠 아래 자리에서 작아 보여 키움
+};
+let CH = CHARS.round;
+export function setCharacter(name) {
+  CH = CHARS[name] || CHARS.round;
+}
+export const bandScale = () => CH.bandScale || 1;
 export const DARK_BG = "#0B0B0C"; // 대화 장면(밤) 바탕
 const OPEN_MOUTH = new Set(["faces/surprised", "faces/laugh"]); // 이미 입이 열린 그림은 입을 덧그리지 않음
 const CLOSED_EYES = new Set(["faces/kind"]); // 눈 감은 그림은 깜빡임 없음
@@ -70,7 +81,7 @@ export function Character({ scene, loud, anchored = false, dark = false, fill = 
   const f = timeline(scene, scene.face, frame, "smile");
   const key = g.is && g.is !== "none" ? `poses/${g.is}` : `faces/${f.is}`;
   const since = Math.max(g.since, f.since);
-  const r = rig[key] || rig["faces/smile"];
+  const r = CH.rig[key] || CH.rig["faces/smile"];
 
   const pop = spring({ frame: frame - since, fps, config: { damping: 9, mass: 0.5, stiffness: 180 } });
   const breath = Math.sin(frame / 22) * 4;
@@ -95,7 +106,7 @@ export function Character({ scene, loud, anchored = false, dark = false, fill = 
         transformOrigin: "50% 95%",
       }}
     >
-      <Img src={staticFile(`${BASE}/${key}${fill ? ".fill" : ""}.png`)} style={{ width: 900, height: 1100, display: "block", filter: dark ? "invert(1)" : undefined }} />
+      <Img src={staticFile(`${CH.base}/${key}${fill ? ".fill" : ""}.png`)} style={{ width: 900, height: 1100, display: "block", filter: dark ? "invert(1)" : undefined }} />
       <svg width={900} height={1100} style={{ position: "absolute", inset: 0 }}>
         {mouthOpen && (
           <>
@@ -107,8 +118,8 @@ export function Character({ scene, loud, anchored = false, dark = false, fill = 
         {blink &&
           r.eyes.map(([ex, ey], i) => (
             <g key={i}>
-              <ellipse cx={ex} cy={ey} rx={12} ry={19} fill={BG} />
-              <path d={`M ${ex - 11} ${ey + 1} Q ${ex} ${ey + 7} ${ex + 11} ${ey + 1}`} stroke={INK} strokeWidth={6} fill="none" strokeLinecap="round" />
+              <ellipse cx={ex} cy={ey} rx={CH.lid[0]} ry={CH.lid[1]} fill={BG} />
+              <path d={`M ${ex - CH.lid[0] + 1} ${ey + 1} Q ${ex} ${ey + 8} ${ex + CH.lid[0] - 1} ${ey + 1}`} stroke={INK} strokeWidth={6} fill="none" strokeLinecap="round" />
             </g>
           ))}
       </svg>

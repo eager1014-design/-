@@ -25,9 +25,14 @@ def centroid(px, box):
 
 
 root = sys.argv[1] if len(sys.argv) > 1 else "public/characters/main"
+# 캐릭터마다 얼굴 생김새가 달라서 창 위치가 다르다 → <폴더>/rig_windows.json 이 있으면 그걸 쓴다
+# {"eyeL": [x0, x1, y0, y1], "eyeR": [...], "mouth": [...]} (2026-10-24 새 동그란 캐릭터 characters/round)
+wfile = os.path.join(root, "rig_windows.json")
+if os.path.exists(wfile):
+    WIN = {k: tuple(v) for k, v in json.load(open(wfile)).items()}
 rig = {}
 for f in sorted(glob.glob(os.path.join(root, "faces", "*.png")) + glob.glob(os.path.join(root, "poses", "*.png"))):
-    if f.endswith("sheet_check.png"):
+    if f.endswith("sheet_check.png") or f.endswith(".fill.png"):
         continue
     im = Image.open(f)
     # 선 = 진한 곳. 투명 그림(cut_sheet 결과)은 불투명도가, 흰 바탕 그림은 어두운 정도가 '진함'
