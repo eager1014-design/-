@@ -6,7 +6,7 @@
       (17 로 하면 안경테·귀가 만나는 곳까지 남아 위치가 틀어졌음)
       2) 눈동자 가운데를 (450, EYE_Y), 사이 거리를 EYE_D 로 맞춤 → 3) 눈 높이에서 귀~귀 폭을 가운데값으로 한 번 더 맞춤
       4) 눈 감은 그림처럼 눈동자가 없으면 다른 그림들의 평균 위치를 씀
-      5) rig.json: 눈 = 눈동자, 입 = 눈 가운데 아래 창(+85~+160px)의 선 무게중심
+      5) rig.json: 눈 = 눈동자, 입 = 눈 가운데 아래 창(+70~+128px)의 선 무게중심 (더 아래는 턱선이라 섞이면 입이 두 개로 보였음)
 
 사용법 (cut_sheet.py 로 자른 다음):
   python3 scripts/align_by_eyes.py public/characters/round
@@ -114,7 +114,7 @@ def main(root):
         e = pupil_blobs(a, (CX - 170, CX + 170, EYE_Y - 60, EYE_Y + 60))  # 맞춘 뒤에는 눈 높이 근처만 (턱 괸 손·안경테 오인 방지)
         eyes = [[round(e[0][0]), round(e[0][1])], [round(e[1][0]), round(e[1][1])]] if e else [[CX - EYE_D // 2, EYE_Y], [CX + EYE_D // 2, EYE_Y]]
         mx, my = (eyes[0][0] + eyes[1][0]) // 2, (eyes[0][1] + eyes[1][1]) // 2
-        pts = [(x, y) for y in range(my + 85, my + 160) for x in range(mx - 60, mx + 60) if a.getpixel((x, y)) > 145]
+        pts = [(x, y) for y in range(my + 70, my + 128) for x in range(mx - 55, mx + 55) if a.getpixel((x, y)) > 145]
         mouth = [round(sum(p[0] for p in pts) / len(pts)), round(sum(p[1] for p in pts) / len(pts))] if pts else [mx, my + 110]
         key = os.path.relpath(f, root)[:-4]
         rig[key] = rig[key + ".fill"] = {"eyes": eyes, "mouth": mouth}

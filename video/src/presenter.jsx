@@ -20,8 +20,8 @@ import rigRound from "../public/characters/round/rig.json";
 // 캐릭터 고르기: 편의 "character" 칸 (기본 round = 2026-10-24 새 동그란 안경 캐릭터, main = 예전 곱슬머리 선화)
 // round 는 scripts/align_by_eyes.py 로 눈동자 기준 정렬 — 눈동자가 커서 깜빡임 덮개도 크다
 const CHARS = {
-  main: { base: "characters/main", rig: rigMain, lid: [12, 19] },
-  round: { base: "characters/round", rig: rigRound, lid: [19, 26], bandScale: 1.35 }, // 전신이라 쇼츠 아래 자리에서 작아 보여 키움
+  main: { base: "characters/main", rig: rigMain, lid: [12, 19], mouthCover: [40, 16] },
+  round: { base: "characters/round", rig: rigRound, lid: [19, 26], bandScale: 1.35, mouthCover: [62, 30] }, // 입 그림이 커서 말할 때 덮개도 크게 (작으면 입이 두 개로 보임) // 전신이라 쇼츠 아래 자리에서 작아 보여 키움
 };
 let CH = CHARS.round;
 export function setCharacter(name) {
@@ -111,7 +111,7 @@ export function Character({ scene, loud, anchored = false, dark = false, fill = 
       <svg width={900} height={1100} style={{ position: "absolute", inset: 0 }}>
         {mouthOpen && (
           <>
-            <ellipse cx={mx} cy={my} rx={40} ry={16} fill={BG} />
+            <ellipse cx={mx} cy={my} rx={CH.mouthCover[0]} ry={CH.mouthCover[1]} fill={BG} />
             <ellipse cx={mx} cy={my + 2} rx={rx} ry={ry} fill={dark ? DARK_BG : COLORS.ink} stroke={dark ? INK : "none"} strokeWidth={5} />
             {ry > 8 && <ellipse cx={mx} cy={my + 2 + ry * 0.45} rx={rx * 0.55} ry={ry * 0.35} fill="#D9776A" />}
           </>
