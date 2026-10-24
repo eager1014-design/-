@@ -13,6 +13,7 @@ import { HERE, DATA_DIR, CODEX, ROOT, GEMINI_MODEL, friendlyError, load, save, u
 
 import { readNeeds, updateNeed, NEED_STATUSES } from "../needs_form.mjs";
 import { listIdeas, verifyIdea, setIdea, deleteIdea } from "./ideas.mjs";
+import { listProjects, getProject, createProject, postMessage, deleteProject } from "./longform.mjs";
 
 const PORT = Number(process.env.VIRAL_PORT || 4600);
 
@@ -108,6 +109,15 @@ const routes = {
   "POST /api/ideas/verify": async (b) => verifyIdea(b),
   "POST /api/ideas/update": async (b) => setIdea(b.id, b),
   "POST /api/ideas/delete": async (b) => { deleteIdea(b.id); return { ok: true }; },
+  // 롱폼 (대화하며 기획 → 썸네일 → 대본·초안 → 사장님 녹음 → 완성 → 업로드 문구). 오래 걸리는 일은 longform.mjs 가 따로 떠서 함
+  "GET /api/longform": async () => listProjects(),
+  "POST /api/longform/new": async (b) => {
+    const p = createProject(b);
+    return (b.brief || b.links || b.files?.length) ? postMessage(p.id, { text: b.brief, links: b.links, files: b.files, step: "chat" }) : p;
+  },
+  "POST /api/longform/get": async (b) => getProject(b.id),
+  "POST /api/longform/send": async (b) => postMessage(b.id, b),
+  "POST /api/longform/delete": async (b) => { deleteProject(b.id); return { ok: true }; },
   // 매일 쇼츠
   "GET /api/daily": async () => dailyList(),
   "POST /api/daily/run": async (b) => startDaily("run", b.date),

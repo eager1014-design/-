@@ -218,7 +218,7 @@ export async function analyze(id) {
 // ---------- 사장님이 올린 파일 (스크린샷·화면 녹화) ----------
 export const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 const IMAGE_TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".heic": "image/heic", ".gif": "image/gif" };
-const isVideo = (f) => /\.(mp4|mov|webm|m4v)$/i.test(f);
+export const isVideo = (f) => /\.(mp4|mov|webm|m4v)$/i.test(f);
 const isImage = (f) => !!IMAGE_TYPES[path.extname(f).toLowerCase()];
 
 // 브라우저에서 받은 파일 [{ name, data(base64) }] → uploads 폴더에 저장, 프로젝트 기준 경로 목록을 돌려준다
@@ -227,13 +227,13 @@ export function saveUploads(files = []) {
   return files.map((f, i) => {
     const ext = path.extname(f.name || "").toLowerCase();
     // ext 는 ".png" 처럼 점으로 시작 → extname(".png") 이 "" 라 isImage 가 늘 거짓이던 버그 (2026-10-24, 사진이 하나도 안 올라갔음)
-    if (!IMAGE_TYPES[ext] && !isVideo(ext)) throw new Error(`사진(png·jpg)이나 영상(mp4·mov)만 올릴 수 있어요: ${f.name}`);
+    if (!IMAGE_TYPES[ext] && !isVideo(ext) && !/^\.(mp3|m4a|wav)$/.test(ext)) throw new Error(`사진(png·jpg)·영상(mp4·mov)·녹음(mp3)만 올릴 수 있어요: ${f.name}`);
     const file = path.join(UPLOAD_DIR, `${Date.now()}-${i}${ext}`);
     fs.writeFileSync(file, Buffer.from(f.data, "base64"));
     return path.relative(ROOT, file);
   });
 }
-function imageParts(files = []) {
+export function imageParts(files = []) {
   return files.filter(isImage).slice(0, 8).map((f) => ({
     inlineData: { mimeType: IMAGE_TYPES[path.extname(f).toLowerCase()], data: fs.readFileSync(path.join(ROOT, f)).toString("base64") },
   }));
