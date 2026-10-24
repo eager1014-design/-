@@ -6,7 +6,19 @@ import { CHARS_PER_SECOND, FPS, SCENE_PAD_FRAMES, TRANSITION_FRAMES } from "./th
 //  - speed: 목소리를 그만큼 빠르게 (음 높이는 그대로)
 // 장면에 trimStart·voiceEnd·paceRate 를 붙여 돌려준다. 영상 길이 계산(Root)과 화면(Episode)이 같이 쓴다.
 export function applyPace(scenes, pace) {
-  if (!pace) return scenes;
+  return applyPauses(pace ? paced(scenes, pace) : scenes);
+}
+
+// 가장 중요한 문장 앞 무음 (사운드 원칙, 2026-10-24): 장면의 "pauseBefore": 0.7(초) → 앞 장면 끝에 그만큼 쉼을 더 둔다
+function applyPauses(scenes) {
+  return scenes.map((s, i) => {
+    const next = scenes[i + 1];
+    if (!next?.pauseBefore) return s;
+    return { ...s, padFrames: (s.padFrames ?? SCENE_PAD_FRAMES) + Math.round(Math.min(1.2, next.pauseBefore) * FPS) };
+  });
+}
+
+function paced(scenes, pace) {
   return scenes.map((s) => {
     if (!s.audioDuration) return s;
     const ct = s.charTimes || [];

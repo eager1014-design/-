@@ -15,6 +15,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { ROOT, DATA_DIR, load, save, upsert, searchYoutube, analyze, saveSettings } from "./viral/core.mjs";
 import { fetchPortraits, locateFace, creditLines } from "./commons.mjs";
+import { SOUND_RULES, pickSections } from "./viral/sound_rules.mjs";
 
 const DAILY_DIR = path.join(DATA_DIR, "daily");
 const VIDEO = path.join(ROOT, "video");
@@ -176,9 +177,7 @@ ${feedback ? `\n[사장님 수정 요청 — 반드시 반영]\n${feedback}\n\n[
 8. 화면 글씨에서 **강조**는 형광펜, 줄바꿈은 \\n. 한 화면 글씨는 짧게 (그래픽 칸이 가로 16:9 라서 한 줄 12자 이내, 최대 3줄).
 9. 댓글 말풍선: 가운데 장면 2~3곳에 "comments": [{"text": "시청자가 달 법한 공감·질문 한마디(16자 이내)", "at": "그 장면 내레이션 속 단어", "emoji": "😳"}] — 한 장면에 1~2개, 영상 전체 3~5개. 화면에 '예시'라고 자동 표시되니 실제 후기처럼 꾸미지 말 것 (이름·숫자·효과 주장 금지).
 10. compare 의 항목(items)은 2개씩, 각 10자 이내. checklist 는 3개, 각 14자 이내.
-11. 효과음: 장면마다 "sfx": [{"name": "이름", "ext": "mp3", "cue": "그 장면 내레이션 속 단어"}] 로 0~2개. 같은 소리를 영상에서 두 번 넘게 쓰지 말고 섞어서. 글씨 등장 '휙·뽁' 소리는 자동이니 넣지 말 것.
-   쓸 수 있는 효과음: correct(정답 띵동) · wrong(오답 부저) · scratch(레코드 긁힘, 반전 직전) · boing(띠용, 황당) · gasp(헉) · sigh(한숨) · slidewhistle(뚝 떨어짐, 실망) · thud(쿵) · drum(퍽, 충격 한 방) · glitch(지지직, 머릿속 혼란) · pageturn(책장 넘김, 다음 이야기) · bell(띵, 깨달음) · kaching(삑, 체크) · tick(째깍, 시간·기다림) · heartbeat(두근, 불안) · notification(알림, 메시지) · typing(타자) · camera(찰칵) · riser(긴장 고조) · sparkle(반짝, 희망) · ding(딩) · paper(종이) · chime(wav, 마무리)
-12. 배경음악 분위기를 "music_mood" 로 하나 골라: ${musicMoods().join(" · ")} (calm 잔잔 · sad 슬픔·여운 · tense 긴장·위험 신호(손절·가스라이팅 편에 잘 맞음) · playful 장난·경쾌 · hopeful 희망·위로)
+11~12. ${SOUND_RULES("쇼츠는 2구간: 훅 tense 또는 sad → 마무리 hopeful 등, 내용에 맞게")}
 
 ${load().settings?.skin === "chalk" ? `13. 칠판 스타일 소품: "props": [{"icon": "이름", "at": "그 장면 내레이션 속 단어", "x": 0.2, "y": 0.4, "size": 220, "move": "bob|wiggle|pulse|spin"}] — 장면 뜻에 맞는 손그림 소품이 선으로 그려지며 나타나 계속 살짝 움직임. 쓸 수 있는 아이콘: brain·bulb·phone·battery·heart·clock·lightning·question·exclaim·check·chart·coffee·speech·thought·bed·money·calendar·lock·search·star·people·house·tear·fire. 장면 절반 정도에 1~2개, 글씨·캐릭터와 안 겹치게 빈 쪽(x 0.12~0.22 또는 0.78~0.88).\n` : ""}${load().settings?.skin === "cute" ? `13. 귀여운 스타일: 장면 4~5곳에 "stickers": [{"emoji": "✨", "at": "그 장면 내레이션 속 단어", "x": 0.85, "y": 0.2}] 로 1개씩. 이모지는 ✨ 💡 💭 ❓ ❗ 💦 💕 ⭐ 🎵 중 장면 뜻에 맞게. x·y 는 화면 비율(0~1) — 제목(위 0.15 까지)·자막(아래 0.75 아래)·캐릭터를 피해 귀퉁이 쪽(x 0.12 또는 0.88, y 0.25~0.6).\n` : ""}[쓸 수 있는 장면 종류] photo(위인 사진, 위 위인 편 참고) · hook(lines[{text,cue}], kicker) · statement(text, kicker, sub, cue) · bigNumber(value, prefix, suffix, label, source, cue, kicker) · compare(title, left/right{title, emoji, cue, items[]}) · checklist(title, items[]) · story(emoji, lines[{text,cue}]) · outro(question, cue, channelCue, channel) · pillars · elements(사주 설명, 예시 참고) · roadmap(title, items[])
 장면 공통: id("s01"…), narration, comments(규칙 9), keywords[], face(smile·surprised·serious·laugh·worried·kind, 또는 [{at, is}]), gesture(idea·point·think·explain·none, 또는 [{at, is}]), cast(right·left·center·corner·off, 또는 [{at, pos}] — 섞어서 지루하지 않게), musicDrop({at, level:0}) 핵심 문장 1~2곳.
@@ -187,7 +186,7 @@ ${load().settings?.skin === "chalk" ? `13. 칠판 스타일 소품: "props": [{"
 ${template}
 
 다른 말 없이 JSON 하나만 출력해:
-{"music_mood": "규칙 12 중 하나", "idea": {"title": "오늘 영상 한 줄 기획", "why": "왜 이게 뜰 것 같은지 (참고한 공식 포함) 2~3문장", "diary_ids": ["사용한 일기 id"], "techniques": ["적용한 연출 기법 이름"]},
+{"music_plan": [{"from": "s01", "mood": "tense"}, {"from": "마무리 쪽 장면 id", "mood": "hopeful"}], "idea": {"title": "오늘 영상 한 줄 기획", "why": "왜 이게 뜰 것 같은지 (참고한 공식 포함) 2~3문장", "diary_ids": ["사용한 일기 id"], "techniques": ["적용한 연출 기법 이름"]},
  "episode": { ...예시와 같은 형식, "title" 은 "#shorts" 포함 ... },
  "youtube": {"title": "검색될 키워드를 앞에 둔 제목 (#HSP 등 해시태그 1~2개)", "description": "첫 2줄 요약 + 댓글 질문 + (사주 편이면) 무료 사주 링크 https://ai-production-1a94.up.railway.app/?src=youtube + '경험 정리' 고지 + 해시태그 3개", "tags": ["10~15개"]}}`;
 }
@@ -210,12 +209,18 @@ function pickMusic(st, mood) {
   let list = [];
   try { list = JSON.parse(fs.readFileSync(path.join(VIDEO, "public/music/index.json"), "utf8")); } catch {}
   if (!list.length) return "music/ep01-calm.mp3";
-  const recent = pastDailies(3).map((d) => d.music);
+  const recent = pastDailies(3).flatMap((d) => [].concat(d.music || []));
   const fit = list.filter((m) => m.mood === mood && !recent.includes(m.file));
   const pool = fit.length ? fit : list.filter((m) => !recent.includes(m.file));
   const pick = (pool.length ? pool : list)[Math.floor(Date.parse(st.date) / 864e5) % (pool.length || list.length)];
   st.music = pick.file;
   return pick.file;
+}
+function pickMusicSections(st, plan, scenes) {
+  const recent = pastDailies(3).flatMap((d) => [].concat(d.music || []));
+  const secs = pickSections(plan, scenes, recent, Math.floor(Date.parse(st.date) / 864e5));
+  st.music = secs.map((x) => x.file);
+  return secs;
 }
 function musicMoods() {
   try { return [...new Set(JSON.parse(fs.readFileSync(path.join(VIDEO, "public/music/index.json"), "utf8")).map((m) => m.mood))]; } catch { return ["calm"]; }
@@ -234,7 +239,11 @@ async function script(st, feedback) {
       ...res.episode, format: "short", layout: ["title", "full"].includes(look) ? undefined : look === "band" ? "band" : "one", castLook: look === "circle" ? "circle" : undefined,
       // 말 1.3배 = 레퍼런스(Grabity) 1초 6.8자에 맞춤 (2026-10-24)
       style: "punchy", pace: { speed: 1.3, trim: true }, presenter: true, skin: load().settings?.skin || undefined,
-      music: pickMusic(st, res.music_mood), musicStart: res.episode.scenes?.[1]?.id, musicVolume: 0.14, voice: VOICE,
+      // 소리 원칙(sound_rules.mjs): 효과음은 대본이 고른 것만(soundPlan), 배경음악은 흐름 구간마다 (BGM 0.25)
+      soundPlan: true, voice: VOICE,
+      ...(res.music_plan?.length
+        ? { musicSections: pickMusicSections(st, res.music_plan, res.episode.scenes || []) }
+        : { music: pickMusic(st, res.music_mood || "calm"), musicStart: res.episode.scenes?.[1]?.id }),
     };
     if (look === "full") delete ep.frame;
     else ep.frame = { ...(ep.frame || {}), brand: "예민한자립가" };

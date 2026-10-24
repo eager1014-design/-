@@ -42,7 +42,7 @@ ep.scenes.forEach((s, i) => {
     if (!v) continue;
     for (const x of typeof v === "string" ? [{ is: v }] : v) {
       if (x.at && !(s.narration || "").includes(x.at)) problems.push(`${where}: ${k} 바뀌는 단어 "${x.at}" 가 내레이션에 없음`);
-      if (x.is !== "none" && !fs.existsSync(new URL(`../public/characters/main/${dir}/${x.is}.png`, import.meta.url))) problems.push(`${where}: ${k} "${x.is}" 그림이 없음 (characters/main/${dir}/)`);
+      if (x.is !== "none" && !fs.existsSync(new URL(`../public/characters/round/${dir}/${x.is}.png`, import.meta.url))) problems.push(`${where}: ${k} "${x.is}" 그림이 없음 (characters/round/${dir}/)`);
     }
   }
   for (const c of typeof s.cast === "string" ? [{ pos: s.cast }] : s.cast || []) {
@@ -52,6 +52,18 @@ ep.scenes.forEach((s, i) => {
   for (const c of s.comments || []) {
     if (c.at && !(s.narration || "").includes(c.at)) problems.push(`${where}: 댓글 나타나는 단어 "${c.at}" 가 내레이션에 없음`);
     if ((c.text || "").length > 24) problems.push(`${where}: 댓글 "${c.text}" 이 너무 김 (24자 이내)`);
+  }
+  // 소리 원칙 (2026-10-24): 효과음 이름·한 장면 1개, 강조 자막 단어·길이, 소품 아이콘
+  const sfxOk = (n) => fs.existsSync(new URL(`../public/sfx/${n}.mp3`, import.meta.url)) || fs.existsSync(new URL(`../public/sfx/${n}.wav`, import.meta.url));
+  for (const x of s.sfx || []) if (!sfxOk(x.name)) problems.push(`${where}: 효과음 "${x.name}" 파일이 없음 (public/sfx/)`);
+  if ((s.sfx || []).filter((x) => !x.after).length > 1) problems.push(`${where}: 효과음은 한 장면(문장)에 1개까지`);
+  for (const pch of s.punch || []) {
+    if (pch.at && !(s.narration || "").includes(pch.at)) problems.push(`${where}: 강조 자막 단어 "${pch.at}" 가 내레이션에 없음`);
+    if ((pch.text || "").replace(/\*/g, "").length > 12) problems.push(`${where}: 강조 자막 "${pch.text}" 이 너무 김 (2~8자 권장)`);
+  }
+  for (const pr of s.props || []) {
+    if (pr.at && !(s.narration || "").includes(pr.at)) problems.push(`${where}: 소품 나타나는 단어 "${pr.at}" 가 내레이션에 없음`);
+    if (!fs.existsSync(new URL(`../public/icons/${pr.icon}.png`, import.meta.url))) problems.push(`${where}: 소품 아이콘 "${pr.icon}" 이 없음 (public/icons/)`);
   }
   if (s.audio && !fs.existsSync(new URL(`../public/${s.audio}`, import.meta.url))) problems.push(`${where}: 목소리 파일 없음 (${s.audio})`);
 });

@@ -9,7 +9,7 @@ import { wipe } from "@remotion/transitions/wipe";
 import { loadFont } from "@remotion/fonts";
 import { FONT, FRAME, SIZES, SKINS, TRANSITION_FRAMES } from "./theme.js";
 import { applyPace, cueFrame, sceneFrames, voiceSeconds } from "./timing.js";
-import { Background, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, Props, Stickers, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
+import { Background, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, Props, Punch, PunchSfx, SOUND, Stickers, sfxFile, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
 import { SCENES } from "./scenes.jsx";
 import { Cast, castTimeline, setCharacter } from "./presenter.jsx";
 import { BAND, BandCast, Comments } from "./band.jsx";
@@ -58,25 +58,31 @@ function layout(scenes, useSteps) {
 //  - 장면의 musicDrop: { at: "단어", until: "단어"(없으면 장면 끝), level: 0~1 } → 핵심 문장 직전에 음악을 빼서 그 말이 꽂히게
 //  - 장면의 musicMute: true → 그 장면 전체 무음
 const ramp = (f, a, b) => Math.min(1, Math.max(0, (f - a) / Math.max(1, b - a)));
-function Music({ src, items, startId, volume = 0.16 }) {
+// 배경음악 (사운드 원칙 2026-10-24, 사장님이 Vrew 에 쓰던 규칙):
+//  - 편의 "musicSections": [{ "from": "s01", "file": "music/…mp3" }, …] → 흐름(훅·고백·깨달음·마무리)마다 곡을 바꾸고 1.5초 겹쳐 넘어감
+//    없으면 예전처럼 "music" 한 곡을 musicStart 장면부터
+//  - 볼륨: 목소리 1 기준 BGM 0.25 (말하는 동안은 0.75배로 살짝 낮춤 — 목소리 전달력이 먼저)
+//  - 장면 musicDrop {at, until, level} / musicMute(가장 무거운 고백 = 무음) / emotion(감정 구간 = 0.4배)
+const XFADE = 45;
+function Music({ src, sections, items, startId, volume = 0.25 }) {
   const frame = useCurrentFrame();
-  const startItem = items.find((it) => it.scene.id === startId) || items[0];
   const last = items.at(-1);
   const end = last.start + last.frames;
-  // 목소리 작게: 목소리 구간에서 0.55배, 경계는 10프레임에 걸쳐 부드럽게
+  const startOf = (id) => (items.find((it) => it.scene.id === id) || items[0]).start;
+  const secs = (sections?.length ? sections : [{ from: startId, file: src }]).map((s) => ({ ...s, a: startOf(s.from) })).sort((x, y) => x.a - y.a);
   let duck = 1;
   for (const it of items) {
     const vs = it.start;
     const ve = it.start + Math.ceil(voiceSeconds(it.scene) * 30);
     const inVoice = Math.min(ramp(frame, vs - 10, vs), 1 - ramp(frame, ve, ve + 15));
-    duck = Math.min(duck, 1 - 0.45 * inVoice);
+    duck = Math.min(duck, 1 - 0.25 * inVoice);
   }
-  // 핵심 문장에서 음악 빼기: 단어 0.3초 전부터 빠지기 시작, 끝나면 0.8초에 걸쳐 돌아옴
   let drop = 1;
   for (const it of items) {
     const s = it.scene;
     const windows = [];
     if (s.musicMute) windows.push({ a: it.start, b: it.start + it.frames, level: 0 });
+    if (s.emotion) windows.push({ a: it.start, b: it.start + it.frames, level: 0.4 });
     for (const d of [].concat(s.musicDrop || [])) {
       const a = cueFrame(s, d.at);
       const b = d.until ? cueFrame(s, d.until) : it.frames;
@@ -88,21 +94,35 @@ function Music({ src, items, startId, volume = 0.16 }) {
       drop = Math.min(drop, 1 - (1 - w.level) * inside);
     }
   }
-  const enter = ramp(frame, startItem.start, startItem.start + 45);
   const exit = 1 - ramp(frame, end - 60, end);
-  const v = volume * duck * drop * enter * exit;
-  return <Audio src={staticFile(src)} volume={v} startFrom={0} />;
+  return (
+    <>
+      {secs.map((sec, k) => {
+        const next = secs[k + 1];
+        const a = sec.a, b = next ? next.a : end;
+        const gate = Math.min(ramp(frame, a, a + XFADE), next ? 1 - ramp(frame, b - XFADE / 2, b + XFADE / 2) : 1);
+        if (frame < a - 1 || frame > b + XFADE) return null;
+        return (
+          <Sequence key={k} from={a} durationInFrames={b - a + XFADE}>
+            <Audio src={staticFile(sec.file)} volume={volume * duck * drop * exit * gate} loop />
+          </Sequence>
+        );
+      })}
+    </>
+  );
 }
 
 // 장면별 추가 효과음: scene.sfx = [{ name: "chime", cue: "단어" | after: true, volume }]
+// 감정 구간(scene.emotion: 이혼·약·바닥·부모님·고백)은 효과음을 넣지 않는다 (사운드 원칙 2026-10-24)
 function SceneSfx({ scene }) {
+  if (scene.emotion) return null;
   return (
     <>
-      {(scene.sfx || []).map((x, i) => {
+      {(scene.sfx || []).slice(0, 1).map((x, i) => {
         const at = x.after ? Math.ceil(voiceSeconds(scene) * 30) + 2 : cueFrame(scene, x.cue) ?? 0;
         return (
           <Sequence key={i} from={Math.max(0, at)} durationInFrames={90}>
-            <Audio src={staticFile(`sfx/${x.name}.${x.ext || "wav"}`)} volume={x.volume ?? 0.35} />
+            <Audio src={staticFile(sfxFile(x.name, x.ext))} volume={x.volume ?? 0.35} />
           </Sequence>
         );
       })}
@@ -158,7 +178,7 @@ function FrameShell({ frame, presenter, children }) {
 const captionOn = (captions, scene) => captions && (scene.captions ?? !["hook", "statement", "story", "chapter", "dialogue"].includes(scene.type));
 
 // 띠 쇼츠 ("layout": "band", band.jsx): 제목 / 16:9 그래픽 칸 / 자막 줄 / 캐릭터 + 댓글 — 서로 겹치지 않는 칸
-function BandEpisode({ items, style, frame = {}, captions, music, musicStart, musicVolume, paper, castLook }) {
+function BandEpisode({ items, style, frame = {}, captions, music, musicStart, musicVolume, paper, castLook, musicSections }) {
   const [l1, l2] = frame.title || [];
   const line = { fontFamily: FONT, fontWeight: 800, fontSize: BAND.titleSize, lineHeight: 1.15, letterSpacing: "-0.02em", color: paper ? COLORS.ink : FRAME.title };
   const last = items.length - 1;
@@ -211,7 +231,7 @@ function BandEpisode({ items, style, frame = {}, captions, music, musicStart, mu
           ))}
         </CaptionBandContext.Provider>
       </SizeContext.Provider>
-      {music && items.length > 0 && <Music src={music} items={items} startId={musicStart} volume={musicVolume} />}
+      {(music || musicSections?.length) && items.length > 0 && <Music src={music} sections={musicSections} items={items} startId={musicStart} volume={musicVolume} />}
     </AbsoluteFill>
     </StyleContext.Provider>
   );
@@ -226,12 +246,13 @@ function useSkinFont(skin) {
   if (font && !loadedSkins.has(skin)) { loadedSkins.add(skin); loadFont({ family: "SkinFont", url: staticFile(font), weight: "100 900" }); }
 }
 
-export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm", music, musicStart, musicVolume, captions = true, frame, presenter, layout: screen, castLook, palette, skin, character }) {
+export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm", music, musicStart, musicVolume, captions = true, frame, presenter, layout: screen, castLook, palette, skin, character, musicSections, soundPlan }) {
   setCharacter(character);
+  SOUND.auto = !soundPlan;
   Object.assign(COLORS, DEFAULT_COLORS, SKINS[skin]?.colors || {}, palette || {});
   useSkinFont(skin);
   const items = layout(applyPace(scenes, pace), !!steps?.length);
-  if (screen === "band" || screen === "one") return <BandEpisode {...{ items, style, frame, captions, music, musicStart, musicVolume, castLook }} paper={screen === "one"} />;
+  if (screen === "band" || screen === "one") return <BandEpisode {...{ items, style, frame, captions, music, musicStart, musicVolume, castLook, musicSections }} paper={screen === "one"} />;
   const bar = steps?.length ? steps : chapters;
   const Shell = frame ? FrameShell : React.Fragment;
   // 무대 크기 = 실제 화면 크기 (한 화면 쇼츠는 1080×1920 — 예전엔 가로 크기로 계산해 캐릭터가 글씨 위에 겹쳤음)
@@ -261,6 +282,8 @@ export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm
                 {it.scene.pose && <SideCharacter src={it.scene.pose} side={it.scene.poseSide} at={6} />}
                 {it.scene.stickers && <Stickers scene={it.scene} />}
                 {it.scene.props && <Props scene={it.scene} />}
+                {it.scene.punch && <Punch scene={it.scene} />}
+                {it.scene.punch && <PunchSfx scene={it.scene} />}
                 {showProgress && <ChapterProgress chapters={bar} current={it.chapter} />}
                 {captionOn(captions, it.scene) && <Captions scene={it.scene} />}
                 <SceneSfx scene={it.scene} />
@@ -283,7 +306,7 @@ export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm
         })}
       </TransitionSeries>
       </Shell>
-      {music && items.length > 0 && <Music src={music} items={items} startId={musicStart} volume={musicVolume} />}
+      {(music || musicSections?.length) && items.length > 0 && <Music src={music} sections={musicSections} items={items} startId={musicStart} volume={musicVolume} />}
     </AbsoluteFill>
     </StyleContext.Provider>
   );

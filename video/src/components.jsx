@@ -133,7 +133,7 @@ export function Captions({ scene }) {
   const punchy = usePunchy();
   const bottomPx = useContext(CaptionBottomContext);
   const band = useContext(CaptionBandContext);
-  const chunks = captionChunks(scene, band ? band.chunk : short ? 15 : 24);
+  const chunks = captionChunks(scene, band ? band.chunk : 15); // 한 줄 최대 15자 (사운드·자막 원칙 2026-10-24)
   const now = chunks.find((c) => frame >= c.from && frame < c.to);
   if (!now) return null;
   const keys = punchy ? keywordsOf(scene) : [];
@@ -216,7 +216,13 @@ export function ChapterProgress({ chapters, current }) {
 }
 
 // 효과음: 요소가 나타나는 순간마다 "뽁". 장면이 시작할 때 "슉".
+// 효과음 자동 넣기 스위치: 편의 "soundPlan": true 면 끔 → 대본이 장면마다 고른 효과음(sfx)·강조 자막(punch) 소리만 남음
+// (자동으로 장면마다 휙 + 글씨마다 뽁이 나면 '한 문장에 효과음 최대 1개' 원칙이 깨짐)
+export const SOUND = { auto: true };
+export const sfxFile = (name, ext) => `sfx/${name}.${ext || (["chime", "whoosh", "pop"].includes(name) ? "wav" : "mp3")}`;
+
 export function Sfx({ at = [], whoosh = true }) {
+  if (!SOUND.auto) return null;
   return (
     <>
       {whoosh && (
@@ -330,6 +336,56 @@ export function Props({ scene }) {
           filter: COLORS.dark ? `invert(1) drop-shadow(0 0 ${8 * u}px ${COLORS.sage}aa)` : undefined }} />
         {draw < 1 && <div style={{ position: "absolute", left: `${ease * 100}%`, top: "50%", width: 18 * u, height: 18 * u, borderRadius: 99, background: COLORS.amber, boxShadow: `0 0 ${24 * u}px ${COLORS.amber}`, transform: "translate(-50%, -50%)" }} />}
       </div>
+    );
+  });
+}
+
+// 강조 자막 (사운드·자막 원칙 2026-10-24): 장면 칸 "punch": [{"text": "**7분**이면 끝", "at": "칠", "kind": "number"}]
+// 화면 가운데~약간 아래, 일반 자막의 약 2배, 굵은 고딕, 흰 글씨 + 검은 테두리, **단어**만 골드(#FFD700). 1.6초 보임.
+// kind 별 움직임·소리: number(사실·숫자) 팝업 + 쿵 · turn(반전·깨달음) 줌인 + 심장소리 · hope(다짐·희망) 아래서 떠오름 + 반짝
+//                     question(질문) 옆에서 밀려옴 + 스윽 · emotion(이혼·약·바닥·부모님·고백) 색 없이 천천히, 소리 없음
+const PUNCH_SFX = { number: "thud", turn: "heartbeat", hope: "sparkle", question: "swipe" };
+export function Punch({ scene }) {
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
+  const u = Math.min(width, height) / 1080;
+  return (scene.punch || []).map((p, i) => {
+    const at = p.at ? cueFrame(scene, p.at) ?? 0 : 0;
+    const t = frame - at;
+    const dur = Math.round((p.seconds || 1.6) * fps);
+    const kind = p.kind || "number";
+    if (t < 0 || t > dur) return null;
+    const sp = spring({ frame: t, fps, config: { damping: 11, mass: 0.5, stiffness: 170 } });
+    const out = 1 - Math.max(0, Math.min(1, (t - (dur - 8)) / 8));
+    const move = kind === "turn" ? `scale(${1.35 - 0.35 * sp})` : kind === "hope" ? `translateY(${(1 - sp) * 120 * u}px)` : kind === "question" ? `translateX(${(1 - sp) * 380 * u}px)` : kind === "emotion" ? "none" : `scale(${0.3 + 0.7 * sp})`;
+    const opacity = (kind === "emotion" ? Math.min(1, t / 12) : Math.min(1, sp * 1.5)) * out;
+    const gold = kind === "emotion" ? "#FFFFFF" : "#FFD700";
+    const parts = String(p.text).split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+    return (
+      // 뒤 화면을 잠깐 어둡게 눌러 강조 자막만 또렷하게 (복잡한 화면 위에서도 읽히게)
+      <AbsoluteFill key={i} style={{ justifyContent: "center", alignItems: "center", paddingTop: height * 0.12, pointerEvents: "none", background: `rgba(0,0,0,${0.6 * opacity})` }}>
+        <div style={{ transform: move, opacity, fontFamily: FONT, fontWeight: 800, fontSize: (height > width ? 118 : 104) * u, lineHeight: 1.15, letterSpacing: "-0.02em",
+          color: "#FFFFFF", WebkitTextStroke: `${14 * u}px #000000`, paintOrder: "stroke fill", textAlign: "center", maxWidth: "90%", whiteSpace: "pre-line" }}>
+          {parts.map((x, k) => x.startsWith("**") ? <span key={k} style={{ color: gold }}>{x.slice(2, -2)}</span> : <React.Fragment key={k}>{x}</React.Fragment>)}
+        </div>
+      </AbsoluteFill>
+    );
+  });
+}
+
+// 강조 자막 효과음 (Punch 와 같은 시점, 장면 효과음과 0.5초 안에 겹치면 하나만)
+export function PunchSfx({ scene }) {
+  return (scene.punch || []).map((p, i) => {
+    const kind = p.kind || "number";
+    const name = p.sfx || PUNCH_SFX[kind];
+    if (!name || kind === "emotion" || scene.emotion) return null;
+    const at = p.at ? cueFrame(scene, p.at) ?? 0 : 0;
+    const clash = (scene.sfx || []).some((x) => !x.after && Math.abs((cueFrame(scene, x.cue) ?? 0) - at) < 15);
+    if (clash) return null;
+    return (
+      <Sequence key={i} from={Math.max(0, at - 2)} durationInFrames={60}>
+        <Audio src={staticFile(sfxFile(name))} volume={0.38} />
+      </Sequence>
     );
   });
 }
