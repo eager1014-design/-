@@ -1,15 +1,15 @@
-// 롱폼 만들기 (2026-10-24 사장님 요청): 사장님과 대화하면서 가로 긴 영상을 기획 → 썸네일 → 대본·무료 초안 → (사장님 녹음) → 완성 → 업로드 문구.
+// 대화로 영상 만들기 (2026-10-24 사장님 요청, 롱폼·숏폼 둘 다): 사장님과 대화하면서 영상을 기획 → 썸네일 → 대본·무료 초안 → (사장님 녹음) → 완성 → 업로드 문구.
 // 분담: 참고 링크·사진 보기 = 제미나이(무료), 대화·기획·대본 = 클로드(맥북 구독 claude -p), 그림 = 챗GPT(플러스, tools/gpt_image.mjs), 조립 = video/ 영상 공장.
-// 목소리는 사장님이 직접 녹음한 파일을 올린다 (일레븐랩스 자동 녹음 없음).
+// 목소리: 사장님이 직접 녹음한 파일을 올리거나, [일레븐랩스로 녹음] 버튼(크레딧, 사장님이 누를 때만).
 //
 // 앱(server.mjs)은 이 파일의 함수로 프로젝트를 만들고 읽는다. 오래 걸리는 일은 따로 띄워서 돈다:
-//   node tools/viral/longform.mjs <일> <프로젝트id>      일 = chat · plan · thumbs · script · voice · upload
+//   node tools/viral/longform.mjs <일> <프로젝트id>      일 = chat · plan · thumbs(롱폼만) · script · voice · eleven · upload
 // 저장: tools/viral/data/longform/<id>.json (깃에 안 올라감), 편 폴더 video/public/episodes/lf-<id>/, 영상 video/out/lf-<id>_*.mp4
 import fs from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { ROOT, DATA_DIR, UPLOAD_DIR, GEMINI_MODEL, saveUploads, imageParts, isVideo } from "./core.mjs";
+import { ROOT, DATA_DIR, UPLOAD_DIR, GEMINI_MODEL, load, saveUploads, imageParts, isVideo } from "./core.mjs";
 import { gemini, watchVideo } from "../ai-bridge/gemini.mjs";
 import { SCENES_LIST } from "../../video/scripts/scene-types.mjs";
 
@@ -18,7 +18,8 @@ const VIDEO = path.join(ROOT, "video");
 const CLAUDE = process.env.CLAUDE_BIN || path.join(process.env.HOME, ".local/bin/claude");
 const NODE = process.execPath;
 const ID = /^[a-z0-9]{6,20}$/;
-const STEPS = ["chat", "plan", "thumbs", "script", "voice", "upload"];
+const STEPS = ["chat", "plan", "thumbs", "script", "voice", "eleven", "upload"];
+const VOICE = { provider: "elevenlabs", id: "vithIMnhyN3GwRbVmrZt", name: "천성준" };
 
 // ---------- 저장 ----------
 const file = (id) => {
@@ -39,17 +40,17 @@ export function listProjects() {
   if (!fs.existsSync(DIR)) return [];
   return fs.readdirSync(DIR).filter((f) => f.endsWith(".json"))
     .map((f) => JSON.parse(fs.readFileSync(path.join(DIR, f), "utf8")))
-    .map(({ id, title, updatedAt, busy, stage }) => ({ id, title, updatedAt, busy, stage }))
+    .map(({ id, title, format, updatedAt, busy, stage }) => ({ id, title, format, updatedAt, busy, stage }))
     .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
 }
 const epDir = (p) => path.join(VIDEO, "public/episodes", `lf-${p.id}`);
 const rel = (abs) => path.relative(ROOT, abs);
 
 // ---------- 앱에서 바로 하는 일 (빠름) ----------
-export function createProject({ title = "", brief = "", channel = "예민한자립가" }) {
+export function createProject({ title = "", brief = "", channel = "예민한자립가", format = "long" }) {
   if (!String(title).trim() && !String(brief).trim()) throw new Error("가제나 '이번엔 이런 느낌으로'를 적어주세요.");
   const id = Date.now().toString(36);
-  return saveProject({ id, title: String(title).trim() || "제목 없음", brief: String(brief).trim(), channel, createdAt: new Date().toISOString(), messages: [], refs: [], stage: "대화", busy: null, log: [] });
+  return saveProject({ id, title: String(title).trim() || "제목 없음", brief: String(brief).trim(), channel, format: format === "short" ? "short" : "long", createdAt: new Date().toISOString(), messages: [], refs: [], stage: "대화", busy: null, log: [] });
 }
 
 // 사장님 말 + 링크 여러 개 + 파일 여러 개 → 저장하고, 답(또는 단계 실행)은 따로 띄운다
@@ -60,11 +61,12 @@ export function postMessage(id, { text = "", links = "", files = [], step = "cha
   const urls = String(links).split(/[\s,]+/).filter((u) => /^https?:\/\//.test(u));
   const saved = saveUploads(files);
   if (!String(text).trim() && !urls.length && !saved.length && step === "chat") throw new Error("말이나 링크, 파일을 넣어주세요.");
+  if (step === "thumbs" && p.format === "short") throw new Error("쇼츠 표지는 컴퓨터에서 못 바꿔요. 올린 뒤 휴대폰 유튜브 앱에서 장면을 고르세요.");
   if (step === "voice" && !saved.some((f) => /\.(mp3|m4a|wav)$/i.test(f))) throw new Error("녹음 파일(mp3·m4a·wav)을 올려주세요.");
   for (const u of urls) p.refs.push({ url: u, at: new Date().toISOString() });
   for (const f of saved) p.refs.push({ file: f, at: new Date().toISOString() });
   if (String(text).trim() || urls.length || saved.length) p.messages.push({ role: "me", text: String(text).trim(), links: urls, files: saved, step, at: new Date().toISOString() });
-  p.busy = { chat: "답 쓰는 중", plan: "기획안 만드는 중", thumbs: "썸네일 그리는 중", script: "대본·초안 만드는 중", voice: "목소리 맞추는 중", upload: "업로드 문구 쓰는 중" }[step];
+  p.busy = { chat: "답 쓰는 중", plan: "기획안 만드는 중", thumbs: "썸네일 그리는 중", script: "대본·초안 만드는 중", voice: "목소리 맞추는 중", eleven: "일레븐랩스 녹음 중", upload: "업로드 문구 쓰는 중" }[step];
   p.log = [];
   saveProject(p);
   const out = fs.openSync(path.join(ROOT, ".tmp/longform.out"), "a");
@@ -118,13 +120,14 @@ async function readRefs(p) {
 function context(p) {
   const refs = p.refs.filter((r) => r.summary).map((r, i) => `[참고 ${i + 1}] ${r.url || path.basename(r.file)}\n${r.summary}`).join("\n\n");
   const talk = p.messages.slice(-20).map((m) => `${m.role === "me" ? "사장님" : "클로드"}: ${m.text}${m.links?.length ? ` (링크 ${m.links.join(" ")})` : ""}${m.files?.length ? ` (파일 ${m.files.length}개)` : ""}`).join("\n");
-  return `[롱폼 프로젝트] 가제: ${p.title} / 채널: ${p.channel}
+  const kind = p.format === "short" ? "세로 쇼츠 1080×1920 (40~60초)" : "가로 롱폼 1920×1080 (보통 6~10분)";
+  return `[${p.format === "short" ? "숏폼" : "롱폼"} 프로젝트] 가제: ${p.title} / 채널: ${p.channel} / ${kind}
 [사장님이 처음 말한 느낌] ${p.brief || "(없음)"}
 ${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약]\n${refs}\n` : ""}[지금까지 대화]\n${talk || "(아직 없음)"}
 
 [원칙] 사장님은 코드를 모르는 1인 사업가. 쉬운 말로, 짧게. 듣기 좋은 말만 하지 말고 약점도 근거와 함께 (사장님 요청).
 사장님 경험은 대화·메모에 있는 것만 쓰고 지어내지 않는다. 연구·숫자는 확실한 것만, 모르면 '확인 필요'. 다른 유튜버의 문장·화면을 베끼지 않는다.
-목소리는 사장님이 직접 녹음한다. 가로 1920×1080 롱폼(보통 6~10분).`;
+목소리는 사장님이 직접 녹음하거나 사장님 복제 목소리(일레븐랩스)로 넣는다.`;
 }
 
 function askClaude(p, prompt) {
@@ -149,6 +152,7 @@ JSON 하나만: {"reply": "답 (10줄 이내)"}`);
 
 // ② 기획안: 제목 후보·훅·챕터·썸네일 아이디어 3개
 async function plan(p) {
+  if (p.format === "short") return planShort(p);
   const r = askClaude(p, `${context(p)}
 
 롱폼 기획안을 만들어. JSON 하나만:
@@ -157,6 +161,18 @@ async function plan(p) {
    "chapters": [{"title": "챕터 이름", "points": ["다룰 내용 2~4개"]}],
    "thumbnails": [{"lines": ["첫 줄 8자 이내", "**강조** 둘째 줄 8자 이내"], "kicker": "작은 윗글(선택)", "art": "챗GPT에게 줄 그림 설명(영어 아니어도 됨): 장면·표정·색·구도, 글씨 넣지 말 것, 오른쪽 60%에 주인공", "character": true}]}}
 썸네일 아이디어는 서로 다른 방향 3개 (예: 감정 클로즈업 / 대비 / 궁금증). character 가 true 면 채널 캐릭터(안경 쓴 선화 남자)를 그 그림에 넣는다.`);
+  p.plan = r.plan;
+  p.stage = "기획안";
+  say(p, r.reply);
+}
+
+async function planShort(p) {
+  const r = askClaude(p, `${context(p)}
+
+쇼츠 기획안을 만들어. JSON 하나만:
+{"reply": "사장님께 한두 줄 + 고민할 점 한 줄",
+ "plan": {"titles": ["화면 위 제목 2줄 후보 3개 — 각 '첫 줄 / 둘째 줄', 줄마다 14자 이내"], "hook": "첫 3초에 할 말", "length": "예상 길이(초)",
+   "chapters": [{"title": "흐름 단계(훅·전개·반전·마무리 등)", "points": ["화면에 나올 것·할 말 1~3개"]}]}}`);
   p.plan = r.plan;
   p.stage = "기획안";
   say(p, r.reply);
@@ -176,7 +192,7 @@ async function thumbs(p) {
     const g = run(p, `🎨 챗GPT가 썸네일 그림 ${i + 1}/3 그리는 중 (1분 안팎)`, NODE, [path.join(ROOT, "tools/gpt_image.mjs"), `${t.art}. 유튜브 썸네일 배경 그림, 16:9, 글씨·로고 넣지 말 것, 왼쪽 40%는 글씨 자리로 비교적 단순하게`, `--out=${img}`, "--size=1536x1024", ...(t.character && fs.existsSync(charRef) ? [`--ref=${charRef}`] : [])], { allowFail: true, timeout: 600_000 });
     const props = { format: "long", kicker: t.kicker, lines: t.lines, ...(g.ok && fs.existsSync(img) ? { scene: { image: path.relative(path.join(VIDEO, "public"), img), focusX: 0.65, focusY: 0.45, zoom: 1.1 } } : {}) };
     const pf = path.join(dir, `thumb${i + 1}.json`);
-    fs.writeFileSync(pf, JSON.stringify(props, null, 2));
+    fs.writeFileSync(pf, JSON.stringify({ thumbnail: props }, null, 2)); // 썸네일 틀은 upload.json 모양({ thumbnail: … })을 받는다
     const png = path.join(outDir, `thumb${i + 1}_${Date.now()}.png`);
     run(p, `🖼 썸네일 ${i + 1} 글씨 얹는 중`, "npx", ["remotion", "still", "Thumbnail", png, `--props=${pf}`], { cwd: VIDEO });
     made.push(rel(png));
@@ -196,8 +212,13 @@ pillars·elements = 사주 설명 장면 (사주 편일 때만)
 공통: id("s01"…), narration(필수, 사장님이 그대로 읽을 문장), keywords[], face(smile·surprised·serious·laugh·worried·kind), gesture(idea·point·think·explain·none), cast(right·left·center·corner·off)
 규칙: cue·at 은 그 장면 narration 안에 띄어쓰기까지 똑같이 있는 말. 화면 글씨 **강조**=형광펜, 줄바꿈 \\n, 숫자는 내레이션에서 한글("일곱 번")·화면에서 숫자.`;
 
+const SHORT_RULES = `[쇼츠 규칙] 장면 6~9개, 내레이션 합계 250~400자. "frame": {"title": ["첫 줄", "둘째 줄"]} (줄마다 14자 이내). 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅.
+화면 글씨는 짧게 (한 줄 12자 이내). compare 항목 2개씩 10자 이내, checklist 3개 14자 이내. 끝은 outro(댓글로 답하고 싶은 질문).
+가운데 장면 2~3곳에 "comments": [{"text": "시청자가 달 법한 한마디 16자 이내", "at": "그 장면 내레이션 속 단어", "emoji": "😳"}] (화면에 '예시' 표시됨, 실제 후기처럼 꾸미지 말 것).`;
+
 async function script(p) {
   if (!p.plan) throw new Error("기획안이 먼저 있어야 해요.");
+  const short = p.format === "short";
   const dir = epDir(p);
   fs.mkdirSync(dir, { recursive: true });
   const epFile = path.join(dir, "episode.json");
@@ -205,11 +226,14 @@ async function script(p) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     const r = askClaude(p, `${context(p)}
 
-기획안대로 롱폼 대본을 episode.json 으로 써. 사장님이 직접 녹음할 문장이니 입말로.
+기획안대로 ${short ? "쇼츠" : "롱폼"} 대본을 episode.json 으로 써. 사장님 목소리로 읽을 문장이니 입말로.
 ${SCENE_GUIDE}
-챕터마다 chapter 장면으로 시작, 처음은 hook, 끝은 outro. 장면 20~35개.${p.episode ? `\n[지난 대본 — 사장님 말대로 고쳐서 다시]\n${JSON.stringify(p.episode.scenes.map((s) => [s.id, s.type, s.narration]))}` : ""}${feedback ? `\n[대본 검사에서 나온 문제 — 고쳐서 다시]\n${feedback}` : ""}
+${short ? SHORT_RULES : "챕터마다 chapter 장면으로 시작, 처음은 hook, 끝은 outro. 장면 20~35개."}${p.episode ? `\n[지난 대본 — 사장님 말대로 고쳐서 다시]\n${JSON.stringify(p.episode.scenes.map((s) => [s.id, s.type, s.narration]))}` : ""}${feedback ? `\n[대본 검사에서 나온 문제 — 고쳐서 다시]\n${feedback}` : ""}
 JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민할 점)", "episode": {"title": "…", "chapters": ["챕터 이름 짧게"], "scenes": [ … ]}}`);
-    const ep = { ...r.episode, format: "long", style: "calm", presenter: true, captions: true };
+    const skin = load().settings?.skin || undefined; // 앱 '오늘의 영상'에서 고른 글씨·색
+    const ep = short
+      ? { ...r.episode, format: "short", layout: "one", style: "punchy", pace: { speed: 1.1, trim: true }, presenter: true, skin, frame: { ...(r.episode.frame || {}), brand: p.channel.split(" (")[0] } }
+      : { ...r.episode, format: "long", style: "calm", presenter: true, captions: true };
     fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
     const check = run(p, `대본 검사 (${attempt}번째)`, NODE, ["scripts/check_episode.mjs", path.relative(VIDEO, epFile)], { cwd: VIDEO, allowFail: true });
     if (check.ok) {
@@ -253,9 +277,26 @@ async function voice(p) {
   const epFile = path.join(dir, "episode.json");
   if (path.extname(rec).toLowerCase() !== ".mp3") throw new Error("지금은 mp3 녹음만 맞출 수 있어요. 휴대폰 녹음 앱에서 mp3로 저장해 올려주세요.");
   fs.copyFileSync(path.join(ROOT, rec), path.join(dir, "voice_full.mp3"));
+  finish(p, epFile);
+}
+
+// 일레븐랩스 천성준 목소리로 녹음 (크레딧 — 사장님이 버튼을 눌렀을 때만)
+async function eleven(p) {
+  if (!p.episode) throw new Error("대본이 먼저 있어야 해요.");
+  const epFile = path.join(epDir(p), "episode.json");
+  const ep = JSON.parse(fs.readFileSync(epFile, "utf8"));
+  ep.voice = VOICE;
+  fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
+  const chars = ep.scenes.reduce((n, s) => n + (s.narration || "").length, 0);
+  run(p, `🎙 일레븐랩스 천성준 목소리 녹음 (${chars}자 ≈ 크레딧 ${chars})`, NODE, ["tools/elevenlabs.mjs", "narrate", path.relative(ROOT, epFile), "--yes"], { timeout: 900_000 });
+  finish(p, epFile);
+}
+
+function finish(p, epFile) {
   run(p, "✂️ 녹음을 장면별로 자르는 중 (받아쓰기, 몇 분)", NODE, ["scripts/split_voice.mjs", path.relative(VIDEO, epFile)], { cwd: VIDEO, timeout: 3600_000 });
   const ep = JSON.parse(fs.readFileSync(epFile, "utf8"));
   ep.pace = ep.pace || { speed: 1, trim: true };
+  p.episode = ep;
   fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
   const out = path.join(VIDEO, "out", `lf-${p.id}_final.mp4`);
   run(p, "🎬 완성본 만드는 중 (몇 분)", "npx", ["remotion", "render", "Episode", out, `--props=${path.relative(VIDEO, epFile)}`], { cwd: VIDEO });
@@ -269,20 +310,20 @@ async function upload(p) {
   const r = askClaude(p, `${context(p)}
 ${p.episode ? `[대본]\n${p.episode.scenes.map((s) => s.narration).join(" ").slice(0, 6000)}` : ""}
 
-유튜브 업로드 문구를 써. JSON 하나만:
+유튜브 ${p.format === "short" ? "쇼츠" : ""} 업로드 문구를 써.${p.format === "short" ? " 쇼츠는 챕터 시간 없이." : ""} JSON 하나만:
 {"reply": "한두 줄", "youtube": {"titles": ["제목 후보 3개, 100자 이내, 핵심 키워드 앞"], "description": "설명란 (첫 2줄에 키워드, 챕터 시간은 '0:00 들어가며' 형식으로 대략, 댓글 질문 1개, 해시태그 3개)", "tags": ["태그 10개 이내"]}}`);
   p.youtube = r.youtube;
   say(p, r.reply);
 }
 
-const JOBS = { chat, plan, thumbs, script, voice, upload };
+const JOBS = { chat, plan, thumbs, script, voice, eleven, upload };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const [step, id] = process.argv.slice(2);
   const p = getProject(id);
   try {
     if (!JOBS[step]) throw new Error(`모르는 일: ${step}`);
-    if (step !== "voice") await readRefs(p);
+    if (!["voice", "eleven"].includes(step)) await readRefs(p);
     await JOBS[step](p);
     log(p, "✅ 끝");
   } catch (e) {

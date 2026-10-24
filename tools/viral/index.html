@@ -91,7 +91,7 @@
     <button data-tab="lib">보관함 <span id="libCount"></span></button>
     <button data-tab="tech">연출 기법</button>
     <button data-tab="ideas">아이디어 검증</button>
-    <button data-tab="long">롱폼</button>
+    <button data-tab="long">영상 만들기</button>
   </div>
 </header>
 <main>
@@ -168,8 +168,9 @@
 <section id="tab-long" class="hide" style="max-width:1100px;margin:0 auto;padding:0 16px 16px">
   <div class="lf-list" id="lfList"></div>
   <div class="panel hide" id="lfNew">
-    <h3 style="margin-top:0">🎬 새 롱폼</h3>
-    <div class="row"><div><label>가제</label><input id="lfTitle" placeholder="예: 예민한 사람이 일을 오래 하는 법"></div>
+    <h3 style="margin-top:0">🎬 대화로 영상 만들기</h3>
+    <div class="row"><div><label>종류</label><select id="lfFormat"><option value="long">롱폼 (가로, 6~10분)</option><option value="short">숏폼 (세로, 1분 이내)</option></select></div>
+      <div><label>가제</label><input id="lfTitle" placeholder="예: 예민한 사람이 일을 오래 하는 법"></div>
       <div><label>채널</label><select id="lfChannel"><option>예민한자립가</option><option>사장님, 뭐가 제일 귀찮으세요? (새 채널)</option></select></div></div>
     <label>이번엔 이런 느낌으로</label>
     <textarea id="lfBrief" placeholder="예: 이 영상처럼 차분하게, 내 경험 위주로, 10분 정도. 썸네일은 귀엽게"></textarea>
@@ -178,7 +179,7 @@
     <label style="margin-top:10px">참고 사진·영상 (여러 개)</label>
     <input id="lfFiles" type="file" accept="image/*,video/*" multiple>
     <button class="btn" id="lfCreate" style="margin-top:10px">시작하기</button>
-    <p class="note">유튜브 링크는 제미나이가 직접 보고(무료), 대화·대본은 클로드, 그림은 챗GPT가 맡아요. 목소리는 사장님이 녹음한 파일을 올리면 맞춰 드려요.</p>
+    <p class="note">유튜브 링크는 제미나이가 직접 보고(무료), 대화·대본은 클로드, 그림은 챗GPT가 맡아요. 목소리는 사장님 녹음 파일을 올리거나, 일레븐랩스(크레딧) 버튼으로 넣어요.</p>
   </div>
   <div id="lfView"></div>
 </section>
@@ -538,7 +539,7 @@ $("#igo").onclick = () => busy($("#igo"), "제미나이가 보는 중… (붐비
 let lfId = null, lfTimer = null;
 async function loadLong() {
   const list = await api("/api/longform");
-  $("#lfList").innerHTML = `<button class="${lfId ? "" : "on"}" onclick="lfId=null;loadLong()">+ 새 롱폼</button>` + list.map((x) => `<button class="${x.id === lfId ? "on" : ""}" onclick="lfId='${x.id}';loadLong()">${x.busy ? "⏳ " : ""}${esc(x.title)} <small>· ${esc(x.stage || "")}</small></button>`).join("");
+  $("#lfList").innerHTML = `<button class="${lfId ? "" : "on"}" onclick="lfId=null;loadLong()">+ 새 영상</button>` + list.map((x) => `<button class="${x.id === lfId ? "on" : ""}" onclick="lfId='${x.id}';loadLong()">${x.busy ? "⏳ " : ""}${x.format === "short" ? "📱 " : "🖥 "}${esc(x.title)} <small>· ${esc(x.stage || "")}</small></button>`).join("");
   $("#lfNew").classList.toggle("hide", !!lfId);
   if (!lfId) { $("#lfView").innerHTML = ""; return; }
   const p = await api("/api/longform/get", { id: lfId });
@@ -547,7 +548,7 @@ async function loadLong() {
   if (p.busy && !$("#tab-long").classList.contains("hide")) lfTimer = setTimeout(loadLong, 4000);
 }
 function renderLong(p) {
-  const busy = !!p.busy;
+  const busy = !!p.busy, short = p.format === "short";
   const btn = (step, label, need) => `<button class="btn ${need ? "" : "ghost"}" ${busy ? "disabled" : ""} onclick="lfSend('${step}',this)">${label}</button>`;
   const plan = p.plan ? `<div class="panel"><b>기획안</b>
     <p><b>제목 후보</b><br>${p.plan.titles.map(esc).join("<br>")}</p><p><b>첫 10초</b> ${esc(p.plan.hook)} <span class="note">(${esc(p.plan.length || "")})</span></p>
@@ -557,13 +558,14 @@ function renderLong(p) {
     <div class="readout" id="lfRead">${esc(p.episode.scenes.map((s) => s.narration).join("\n\n"))}</div>
     <button class="btn sm ghost" style="margin-top:8px" onclick="navigator.clipboard.writeText($('#lfRead').textContent).then(()=>say('대본을 복사했어요.'))">대본 복사</button>
     <div style="margin-top:12px"><label>녹음 파일 (mp3)</label><input id="lfVoice" type="file" accept="audio/*"></div>
-    <button class="btn" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfVoiceSend(this)">녹음 올리고 완성본 만들기</button></div>` : "";
+    <button class="btn" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfVoiceSend(this)">녹음 올리고 완성본 만들기</button>
+    <button class="btn ghost" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfEleven(${p.episode.scenes.reduce((n, s) => n + (s.narration || "").length, 0)}, this)">또는 일레븐랩스 천성준 목소리로</button></div>` : "";
   const yt = p.youtube ? `<div class="panel"><b>업로드 문구</b><p>${p.youtube.titles.map(esc).join("<br>")}</p><div class="readout">${esc(p.youtube.description)}</div><p class="note">태그: ${p.youtube.tags.map(esc).join(", ")}</p></div>` : "";
-  const msg = (m) => `<div class="bubble ${m.role}">${esc(m.text)}${(m.images || []).map((f) => `<img src="/upload?p=${encodeURIComponent(f)}">`).join("")}${m.video ? `<video controls preload="metadata" src="/video?p=${encodeURIComponent(m.video)}"></video>` : ""}${m.links?.length ? `<div class="note" style="color:inherit">🔗 ${m.links.map(esc).join(" ")}</div>` : ""}${m.files?.length ? `<div class="note" style="color:inherit">📎 파일 ${m.files.length}개</div>` : ""}</div>`;
-  $("#lfView").innerHTML = `<div class="panel"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h3 style="margin:0;flex:1">${esc(p.title)}</h3><span class="tag">${esc(p.channel)}</span><span class="st ${busy ? "wait" : ""}">${busy ? `<span class="spin"></span>${esc(p.busy)}` : esc(p.stage)}</span>
+  const msg = (m) => `<div class="bubble ${m.role}">${esc(m.text)}${(m.images || []).map((f) => `<img src="/upload?p=${encodeURIComponent(f)}">`).join("")}${m.video ? `<video controls preload="metadata" style="${short ? "max-width:320px" : ""}" src="/video?p=${encodeURIComponent(m.video)}"></video>` : ""}${m.links?.length ? `<div class="note" style="color:inherit">🔗 ${m.links.map(esc).join(" ")}</div>` : ""}${m.files?.length ? `<div class="note" style="color:inherit">📎 파일 ${m.files.length}개</div>` : ""}</div>`;
+  $("#lfView").innerHTML = `<div class="panel"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h3 style="margin:0;flex:1">${esc(p.title)}</h3><span class="tag">${short ? "숏폼" : "롱폼"} · ${esc(p.channel)}</span><span class="st ${busy ? "wait" : ""}">${busy ? `<span class="spin"></span>${esc(p.busy)}` : esc(p.stage)}</span>
       <button class="btn sm ghost" onclick="lfDel('${p.id}')">삭제</button></div>
     ${p.brief ? `<p class="note">${esc(p.brief)}</p>` : ""}
-    <div class="steps" style="margin-top:10px">${btn("plan", "① 기획안 만들기", !p.plan)}${btn("thumbs", p.thumbs ? "② 썸네일 다시" : "② 썸네일 그리기", p.plan && !p.thumbs)}${btn("script", p.episode ? "③ 대본·초안 다시" : "③ 대본·초안 만들기", p.thumbs && !p.episode)}${btn("upload", "⑤ 업로드 문구", p.final && !p.youtube)}</div>
+    <div class="steps" style="margin-top:10px">${btn("plan", "① 기획안 만들기", !p.plan)}${short ? "" : btn("thumbs", p.thumbs ? "② 썸네일 다시" : "② 썸네일 그리기", p.plan && !p.thumbs)}${btn("script", p.episode ? "③ 대본·초안 다시" : "③ 대본·초안 만들기", (short ? p.plan : p.thumbs) && !p.episode)}${btn("upload", "⑤ 업로드 문구", p.final && !p.youtube)}</div>
     <p class="note">버튼을 누를 때 아래 칸에 적은 말이 같이 전달돼요 (예: "2번 썸네일 느낌으로, 글씨는 더 크게"). ④는 녹음 파일 올리기.</p>
     ${busy && p.log?.length ? `<details open><summary>진행 상황</summary><div class="logbox">${esc(p.log.join("\n"))}</div></details>` : ""}</div>
   ${plan}${thumbs}${read}${yt}
@@ -583,9 +585,13 @@ async function lfVoiceSend(b) {
   if (!$("#lfVoice").files.length) return say("녹음 파일을 골라주세요.", true);
   await busy(b, "올리는 중…", async () => { await api("/api/longform/send", { id: lfId, step: "voice", text: "녹음 올렸어요", files: await readFiles($("#lfVoice")) }); loadLong(); });
 }
-async function lfDel(id) { if (!confirm("이 롱폼을 지울까요? (만든 영상 파일은 남아요)")) return; await api("/api/longform/delete", { id }); lfId = null; loadLong(); }
+async function lfEleven(chars, b) {
+  if (!confirm(`일레븐랩스 크레딧을 약 ${chars} 써요. 녹음할까요?`)) return;
+  await busy(b, "보내는 중…", async () => { await api("/api/longform/send", { id: lfId, step: "eleven", text: "일레븐랩스로 녹음해줘" }); loadLong(); });
+}
+async function lfDel(id) { if (!confirm("이 영상 대화를 지울까요? (만든 영상 파일은 남아요)")) return; await api("/api/longform/delete", { id }); lfId = null; loadLong(); }
 $("#lfCreate").onclick = () => busy($("#lfCreate"), "시작하는 중…", async () => {
-  const p = await api("/api/longform/new", { title: $("#lfTitle").value, channel: $("#lfChannel").value, brief: $("#lfBrief").value, links: $("#lfLinks").value, files: await readFiles($("#lfFiles")) });
+  const p = await api("/api/longform/new", { format: $("#lfFormat").value, title: $("#lfTitle").value, channel: $("#lfChannel").value, brief: $("#lfBrief").value, links: $("#lfLinks").value, files: await readFiles($("#lfFiles")) });
   ["#lfTitle", "#lfBrief", "#lfLinks", "#lfFiles"].forEach((x) => $(x).value = ""); $("#lfFiles").dispatchEvent(new Event("change"));
   lfId = p.id; say("시작했어요! 클로드가 참고 자료를 보고 답하는 중이에요 (1~3분)."); loadLong();
 });
