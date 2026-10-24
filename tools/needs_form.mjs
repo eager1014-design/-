@@ -29,9 +29,11 @@ function envSet(k, v) {
   process.env[k] = v;
 }
 
-let cached;
+// 구글 출입증(access token)은 1시간짜리 — 앱(떡상 소싱)처럼 오래 켜 둔 곳에서도 만료 5분 전에 새로 받는다
+// (2026-10-24: 한 번 받은 출입증을 계속 써서 1시간 뒤 '고객 고충' 탭이 401 에러)
+let cached, cachedUntil = 0;
 async function accessToken() {
-  if (cached) return cached;
+  if (cached && Date.now() < cachedUntil) return cached;
   if (!fs.existsSync(TOKEN)) die("구글 로그인이 안 돼 있습니다. `node tools/finance.mjs login` 을 한 번 해주세요.");
   const c = JSON.parse(fs.readFileSync(CRED, "utf8"));
   const { client_id, client_secret } = c.installed || c.web;
@@ -39,6 +41,7 @@ async function accessToken() {
   const r = await fetch("https://oauth2.googleapis.com/token", { method: "POST", body: new URLSearchParams({ client_id, client_secret, refresh_token, grant_type: "refresh_token" }) });
   const j = await r.json();
   if (!r.ok) die(`구글 열쇠가 만료됐습니다 (7일마다). \`node tools/finance.mjs login\` 으로 다시 로그인해주세요. (${j.error})`);
+  cachedUntil = Date.now() + ((j.expires_in || 3600) - 300) * 1000;
   return (cached = j.access_token);
 }
 async function api(url, { method = "GET", body } = {}) {
