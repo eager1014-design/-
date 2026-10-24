@@ -560,7 +560,12 @@ function renderLong(p) {
     <div style="margin-top:12px"><label>녹음 파일 (mp3)</label><input id="lfVoice" type="file" accept="audio/*"></div>
     <button class="btn" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfVoiceSend(this)">녹음 올리고 완성본 만들기</button>
     <button class="btn ghost" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfEleven(${p.episode.scenes.reduce((n, s) => n + (s.narration || "").length, 0)}, this)">또는 일레븐랩스 천성준 목소리로</button></div>` : "";
-  const yt = p.youtube ? `<div class="panel"><b>업로드 문구</b><p>${p.youtube.titles.map(esc).join("<br>")}</p><div class="readout">${esc(p.youtube.description)}</div><p class="note">태그: ${p.youtube.tags.map(esc).join(", ")}</p></div>` : "";
+  const yt = p.youtube ? `<div class="panel"><b>업로드 문구</b>
+    <p>${p.youtube.titles.map((t, i) => `<label style="display:block;margin:4px 0;color:var(--ink);font-size:15px"><input type="radio" name="lfTitle" value="${i}" ${i === (p.pick?.title || 0) ? "checked" : ""} style="width:auto"> ${esc(t)}</label>`).join("")}</p>
+    ${!short && p.thumbs?.length ? `<p class="note" style="margin-bottom:4px">올릴 썸네일</p><div style="display:flex;gap:8px;flex-wrap:wrap">${p.thumbs.map((t, i) => `<label style="width:150px"><input type="radio" name="lfThumb" value="${i}" ${i === (p.pick?.thumb || 0) ? "checked" : ""} style="width:auto"> ${i + 1}번<img src="/upload?p=${encodeURIComponent(t)}" style="width:100%;border-radius:8px"></label>`).join("")}</div>` : ""}
+    ${p.youtubeUrl ? `<p>✅ 올림: <a href="${esc(p.youtubeUrl)}" target="_blank">${esc(p.youtubeUrl)}</a></p>` : ""}
+    <button class="btn" style="margin-top:10px" ${busy || !p.final ? "disabled" : ""} onclick="lfPublish(this)">⑥ 유튜브에 비공개로 올리기</button>
+    <span class="note">${p.final ? "공개 전환은 스튜디오에서 사장님이" : "완성본이 있어야 올릴 수 있어요"}</span><div class="readout">${esc(p.youtube.description)}</div><p class="note">태그: ${p.youtube.tags.map(esc).join(", ")}</p></div>` : "";
   const msg = (m) => `<div class="bubble ${m.role}">${esc(m.text)}${(m.images || []).map((f) => `<img src="/upload?p=${encodeURIComponent(f)}">`).join("")}${m.video ? `<video controls preload="metadata" style="${short ? "max-width:320px" : ""}" src="/video?p=${encodeURIComponent(m.video)}"></video>` : ""}${m.links?.length ? `<div class="note" style="color:inherit">🔗 ${m.links.map(esc).join(" ")}</div>` : ""}${m.files?.length ? `<div class="note" style="color:inherit">📎 파일 ${m.files.length}개</div>` : ""}</div>`;
   $("#lfView").innerHTML = `<div class="panel"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h3 style="margin:0;flex:1">${esc(p.title)}</h3><span class="tag">${short ? "숏폼" : "롱폼"} · ${esc(p.channel)}</span><span class="st ${busy ? "wait" : ""}">${busy ? `<span class="spin"></span>${esc(p.busy)}` : esc(p.stage)}</span>
       <button class="btn sm ghost" onclick="lfDel('${p.id}')">삭제</button></div>
@@ -592,6 +597,11 @@ async function lfSend(step, b) {
 async function lfVoiceSend(b) {
   if (!$("#lfVoice").files.length) return say("녹음 파일을 골라주세요.", true);
   await busy(b, "올리는 중…", async () => { await api("/api/longform/send", { id: lfId, step: "voice", text: "녹음 올렸어요", files: await readFiles($("#lfVoice")) }); loadLong(); });
+}
+async function lfPublish(b) {
+  const ti = document.querySelector("input[name=lfTitle]:checked")?.value || 0, th = document.querySelector("input[name=lfThumb]:checked")?.value || 0;
+  if (!confirm("고른 제목·썸네일로 유튜브에 비공개로 올릴까요?")) return;
+  await busy(b, "보내는 중…", async () => { await api("/api/longform/send", { id: lfId, step: "publish", text: "유튜브에 올려줘", titleIdx: ti, thumbIdx: th }); loadLong(); });
 }
 async function lfEleven(chars, b) {
   if (!confirm(`일레븐랩스 크레딧을 약 ${chars} 써요. 녹음할까요?`)) return;

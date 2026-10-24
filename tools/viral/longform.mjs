@@ -18,7 +18,7 @@ const VIDEO = path.join(ROOT, "video");
 const CLAUDE = process.env.CLAUDE_BIN || path.join(process.env.HOME, ".local/bin/claude");
 const NODE = process.execPath;
 const ID = /^[a-z0-9]{6,20}$/;
-const STEPS = ["chat", "plan", "thumbs", "script", "voice", "eleven", "upload"];
+const STEPS = ["chat", "plan", "thumbs", "script", "voice", "eleven", "upload", "publish"];
 const VOICE = { provider: "elevenlabs", id: "vithIMnhyN3GwRbVmrZt", name: "천성준" };
 
 // ---------- 저장 ----------
@@ -54,7 +54,7 @@ export function createProject({ title = "", brief = "", channel = "예민한자�
 }
 
 // 사장님 말 + 링크 여러 개 + 파일 여러 개 → 저장하고, 답(또는 단계 실행)은 따로 띄운다
-export function postMessage(id, { text = "", links = "", files = [], step = "chat" }) {
+export function postMessage(id, { text = "", links = "", files = [], step = "chat", titleIdx, thumbIdx }) {
   const p = getProject(id);
   if (p.busy) throw new Error(`지금 '${p.busy}' 하는 중이에요. 끝나고 다시 보내주세요.`);
   if (!STEPS.includes(step)) throw new Error("모르는 단계입니다.");
@@ -62,11 +62,16 @@ export function postMessage(id, { text = "", links = "", files = [], step = "cha
   const saved = saveUploads(files);
   if (!String(text).trim() && !urls.length && !saved.length && step === "chat") throw new Error("말이나 링크, 파일을 넣어주세요.");
   if (step === "thumbs" && p.format === "short") throw new Error("쇼츠 표지는 컴퓨터에서 못 바꿔요. 올린 뒤 휴대폰 유튜브 앱에서 장면을 고르세요.");
+  if (step === "publish") {
+    if (!p.final) throw new Error("완성본이 먼저 있어야 해요 (녹음 올리기 또는 일레븐랩스).");
+    if (!p.youtube) throw new Error("업로드 문구가 먼저 있어야 해요. [⑤ 업로드 문구]를 눌러주세요.");
+    p.pick = { title: Number(titleIdx) || 0, thumb: Number(thumbIdx) || 0 };
+  }
   if (step === "voice" && !saved.some((f) => /\.(mp3|m4a|wav)$/i.test(f))) throw new Error("녹음 파일(mp3·m4a·wav)을 올려주세요.");
   for (const u of urls) p.refs.push({ url: u, at: new Date().toISOString() });
   for (const f of saved) p.refs.push({ file: f, at: new Date().toISOString() });
   if (String(text).trim() || urls.length || saved.length) p.messages.push({ role: "me", text: String(text).trim(), links: urls, files: saved, step, at: new Date().toISOString() });
-  p.busy = { chat: "답 쓰는 중", plan: "기획안 만드는 중", thumbs: "썸네일 그리는 중", script: "대본·초안 만드는 중", voice: "목소리 맞추는 중", eleven: "일레븐랩스 녹음 중", upload: "업로드 문구 쓰는 중" }[step];
+  p.busy = { chat: "답 쓰는 중", plan: "기획안 만드는 중", thumbs: "썸네일 그리는 중", script: "대본·초안 만드는 중", voice: "목소리 맞추는 중", eleven: "일레븐랩스 녹음 중", upload: "업로드 문구 쓰는 중", publish: "유튜브에 올리는 중" }[step];
   p.log = [];
   saveProject(p);
   const out = fs.openSync(path.join(ROOT, ".tmp/longform.out"), "a");
@@ -344,18 +349,42 @@ ${p.episode ? `[대본]\n${p.episode.scenes.map((s) => s.narration).join(" ").sl
   say(p, r.reply);
 }
 
-const JOBS = { chat, plan, thumbs, script, voice, eleven, upload };
+// ⑦ 유튜브에 비공개로 올리기 — 사장님이 고른 제목·썸네일로. 공개는 사장님이 스튜디오에서 (매일 쇼츠와 같은 규칙)
+async function publish(p) {
+  const dir = epDir(p);
+  const meta = {
+    title: p.youtube.titles[p.pick?.title || 0] || p.youtube.titles[0],
+    description: p.youtube.description,
+    tags: p.youtube.tags,
+    privacy: "private",
+    altered_content: Boolean(p.episode?.voice?.provider === "elevenlabs"), // 복제 목소리를 쓰면 '합성 콘텐츠: 예' (사장님 결정 2026-10-19)
+  };
+  const th = p.format === "long" && p.thumbs?.[p.pick?.thumb || 0];
+  if (th) {
+    const small = path.join(dir, "thumb_upload.jpg"); // 유튜브 썸네일은 2MB 이하 → jpg 로
+    run(p, "썸네일 줄이는 중", "npx", ["remotion", "ffmpeg", "-y", "-loglevel", "error", "-i", path.join(ROOT, th), "-vf", "scale=1280:720", "-q:v", "3", small], { cwd: VIDEO });
+    meta.thumbnail = small;
+  }
+  const mf = path.join(dir, "youtube.json");
+  fs.writeFileSync(mf, JSON.stringify(meta, null, 2));
+  const r = run(p, "📤 유튜브에 비공개로 올리는 중 (몇 분)", NODE, ["tools/youtube_upload.mjs", "upload", path.join(ROOT, p.final), mf, "--yes"], { timeout: 3600_000 });
+  p.youtubeUrl = r.out.match(/https:\/\/(?:youtu\.be|www\.youtube\.com|studio\.youtube\.com)\/\S+/)?.[0] || null;
+  p.stage = "올림(비공개)";
+  say(p, `유튜브에 비공개로 올렸어요: "${meta.title}"${p.youtubeUrl ? `\n${p.youtubeUrl}` : ""}\n스튜디오에서 확인하고 공개로 바꿔 주세요.${/열쇠|만료|invalid_grant/i.test(r.out) ? "" : ""}`);
+}
+
+const JOBS = { chat, plan, thumbs, script, voice, eleven, upload, publish };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const [step, id] = process.argv.slice(2);
   const p = getProject(id);
   try {
     if (!JOBS[step]) throw new Error(`모르는 일: ${step}`);
-    if (!["voice", "eleven"].includes(step)) await readRefs(p);
+    if (!["voice", "eleven", "publish"].includes(step)) await readRefs(p);
     await JOBS[step](p);
     log(p, "✅ 끝");
   } catch (e) {
-    say(p, `⚠ 문제가 생겼어요: ${String(e.message).slice(0, 400)}`);
+    say(p, `⚠ 문제가 생겼어요: ${String(e.message).slice(0, 400)}${/열쇠|만료|invalid_grant|login/i.test(e.message) ? "\n(유튜브 열쇠가 7일마다 만료돼요 — 저한테 '유튜브 다시 로그인'이라고 말씀해 주세요)" : ""}`);
     log(p, `❌ ${e.message}`);
   } finally {
     p.busy = null;
