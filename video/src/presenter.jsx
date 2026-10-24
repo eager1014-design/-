@@ -73,7 +73,8 @@ export function useLoudnessAudio(scene) {
 
 // fill: 몸 안을 흰색으로 채운 그림(*.fill.png) — 실사 배경 위에 '만화 캐릭터가 들어온' 느낌. 입·눈 덮개는 흰색
 export function Character({ scene, loud, anchored = false, dark = false, fill = false }) {
-  const BG = fill ? "#FFFFFF" : dark ? DARK_BG : COLORS.bg; // 입·눈 덮개 색 = 얼굴 바탕색
+  dark = dark || COLORS.dark; // 칠판 스킨이면 선을 흰색으로
+  const BG = fill ? "#FFFFFF" : dark ? (COLORS.dark ? COLORS.bg : DARK_BG) : COLORS.bg; // 입·눈 덮개 색 = 얼굴 바탕색
   const INK = dark ? "#F4EFE6" : COLORS.ink;
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();

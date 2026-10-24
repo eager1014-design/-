@@ -92,6 +92,16 @@ export function Rich({ text, at = 0, color = COLORS.amber, style }) {
         if (!p.startsWith("**")) return <React.Fragment key={i}>{p}</React.Fragment>;
         const start = at + 8 + mark++ * 6;
         const w = interpolate(frame, [start, start + 12], [0, 100], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        if (COLORS.dark) {
+          // 칠판: 형광펜 대신 글씨가 노랗게 켜지며 빛남 (켜지는 순간 살짝 커졌다 돌아옴)
+          const on = w / 100;
+          const glow = 0.55 + 0.45 * Math.sin((frame - start) / 9);
+          return (
+            <span key={i} style={{ color: on > 0 ? color : undefined, textShadow: on > 0 ? `0 0 ${18 + 10 * glow}px ${color}aa, 0 0 4px ${color}` : undefined, display: "inline-block", transform: `scale(${1 + 0.12 * Math.sin(Math.min(1, on) * Math.PI)})` }}>
+              {p.slice(2, -2)}
+            </span>
+          );
+        }
         return (
           <span
             key={i}
@@ -135,7 +145,7 @@ export function Captions({ scene }) {
           fontWeight: punchy ? 800 : 700,
           fontSize: band ? band.size : (short ? 56 : 46) * (punchy ? 1.12 : 1) * u,
           color: "#FFFFFF",
-          WebkitTextStroke: band && !band.paper ? "none" : `${band ? 7 : (punchy ? 10 : 7) * u}px ${COLORS.ink}`,
+          WebkitTextStroke: band && !band.paper ? "none" : `${band ? 7 : (punchy ? 10 : 7) * u}px ${COLORS.stroke || COLORS.ink}`,
           transform: `scale(${0.85 + 0.15 * pop})`,
           paintOrder: "stroke fill",
           letterSpacing: "-0.01em",
@@ -229,7 +239,7 @@ export function Card({ children, style }) {
       style={{
         background: COLORS.card,
         borderRadius: 28 * u,
-        boxShadow: `0 ${10 * u}px 0 ${COLORS.bgDeep}, 0 ${24 * u}px ${60 * u}px rgba(60,50,30,0.10)`,
+        boxShadow: COLORS.dark ? `0 0 0 ${2 * u}px ${COLORS.sage}55, 0 0 ${40 * u}px ${COLORS.sage}22` : `0 ${10 * u}px 0 ${COLORS.bgDeep}, 0 ${24 * u}px ${60 * u}px rgba(60,50,30,0.10)`,
         padding: `${36 * u}px ${44 * u}px`,
         ...style,
       }}
@@ -291,6 +301,32 @@ export function Stickers({ scene }) {
     return (
       <div key={i} style={{ position: "absolute", left: `${(st.x ?? 0.85) * 100}%`, top: `${(st.y ?? 0.2) * 100}%`, transform: `translate(-50%, -50%) scale(${pop}) rotate(${wobble}deg)`, fontSize: (st.size || 90) * u, lineHeight: 1, filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.15))" }}>
         {st.emoji}
+      </div>
+    );
+  });
+}
+
+// 소품 아이콘: 장면 칸 "props": [{"icon": "brain", "at": "단어", "x": 0.8, "y": 0.35, "size": 260, "move": "bob"}]
+// 그림: public/icons/<이름>.png (검은 선 손그림, 칠판 스킨에서는 흰 선으로 뒤집음)
+// 등장: 왼쪽부터 선이 그려지듯 드러남(빛나는 펜 끝) → 그다음 계속 살짝 움직임 move: bob(둥실) · wiggle(흔들) · pulse(두근) · spin(빙글)
+export function Props({ scene }) {
+  const frame = useCurrentFrame();
+  const { width } = useVideoConfig();
+  const u = width / 1080;
+  return (scene.props || []).map((p, i) => {
+    const at = p.at ? cueFrame(scene, p.at) : 6;
+    if (at == null || frame < at) return null;
+    const t = frame - at;
+    const draw = Math.min(1, t / 20);
+    const ease = 1 - Math.pow(1 - draw, 3);
+    const m = p.move || "bob";
+    const idle = t < 20 ? "" : m === "wiggle" ? `rotate(${Math.sin(t / 6) * 6}deg)` : m === "pulse" ? `scale(${1 + 0.06 * Math.sin(t / 5)})` : m === "spin" ? `rotate(${(t - 20) * 2}deg)` : `translateY(${Math.sin(t / 14) * 10 * u}px)`;
+    const size = (p.size || 240) * u;
+    return (
+      <div key={i} style={{ position: "absolute", left: `${(p.x ?? 0.8) * 100}%`, top: `${(p.y ?? 0.35) * 100}%`, width: size, height: size, transform: `translate(-50%, -50%) ${idle}` }}>
+        <Img src={staticFile(`icons/${p.icon}.png`)} style={{ width: "100%", height: "100%", objectFit: "contain", clipPath: `inset(0 ${100 - ease * 100}% 0 0)`,
+          filter: COLORS.dark ? `invert(1) drop-shadow(0 0 ${8 * u}px ${COLORS.sage}aa)` : undefined }} />
+        {draw < 1 && <div style={{ position: "absolute", left: `${ease * 100}%`, top: "50%", width: 18 * u, height: 18 * u, borderRadius: 99, background: COLORS.amber, boxShadow: `0 0 ${24 * u}px ${COLORS.amber}`, transform: "translate(-50%, -50%)" }} />}
       </div>
     );
   });

@@ -191,6 +191,7 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
 - 장면 종류 추가 시: `src/scenes.jsx` 의 SCENES 와 `scripts/scene-types.mjs` 둘 다 고칠 것
 
 ## 변경 기록
+- 2026-10-24: **칠판 스킨 `"skin": "chalk"`** (진한 파랑 #0D1C3D + 흰 선 캐릭터 + 노랑·하늘 네온, 강조 글씨는 빛나며 켜짐, 장면 전환은 지우개처럼 닦아냄, 글꼴 검은고딕). **소품 `"props"`: [{"icon","at","x","y","size","move": bob·wiggle·pulse·spin}]** — 선이 그려지듯 등장 후 계속 움직임. 아이콘 24개 `public/icons/` (brain bulb phone battery heart clock lightning question exclaim check chart coffee speech thought bed money calendar lock search star people house tear fire), 새로 그리면 `scripts/cut_icons.py`
 - 2026-10-24: **새 기본 캐릭터 round** (동그란 머리+동그란 안경 졸라맨, `public/characters/round`). 시트 → `cut_sheet.py` → `scripts/align_by_eyes.py`(눈동자 기준 정렬 + rig.json). 편 칸 `"character": "main"` 이면 예전 곱슬머리 캐릭터. 쇼츠 아래 자리는 전신이라 bandScale 1.35. 오려낸 정지 그림(명함·포트폴리오용)은 `business/character/*.fill.png`
 - 2026-10-24: 귀여운 스타일 skin cute + stickers (참고 https://youtu.be/v9oeGZiRteE 분석). FONT = "SkinFont, Pretendard" — 글꼴 불러올 때 family 는 "Pretendard"/"SkinFont" 로 따로
 - 2026-10-24: 자동화 사례 홍보 영상(promo-automation) — `screen` 장면, 편별 `palette`, outro `kicker`. 실제 화면은 Playwright 로 찍되 개인 정보(지출 금액·손님)는 예시 숫자 + '예시 화면' 표시. 다른 사람 썸네일이 보이는 화면(보관함)은 쓰지 않음

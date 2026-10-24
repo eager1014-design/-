@@ -13,11 +13,18 @@ export const COLORS = {
   key: "#FFD84D", // 자막 속 키워드 색
   band: "#E0242E", // 쇼츠 제목 둘째 줄 띠
   bandRadius: 0,
+  stroke: null, // 자막 글씨 테두리 색 (null = ink)
+  dark: false, // 어두운 바탕 스킨: 캐릭터 선을 흰색으로, 형광펜 대신 빛나는 글씨
 };
 
 // 편 전체 "skin": 글꼴·색 묶음. 글꼴은 SkinFont 라는 이름으로 불러오고, 없으면 Pretendard (FONT 의 순서)
 // cute (2026-10-24, 사장님 참고 쇼츠 https://youtu.be/v9oeGZiRteE): 둥근 글꼴(배민 주아체, OFL) + 크림 배경 + 진한 남색 테두리 + 파스텔 포인트
 export const SKINS = {
+  // chalk (2026-10-24, 레퍼런스 Grabity 본편 + 우리 브랜드 파랑): 진한 파랑 칠판 + 흰 선 캐릭터 + 네온 노랑·하늘색
+  chalk: {
+    font: "fonts/BlackHanSans-Regular.ttf",
+    colors: { bg: "#0D1C3D", bgDeep: "#16295A", card: "#13285A", ink: "#F3F6FF", inkSoft: "#A9BCE0", sage: "#5ED4FF", sageDeep: "#9FE6FF", amber: "#FFE45C", terracotta: "#FF8193", key: "#FFE45C", band: "#2160D6", bandRadius: 14, stroke: "#071230", dark: true },
+  },
   cute: {
     font: "fonts/Jua-Regular.ttf",
     colors: { bg: "#FFF7EA", bgDeep: "#F4E7D0", card: "#FFFFFF", ink: "#2B2F4A", inkSoft: "#6B6F86", sage: "#5FB894", sageDeep: "#2F7F63", amber: "#FFE08A", terracotta: "#F2877E", key: "#FFE27A", band: "#F2877E", bandRadius: 22 },

@@ -9,7 +9,7 @@ import { wipe } from "@remotion/transitions/wipe";
 import { loadFont } from "@remotion/fonts";
 import { FONT, FRAME, SIZES, SKINS, TRANSITION_FRAMES } from "./theme.js";
 import { applyPace, cueFrame, sceneFrames, voiceSeconds } from "./timing.js";
-import { Background, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, Stickers, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
+import { Background, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, Props, Stickers, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
 import { SCENES } from "./scenes.jsx";
 import { Cast, castTimeline, setCharacter } from "./presenter.jsx";
 import { BAND, BandCast, Comments } from "./band.jsx";
@@ -26,7 +26,9 @@ const PUNCHY_MOVES = [
   () => wipe({ direction: "from-left" }),
   () => slide({ direction: "from-left" }),
 ];
+const CHALK_MOVES = [() => wipe({ direction: "from-left" }), () => wipe({ direction: "from-top-left" }), () => wipe({ direction: "from-right" }), () => wipe({ direction: "from-bottom" })];
 function transitionFor(next, i, style, cur) {
+  if (COLORS.dark) return CHALK_MOVES[i % CHALK_MOVES.length](); // 칠판: 지우개로 닦아내듯 넘어감
   if (next.type === "chapter") return slide({ direction: "from-right" });
   if (next.type === "dialogue" && cur?.type === "dialogue") return fade(); // 대화가 이어지면 두 사람은 그대로, 말풍선만 바뀌게
   return style === "punchy" ? PUNCHY_MOVES[i % PUNCHY_MOVES.length]() : fade();
@@ -256,6 +258,7 @@ export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm
                 )}
                 {it.scene.pose && <SideCharacter src={it.scene.pose} side={it.scene.poseSide} at={6} />}
                 {it.scene.stickers && <Stickers scene={it.scene} />}
+                {it.scene.props && <Props scene={it.scene} />}
                 {showProgress && <ChapterProgress chapters={bar} current={it.chapter} />}
                 {captionOn(captions, it.scene) && <Captions scene={it.scene} />}
                 <SceneSfx scene={it.scene} />

@@ -2,17 +2,6 @@
   "title": "자동화 사례 — 워크플로우 디자이너·개발자 천성준",
   "format": "long",
   "style": "calm",
-  "palette": {
-    "bg": "#F4F6F9",
-    "bgDeep": "#DCE3EC",
-    "card": "#FFFFFF",
-    "ink": "#14233A",
-    "inkSoft": "#56657A",
-    "sage": "#1C3D6E",
-    "sageDeep": "#14233A",
-    "amber": "#EAD9A2",
-    "terracotta": "#8A6A3B"
-  },
   "voice": {
     "provider": "elevenlabs",
     "id": "vithIMnhyN3GwRbVmrZt",
@@ -82,6 +71,24 @@
           "at": "저도",
           "is": "kind"
         }
+      ],
+      "props": [
+        {
+          "icon": "clock",
+          "at": "가게",
+          "x": 0.2,
+          "y": 0.62,
+          "size": 230,
+          "move": "wiggle"
+        },
+        {
+          "icon": "coffee",
+          "at": "또",
+          "x": 0.8,
+          "y": 0.62,
+          "size": 220,
+          "move": "bob"
+        }
       ]
     },
     {
@@ -129,7 +136,17 @@
       ],
       "cast": "right",
       "face": "smile",
-      "gesture": "explain"
+      "gesture": "explain",
+      "props": [
+        {
+          "icon": "lightning",
+          "at": "자동으로",
+          "x": 0.14,
+          "y": 0.32,
+          "size": 220,
+          "move": "pulse"
+        }
+      ]
     },
     {
       "id": "s03",
@@ -531,7 +548,25 @@
       },
       "cast": "center",
       "face": "laugh",
-      "gesture": "explain"
+      "gesture": "explain",
+      "props": [
+        {
+          "icon": "check",
+          "at": "직접",
+          "x": 0.2,
+          "y": 0.6,
+          "size": 240,
+          "move": "pulse"
+        },
+        {
+          "icon": "heart",
+          "at": "쓰고",
+          "x": 0.8,
+          "y": 0.6,
+          "size": 200,
+          "move": "bob"
+        }
+      ]
     },
     {
       "id": "s09",
@@ -587,7 +622,17 @@
       "kicker": "📞 편하게 연락 주세요",
       "cast": "right",
       "face": "kind",
-      "gesture": "point"
+      "gesture": "point",
+      "props": [
+        {
+          "icon": "question",
+          "at": "제일",
+          "x": 0.16,
+          "y": 0.4,
+          "size": 230,
+          "move": "wiggle"
+        }
+      ]
     }
   ],
   "voiceFull": {
@@ -603,5 +648,6 @@
     "speed": 1.2,
     "trim": true
   },
-  "presenter": true
+  "presenter": true,
+  "skin": "chalk"
 }
