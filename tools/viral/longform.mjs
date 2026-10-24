@@ -349,7 +349,24 @@ ${p.episode ? `[대본]\n${p.episode.scenes.map((s) => s.narration).join(" ").sl
 유튜브 ${p.format === "short" ? "쇼츠" : ""} 업로드 문구를 써.${p.format === "short" ? " 쇼츠는 챕터 시간 없이." : ""} JSON 하나만:
 {"reply": "한두 줄", "youtube": {"titles": ["제목 후보 3개, 100자 이내, 핵심 키워드 앞"], "description": "설명란 (첫 2줄에 키워드, 챕터 시간은 '0:00 들어가며' 형식으로 대략, 댓글 질문 1개, 해시태그 3개)", "tags": ["태그 10개 이내"]}}`);
   p.youtube = r.youtube;
-  say(p, r.reply);
+  const ab = abKit(p);
+  say(p, r.reply + (ab ? `\n\nA/B 테스트용 썸네일 3장·제목 3개를 바탕화면 '${path.basename(ab)}' 폴더에 넣어 뒀어요.` : ""));
+}
+
+// 유튜브 스튜디오 'A/B 테스팅'(제목·썸네일 3개 비교)용 묶음 — 유튜브가 이 기능을 프로그램(API)으로는 열어 두지 않아서,
+// 사장님이 스튜디오에서 끌어다 놓기만 하면 되게 바탕화면 폴더에 썸네일 3장(jpg 1280×720)과 제목 3개(txt)를 만들어 둔다 (2026-10-24)
+function abKit(p) {
+  if (!p.youtube?.titles?.length) return null;
+  const safe = (p.title || p.id).replace(/[\\/:*?"<>|]/g, "").slice(0, 30).trim();
+  const dir = path.join(process.env.HOME, "Desktop", `AB테스트_${safe}`);
+  fs.mkdirSync(dir, { recursive: true });
+  const titles = p.youtube.titles.slice(0, 3);
+  fs.writeFileSync(path.join(dir, "제목3개.txt"), titles.map((t, i) => `제목 ${i + 1}: ${t}`).join("\n\n") + "\n");
+  for (const [i, th] of (p.format === "long" ? p.thumbs || [] : []).slice(0, 3).entries()) {
+    run(p, `A/B 썸네일 ${i + 1} 만드는 중`, "npx", ["remotion", "ffmpeg", "-y", "-loglevel", "error", "-i", path.join(ROOT, th), "-vf", "scale=1280:720", "-q:v", "3", path.join(dir, `썸네일${i + 1}.jpg`)], { cwd: VIDEO, allowFail: true });
+  }
+  p.abDir = dir;
+  return dir;
 }
 
 // ⑦ 유튜브에 비공개로 올리기 — 사장님이 고른 제목·썸네일로. 공개는 사장님이 스튜디오에서 (매일 쇼츠와 같은 규칙)
@@ -369,12 +386,13 @@ async function publish(p) {
     run(p, "썸네일 줄이는 중", "npx", ["remotion", "ffmpeg", "-y", "-loglevel", "error", "-i", path.join(ROOT, th), "-vf", "scale=1280:720", "-q:v", "3", small], { cwd: VIDEO });
     meta.thumbnail = small;
   }
+  if (!p.abDir) abKit(p);
   const mf = path.join(dir, "youtube.json");
   fs.writeFileSync(mf, JSON.stringify(meta, null, 2));
   const r = run(p, "📤 유튜브에 비공개로 올리는 중 (몇 분)", NODE, ["tools/youtube_upload.mjs", "upload", path.join(ROOT, p.final), mf, "--yes"], { timeout: 3600_000 });
   p.youtubeUrl = r.out.match(/https:\/\/(?:youtu\.be|www\.youtube\.com|studio\.youtube\.com)\/\S+/)?.[0] || null;
   p.stage = "올림(비공개)";
-  say(p, `유튜브에 비공개로 올렸어요: "${meta.title}"${p.youtubeUrl ? `\n${p.youtubeUrl}` : ""}\n스튜디오에서 확인하고 공개로 바꿔 주세요.${/열쇠|만료|invalid_grant/i.test(r.out) ? "" : ""}`);
+  say(p, `유튜브에 비공개로 올렸어요: "${meta.title}"${p.youtubeUrl ? `\n${p.youtubeUrl}` : ""}\n\nA/B 테스트 하는 법: 스튜디오 → 이 영상 '세부정보' → 썸네일 아래 [A/B 테스팅] → '제목과 썸네일' → 바탕화면 '${path.basename(p.abDir || "")}' 폴더의 썸네일1~3을 끌어다 놓고, 제목3개.txt 에서 제목을 복사해 붙여넣기 → 공개로 바꾸면 테스트 시작.`);
 }
 
 const JOBS = { chat, plan, thumbs, script, voice, eleven, upload, publish };

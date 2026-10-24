@@ -561,8 +561,9 @@ function renderLong(p) {
     <button class="btn" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfVoiceSend(this)">녹음 올리고 완성본 만들기</button>
     <button class="btn ghost" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfEleven(${p.episode.scenes.reduce((n, s) => n + (s.narration || "").length, 0)}, this)">또는 일레븐랩스 천성준 목소리로</button></div>` : "";
   const yt = p.youtube ? `<div class="panel"><b>업로드 문구</b>
-    <p>${p.youtube.titles.map((t, i) => `<label style="display:block;margin:4px 0;color:var(--ink);font-size:15px"><input type="radio" name="lfTitle" value="${i}" ${i === (p.pick?.title || 0) ? "checked" : ""} style="width:auto"> ${esc(t)}</label>`).join("")}</p>
+    <p>${p.youtube.titles.map((t, i) => `<label style="display:block;margin:4px 0;color:var(--ink);font-size:15px"><input type="radio" name="lfTitle" value="${i}" ${i === (p.pick?.title || 0) ? "checked" : ""} style="width:auto"> ${esc(t)} <button type="button" class="btn sm ghost" onclick="navigator.clipboard.writeText(${esc(JSON.stringify(t))}).then(()=>say('제목 ${i + 1}을 복사했어요.'))">복사</button></label>`).join("")}</p>
     ${!short && p.thumbs?.length ? `<p class="note" style="margin-bottom:4px">올릴 썸네일</p><div style="display:flex;gap:8px;flex-wrap:wrap">${p.thumbs.map((t, i) => `<label style="width:150px"><input type="radio" name="lfThumb" value="${i}" ${i === (p.pick?.thumb || 0) ? "checked" : ""} style="width:auto"> ${i + 1}번<img src="/upload?p=${encodeURIComponent(t)}" style="width:100%;border-radius:8px"></label>`).join("")}</div>` : ""}
+    ${p.abDir ? `<p class="note">A/B 테스트용 파일: 바탕화면 '${esc(p.abDir.split("/").pop())}' 폴더 (썸네일1~3.jpg · 제목3개.txt) — 제목 옆 [복사]로도 바로 붙여넣을 수 있어요</p>` : ""}
     ${p.youtubeUrl ? `<p>✅ 올림: <a href="${esc(p.youtubeUrl)}" target="_blank">${esc(p.youtubeUrl)}</a></p>` : ""}
     <button class="btn" style="margin-top:10px" ${busy || !p.final ? "disabled" : ""} onclick="lfPublish(this)">⑥ 유튜브에 비공개로 올리기</button>
     <span class="note">${p.final ? "공개 전환은 스튜디오에서 사장님이" : "완성본이 있어야 올릴 수 있어요"}</span><div class="readout">${esc(p.youtube.description)}</div><p class="note">태그: ${p.youtube.tags.map(esc).join(", ")}</p></div>` : "";
