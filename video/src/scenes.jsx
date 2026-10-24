@@ -674,6 +674,37 @@ function Screen({ scene, frames }) {
   );
 }
 
+// 시간 줄이기 (2026-10-24 사장님: "문서작업 7시간 → 7분 모션그래픽"): from 큰 숫자 → 빨간 줄이 그어짐 → 화살표가 그려짐 → to 가 튀어나오며 빛남
+// title, from("7시간"), to("7분"), label(작은 설명), example(true 면 '예시' 표시), cue(시작), toCue(줄어든 숫자가 나오는 단어)
+function Shrink({ scene }) {
+  const u = useUnit();
+  const frame = useCurrentFrame();
+  const [at, toAt] = revealFrames(scene, [{ cue: scene.cue }, { cue: scene.toCue }]);
+  const ramp = (a, b) => Math.max(0, Math.min(1, (frame - a) / Math.max(1, b - a)));
+  const strike = ramp(toAt - 14, toAt);
+  const arrow = ramp(toAt - 6, toAt + 10);
+  const pop = ramp(toAt + 4, toAt + 16);
+  const big = (sz, color) => ({ ...text(u, sz, 800, color), lineHeight: 1, whiteSpace: "nowrap" });
+  return (
+    <Center>
+      <Sfx at={[at, toAt]} />
+      {scene.title && <Rise at={0}><div style={{ ...text(u, 52, 800), textAlign: "center", marginBottom: 50 * u }}><Rich text={scene.title} at={0} /></div></Rise>}
+      <div style={{ display: "flex", alignItems: "center", gap: 50 * u }}>
+        <Rise at={at} style={{ position: "relative" }}>
+          <div style={big(150, COLORS.inkSoft)}>{scene.from}</div>
+          {strike > 0 && <div style={{ position: "absolute", left: -10 * u, top: "52%", height: 12 * u, width: `calc(${strike * 100}% + ${20 * u}px)`, background: COLORS.terracotta, borderRadius: 99, transform: "rotate(-4deg)", boxShadow: COLORS.dark ? `0 0 ${16 * u}px ${COLORS.terracotta}` : undefined }} />}
+        </Rise>
+        <svg width={170 * u} height={80 * u} viewBox="0 0 170 80" style={{ opacity: arrow > 0 ? 1 : 0 }}>
+          <path d="M8 40 H150 M120 12 L156 40 L120 68" fill="none" stroke={COLORS.ink} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" pathLength="1" strokeDasharray="1" strokeDashoffset={1 - arrow} />
+        </svg>
+        <div style={{ ...big(190, COLORS.amber), transform: `scale(${pop === 0 ? 0 : 0.6 + 0.4 * pop + 0.12 * Math.sin(pop * Math.PI)})`, textShadow: COLORS.dark ? `0 0 ${30 * u}px ${COLORS.amber}aa` : undefined }}>{scene.to}</div>
+      </div>
+      {scene.label && <Rise at={toAt + 10} style={{ marginTop: 44 * u }}><div style={{ ...text(u, 40, 700, COLORS.inkSoft), textAlign: "center" }}><Rich text={scene.label} at={toAt + 10} /></div></Rise>}
+      {scene.example && <div style={{ position: "absolute", right: 60 * u, bottom: 60 * u, ...text(u, 26, 700, COLORS.inkSoft), border: `2px solid ${COLORS.inkSoft}`, borderRadius: 10 * u, padding: `${4 * u}px ${14 * u}px` }}>예시</div>}
+    </Center>
+  );
+}
+
 export const SCENES = {
   hook: Hook,
   statement: Statement,
@@ -691,4 +722,5 @@ export const SCENES = {
   elements: Elements,
   dialogue: Dialogue,
   screen: Screen,
+  shrink: Shrink,
 };
