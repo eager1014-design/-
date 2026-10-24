@@ -180,7 +180,7 @@ ${feedback ? `\n[사장님 수정 요청 — 반드시 반영]\n${feedback}\n\n[
    쓸 수 있는 효과음: correct(정답 띵동) · wrong(오답 부저) · scratch(레코드 긁힘, 반전 직전) · boing(띠용, 황당) · gasp(헉) · sigh(한숨) · slidewhistle(뚝 떨어짐, 실망) · thud(쿵) · drum(퍽, 충격 한 방) · glitch(지지직, 머릿속 혼란) · pageturn(책장 넘김, 다음 이야기) · bell(띵, 깨달음) · kaching(삑, 체크) · tick(째깍, 시간·기다림) · heartbeat(두근, 불안) · notification(알림, 메시지) · typing(타자) · camera(찰칵) · riser(긴장 고조) · sparkle(반짝, 희망) · ding(딩) · paper(종이) · chime(wav, 마무리)
 12. 배경음악 분위기를 "music_mood" 로 하나 골라: ${musicMoods().join(" · ")} (calm 잔잔 · sad 슬픔·여운 · tense 긴장·위험 신호(손절·가스라이팅 편에 잘 맞음) · playful 장난·경쾌 · hopeful 희망·위로)
 
-[쓸 수 있는 장면 종류] photo(위인 사진, 위 위인 편 참고) · hook(lines[{text,cue}], kicker) · statement(text, kicker, sub, cue) · bigNumber(value, prefix, suffix, label, source, cue, kicker) · compare(title, left/right{title, emoji, cue, items[]}) · checklist(title, items[]) · story(emoji, lines[{text,cue}]) · outro(question, cue, channelCue, channel) · pillars · elements(사주 설명, 예시 참고) · roadmap(title, items[])
+${load().settings?.skin === "cute" ? `13. 귀여운 스타일: 장면 4~5곳에 "stickers": [{"emoji": "✨", "at": "그 장면 내레이션 속 단어", "x": 0.85, "y": 0.2}] 로 1개씩. 이모지는 ✨ 💡 💭 ❓ ❗ 💦 💕 ⭐ 🎵 중 장면 뜻에 맞게. x·y 는 화면 비율(0~1) — 제목(위 0.15 까지)·자막(아래 0.75 아래)·캐릭터를 피해 귀퉁이 쪽(x 0.12 또는 0.88, y 0.25~0.6).\n` : ""}[쓸 수 있는 장면 종류] photo(위인 사진, 위 위인 편 참고) · hook(lines[{text,cue}], kicker) · statement(text, kicker, sub, cue) · bigNumber(value, prefix, suffix, label, source, cue, kicker) · compare(title, left/right{title, emoji, cue, items[]}) · checklist(title, items[]) · story(emoji, lines[{text,cue}]) · outro(question, cue, channelCue, channel) · pillars · elements(사주 설명, 예시 참고) · roadmap(title, items[])
 장면 공통: id("s01"…), narration, comments(규칙 9), keywords[], face(smile·surprised·serious·laugh·worried·kind, 또는 [{at, is}]), gesture(idea·point·think·explain·none, 또는 [{at, is}]), cast(right·left·center·corner·off, 또는 [{at, pos}] — 섞어서 지루하지 않게), musicDrop({at, level:0}) 핵심 문장 1~2곳.
 
 [완성 예시 episode.json — 이 모양 그대로]
@@ -230,7 +230,7 @@ async function script(st, feedback) {
     const res = askClaude(st, prompt);
     const ep = {
       ...res.episode, format: "short", layout: look === "band" ? "band" : "one", castLook: look === "circle" ? "circle" : undefined,
-      style: "punchy", pace: { speed: 1.1, trim: true }, presenter: true,
+      style: "punchy", pace: { speed: 1.1, trim: true }, presenter: true, skin: load().settings?.skin || undefined,
       music: pickMusic(st, res.music_mood), musicStart: res.episode.scenes?.[1]?.id, musicVolume: 0.14, voice: VOICE,
     };
     ep.frame = { ...(ep.frame || {}), brand: "예민한자립가" };

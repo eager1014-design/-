@@ -10,6 +10,18 @@ export const COLORS = {
   sageDeep: "#4F6B53", // 진한 세이지 (번호·강조 제목)
   amber: "#E9B860", // 형광펜 강조 (기존 영상의 노란 강조를 부드럽게)
   terracotta: "#C8745A", // 경고·대비 (나쁜 환경, 하지 말 것)
+  key: "#FFD84D", // 자막 속 키워드 색
+  band: "#E0242E", // 쇼츠 제목 둘째 줄 띠
+  bandRadius: 0,
+};
+
+// 편 전체 "skin": 글꼴·색 묶음. 글꼴은 SkinFont 라는 이름으로 불러오고, 없으면 Pretendard (FONT 의 순서)
+// cute (2026-10-24, 사장님 참고 쇼츠 https://youtu.be/v9oeGZiRteE): 둥근 글꼴(배민 주아체, OFL) + 크림 배경 + 진한 남색 테두리 + 파스텔 포인트
+export const SKINS = {
+  cute: {
+    font: "fonts/Jua-Regular.ttf",
+    colors: { bg: "#FFF7EA", bgDeep: "#F4E7D0", card: "#FFFFFF", ink: "#2B2F4A", inkSoft: "#6B6F86", sage: "#5FB894", sageDeep: "#2F7F63", amber: "#FFE08A", terracotta: "#F2877E", key: "#FFE27A", band: "#F2877E", bandRadius: 22 },
+  },
 };
 
 // 제목 띠 쇼츠 (episode.json 의 "frame"): 검은 바탕 + 위 2줄 제목(둘째 줄 빨간 띠) — 채널 최고 쇼츠 '뇌를 찍어봤더니' 틀
@@ -42,7 +54,7 @@ export const ELEMENTS = {
 // 쇼츠·릴스 안전 영역 (1080×1920): 글씨·자막·제목·캐릭터 얼굴은 이 안에만 — 사장님 기준 그림 (2026-10-22)
 export const SAFE = { left: 51, top: 193, right: 1029, bottom: 1399 };
 
-export const FONT = "Pretendard";
+export const FONT = "SkinFont, Pretendard";
 
 export const FPS = 30;
 export const TRANSITION_FRAMES = 12; // 장면 사이 전환 0.4초

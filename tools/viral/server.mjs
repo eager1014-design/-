@@ -91,7 +91,10 @@ const routes = {
     saveSettings({ topic: text });
     return startDaily("run", today);
   },
-  "POST /api/settings": async (b) => saveSettings({ look: ["one", "circle", "band"].includes(b.look) ? b.look : "one" }),
+  "POST /api/settings": async (b) => saveSettings({
+    ...(b.look !== undefined ? { look: ["one", "circle", "band"].includes(b.look) ? b.look : "one" } : {}),
+    ...(b.skin !== undefined ? { skin: b.skin === "cute" ? "cute" : "" } : {}), // 글씨·색: "" 기본 | cute 귀여운 (주아체·파스텔·스티커)
+  }),
   "POST /api/diary/delete": async (b) => { deleteDiary(b.id); return { ok: true }; },
   // 연출 기법
   "GET /api/techniques": async () => Object.values(load().techniques || {}).sort((a, b) => (b.at || "").localeCompare(a.at || "")),

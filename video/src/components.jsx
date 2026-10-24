@@ -2,7 +2,7 @@
 import React, { createContext, useContext } from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { COLORS, FONT } from "./theme.js";
-import { captionChunks } from "./timing.js";
+import { captionChunks, cueFrame } from "./timing.js";
 
 // 장면을 그릴 크기를 영상 크기와 다르게 정할 때 (제목 띠 쇼츠: 세로 영상 가운데 칸에 장면을 가로 배치로 그림).
 // 값: { width, height } 또는 null(영상 크기 그대로)
@@ -147,7 +147,7 @@ export function Captions({ scene }) {
       >
         {punchy
           ? now.text.split(" ").map((w, i) => (
-              <span key={i} style={{ color: isKeyword(w, keys) ? KEY_COLOR : "#FFFFFF" }}>
+              <span key={i} style={{ color: isKeyword(w, keys) ? COLORS.key : "#FFFFFF" }}>
                 {i ? " " : ""}
                 {w}
               </span>
@@ -159,7 +159,6 @@ export function Captions({ scene }) {
 }
 
 // punchy 자막에서 키워드만 노란색. 키워드 = 장면 화면 글씨에서 **강조**한 말 + scene.keywords
-const KEY_COLOR = "#FFD84D";
 function keywordsOf(scene) {
   const marked = [...JSON.stringify(scene).matchAll(/\*\*([^*]+)\*\*/g)].map((m) => m[1]);
   return [...marked, ...(scene.keywords || [])].flatMap((k) => k.split(/[\s\\n]+/)).map((k) => k.replace(/[^가-힣a-zA-Z0-9%]/g, "")).filter((k) => k.length >= 2);
@@ -276,4 +275,23 @@ export function SideCharacter({ src, side = "right", at = 0 }) {
       <Img src={staticFile(src)} style={{ width: "100%", height: "100%", objectFit: "contain", filter: "drop-shadow(0 8px 10px rgba(60,50,30,0.12))" }} />
     </div>
   );
+}
+
+// 스티커: 장면 칸 "stickers": [{"emoji": "✨", "at": "단어", "x": 0.82, "y": 0.18, "size": 90}] — 그 단어에서 통통 튀며 나타나 살짝 흔들림
+// x·y 는 화면 비율(0~1), size 는 1080 기준 px. 귀여운 스타일(skin cute)에서 반짝이·전구·말풍선 같은 포인트용
+export function Stickers({ scene }) {
+  const frame = useCurrentFrame();
+  const { fps, width } = useVideoConfig();
+  const u = width / 1080;
+  return (scene.stickers || []).map((st, i) => {
+    const at = st.at ? cueFrame(scene, st.at) : 6;
+    if (frame < at) return null;
+    const pop = spring({ frame: frame - at, fps, config: { damping: 9, stiffness: 180, mass: 0.6 } });
+    const wobble = Math.sin((frame - at) / 9 + i) * 6;
+    return (
+      <div key={i} style={{ position: "absolute", left: `${(st.x ?? 0.85) * 100}%`, top: `${(st.y ?? 0.2) * 100}%`, transform: `translate(-50%, -50%) scale(${pop}) rotate(${wobble}deg)`, fontSize: (st.size || 90) * u, lineHeight: 1, filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.15))" }}>
+        {st.emoji}
+      </div>
+    );
+  });
 }

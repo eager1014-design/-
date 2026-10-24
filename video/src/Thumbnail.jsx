@@ -14,8 +14,8 @@ import { loadFont } from "@remotion/fonts";
 import { COLORS, FONT } from "./theme.js";
 import { Background } from "./components.jsx";
 
-loadFont({ family: FONT, url: staticFile("fonts/Pretendard-ExtraBold.woff2"), weight: "800" });
-loadFont({ family: FONT, url: staticFile("fonts/Pretendard-Bold.woff2"), weight: "700" });
+loadFont({ family: "Pretendard", url: staticFile("fonts/Pretendard-ExtraBold.woff2"), weight: "800" });
+loadFont({ family: "Pretendard", url: staticFile("fonts/Pretendard-Bold.woff2"), weight: "700" });
 
 const KEY_YELLOW = "#FFD84D";
 

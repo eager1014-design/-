@@ -7,16 +7,16 @@ import { fade } from "@remotion/transitions/fade";
 import { slide } from "@remotion/transitions/slide";
 import { wipe } from "@remotion/transitions/wipe";
 import { loadFont } from "@remotion/fonts";
-import { FONT, FRAME, SIZES, TRANSITION_FRAMES } from "./theme.js";
+import { FONT, FRAME, SIZES, SKINS, TRANSITION_FRAMES } from "./theme.js";
 import { applyPace, cueFrame, sceneFrames, voiceSeconds } from "./timing.js";
-import { Background, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
+import { Background, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, Stickers, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
 import { SCENES } from "./scenes.jsx";
 import { Cast, castTimeline } from "./presenter.jsx";
 import { BAND, BandCast, Comments } from "./band.jsx";
 import { COLORS } from "./theme.js";
 
 for (const [file, weight] of [["Regular", "400"], ["SemiBold", "600"], ["Bold", "700"], ["ExtraBold", "800"]]) {
-  loadFont({ family: FONT, url: staticFile(`fonts/Pretendard-${file}.woff2`), weight });
+  loadFont({ family: "Pretendard", url: staticFile(`fonts/Pretendard-${file}.woff2`), weight });
 }
 
 // 장면 전환: calm 은 부드럽게 겹침(챕터만 옆으로 밀기), punchy 는 매번 방향을 바꿔 빠르게 밀고 닦아냄 (참고 쇼츠의 컷 리듬)
@@ -123,7 +123,7 @@ function FrameShell({ frame, presenter, children }) {
     <AbsoluteFill style={{ backgroundColor: FRAME.bg }}>
       <div style={{ position: "absolute", top: titleTop, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
         {l1 && <div style={line}>{l1}</div>}
-        {l2 && <div style={{ ...line, background: FRAME.red, padding: "6px 26px 10px" }}>{l2}</div>}
+        {l2 && <div style={{ ...line, background: COLORS.band, borderRadius: COLORS.bandRadius, padding: "6px 26px 10px" }}>{l2}</div>}
       </div>
       {presenter ? (
         <div style={{ position: "absolute", top: boxTop, left: 0, width: SIZES.short.width, height: STAGE_H, overflow: "hidden" }}>
@@ -167,7 +167,7 @@ function BandEpisode({ items, style, frame = {}, captions, music, musicStart, mu
       {paper && <SizeContext.Provider value={SIZES.short}><Background /></SizeContext.Provider>}
       <div style={{ position: "absolute", top: BAND.titleTop, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
         {l1 && <div style={line}>{l1}</div>}
-        {l2 && <div style={{ ...line, color: FRAME.title, background: FRAME.red, padding: "4px 24px 8px" }}>{l2}</div>}
+        {l2 && <div style={{ ...line, color: FRAME.title, background: COLORS.band, borderRadius: COLORS.bandRadius, padding: "4px 24px 8px" }}>{l2}</div>}
       </div>
       <div style={{ position: "absolute", top: BAND.boxTop, left: 0, width: SIZES.long.width, height: SIZES.long.height,
         transform: `scale(${BOX_SCALE})`, transformOrigin: "top left", overflow: "hidden" }}>
@@ -217,9 +217,16 @@ function BandEpisode({ items, style, frame = {}, captions, music, musicStart, mu
 
 // 편마다 색 바꾸기 ("palette": {bg, card, ink, sage, …}) — 예민한자립가가 아닌 영상(예: 자동화 사례 홍보, 남색·금색)용
 const DEFAULT_COLORS = { ...COLORS };
+// 글꼴은 편마다 한 번만 불러온다. 굵기 범위를 주면 굵게 쓴 글씨도 가짜 굵게(번짐) 처리하지 않음
+const loadedSkins = new Set();
+function useSkinFont(skin) {
+  const font = SKINS[skin]?.font;
+  if (font && !loadedSkins.has(skin)) { loadedSkins.add(skin); loadFont({ family: "SkinFont", url: staticFile(font), weight: "100 900" }); }
+}
 
-export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm", music, musicStart, musicVolume, captions = true, frame, presenter, layout: screen, castLook, palette }) {
-  Object.assign(COLORS, DEFAULT_COLORS, palette || {});
+export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm", music, musicStart, musicVolume, captions = true, frame, presenter, layout: screen, castLook, palette, skin }) {
+  Object.assign(COLORS, DEFAULT_COLORS, SKINS[skin]?.colors || {}, palette || {});
+  useSkinFont(skin);
   const items = layout(applyPace(scenes, pace), !!steps?.length);
   if (screen === "band" || screen === "one") return <BandEpisode {...{ items, style, frame, captions, music, musicStart, musicVolume, castLook }} paper={screen === "one"} />;
   const bar = steps?.length ? steps : chapters;
@@ -247,6 +254,7 @@ export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm
                   <Scene scene={it.scene} frames={it.frames} />
                 )}
                 {it.scene.pose && <SideCharacter src={it.scene.pose} side={it.scene.poseSide} at={6} />}
+                {it.scene.stickers && <Stickers scene={it.scene} />}
                 {showProgress && <ChapterProgress chapters={bar} current={it.chapter} />}
                 {captionOn(captions, it.scene) && <Captions scene={it.scene} />}
                 <SceneSfx scene={it.scene} />
