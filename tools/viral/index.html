@@ -327,7 +327,7 @@ async function loadDaily() {
   const t = kst();
   const busyNow = days.some((d) => ["running", "voicing", "uploading"].includes(d.status));
   const look = (await api("/api/settings")).look || "one"; // (아래 settings 와 같은 값)
-  const looks = { full: "한 화면 (세로 전체, 분할 없음)", one: "위 제목 + 가운데 칸 (예전)", circle: "한 배경 + 동그라미 창 캐릭터", band: "검은 띠 (예전)" };
+  const looks = { title: "위 고정 제목 + 아래 한 무대 (기본)", full: "제목 없이 세로 한 화면", one: "위 제목 + 가운데 칸 (예전)", circle: "한 배경 + 동그라미 창 캐릭터", band: "검은 띠 (예전)" };
   const settings = await api("/api/settings");
   $("#daily").innerHTML = `<div class="panel"><h3 style="margin-top:0">🎯 다음 영상 주제</h3>
     <textarea id="topicText" style="min-height:80px" placeholder="예: 쇼펜하우어 — 혼자가 편한 예민한 사람 이야기 / 칼 융이 말한 거리 둬야 할 사람">${esc(settings.topic || "")}</textarea>

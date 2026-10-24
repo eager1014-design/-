@@ -93,7 +93,7 @@ const routes = {
     return startDaily("run", today);
   },
   "POST /api/settings": async (b) => saveSettings({
-    ...(b.look !== undefined ? { look: ["full", "one", "circle", "band"].includes(b.look) ? b.look : "full" } : {}),
+    ...(b.look !== undefined ? { look: ["title", "full", "one", "circle", "band"].includes(b.look) ? b.look : "title" } : {}),
     ...(b.skin !== undefined ? { skin: ["cute", "chalk"].includes(b.skin) ? b.skin : "" } : {}), // 글씨·색: "" 기본 | cute 귀여운 | chalk 칠판(진한 파랑+네온+움직이는 소품)
   }),
   "POST /api/diary/delete": async (b) => { deleteDiary(b.id); return { ok: true }; },
