@@ -226,7 +226,8 @@ export function saveUploads(files = []) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   return files.map((f, i) => {
     const ext = path.extname(f.name || "").toLowerCase();
-    if (!isImage(ext) && !isVideo(ext)) throw new Error(`사진(png·jpg)이나 영상(mp4·mov)만 올릴 수 있어요: ${f.name}`);
+    // ext 는 ".png" 처럼 점으로 시작 → extname(".png") 이 "" 라 isImage 가 늘 거짓이던 버그 (2026-10-24, 사진이 하나도 안 올라갔음)
+    if (!IMAGE_TYPES[ext] && !isVideo(ext)) throw new Error(`사진(png·jpg)이나 영상(mp4·mov)만 올릴 수 있어요: ${f.name}`);
     const file = path.join(UPLOAD_DIR, `${Date.now()}-${i}${ext}`);
     fs.writeFileSync(file, Buffer.from(f.data, "base64"));
     return path.relative(ROOT, file);

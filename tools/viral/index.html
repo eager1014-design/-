@@ -69,6 +69,7 @@
   .idea .doubt { color:#b4232a; font-size:13px; } @media (prefers-color-scheme: dark) { .idea .doubt { color:#ff9c9c; } }
   .exp { background:var(--chip); border-radius:12px; padding:12px 14px; margin-top:12px; } .exp ol { margin:6px 0; padding-left:20px; }
   .tablewrap { overflow-x:auto; }
+  .panel.drop { outline:3px dashed var(--accent); outline-offset:-6px; }
   details summary { cursor:pointer; color:var(--sub); font-size:13px; margin-top:10px; }
 </style>
 </head>
@@ -80,7 +81,6 @@
     <button data-tab="needs">고객 고충 <span id="needCount"></span></button>
     <button data-tab="diary">일기장</button>
     <button data-tab="search">찾기</button>
-    <button data-tab="link">링크 추가</button>
     <button data-tab="lib">보관함 <span id="libCount"></span></button>
     <button data-tab="tech">연출 기법</button>
     <button data-tab="ideas">아이디어 검증</button>
@@ -126,21 +126,6 @@
     <div id="results"></div>
   </section>
 
-  <section id="tab-link" class="hide">
-    <div class="panel">
-      <label>링크 (틱톡·인스타·스레드·유튜브)</label>
-      <input id="lurl" placeholder="https://www.tiktok.com/@.../video/...">
-      <div class="row" style="margin-top:12px">
-        <div><label>조회수 (아는 경우)</label><input id="lv" inputmode="numeric"></div>
-        <div><label>좋아요</label><input id="ll" inputmode="numeric"></div>
-        <div><label>댓글</label><input id="lc" inputmode="numeric"></div>
-      </div>
-      <label>글 내용 또는 영상 자막·내용 메모</label>
-      <textarea id="ltext" placeholder="스레드 글은 본문을 통째로, 틱톡·릴스는 자막이나 '첫 장면에 ~가 나오고 ~라고 말함' 식으로 적어주세요. 분석은 이걸 보고 합니다."></textarea>
-      <p class="note">유튜브는 링크만 넣으면 숫자를 자동으로 가져오고 영상을 직접 봅니다. 틱톡·인스타·스레드는 공식으로 영상을 볼 수 없어서, 붙여넣은 글을 보고 분석해요.</p>
-      <button class="btn" id="ladd" style="margin-top:8px">보관함에 넣기</button>
-    </div>
-  </section>
 
   <section id="tab-lib" class="hide"><div id="lib"></div></section>
   <section id="tab-tech" class="hide">
@@ -195,7 +180,7 @@ async function busy(btn, label, fn) {
 
 document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
   document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("on", x === b));
-  ["daily", "needs", "diary", "search", "link", "lib", "tech", "ideas"].forEach((t) => $("#tab-" + t).classList.toggle("hide", t !== b.dataset.tab));
+  ["daily", "needs", "diary", "search", "lib", "tech", "ideas"].forEach((t) => $("#tab-" + t).classList.toggle("hide", t !== b.dataset.tab));
   ({ lib: renderLib, diary: loadDiary, daily: loadDaily, tech: loadTech, needs: loadNeeds, ideas: loadIdeas })[b.dataset.tab]?.();
 });
 
@@ -239,15 +224,9 @@ async function saveHit(id, btn, andAnalyze) {
   });
 }
 
-$("#ladd").onclick = () => busy($("#ladd"), "넣는 중…", async () => {
-  const it = await api("/api/link", { url: $("#lurl").value, text: $("#ltext").value, views: $("#lv").value, likes: $("#ll").value, comments: $("#lc").value });
-  ["#lurl", "#ltext", "#lv", "#ll", "#lc"].forEach((s) => $(s).value = "");
-  await loadLib(); say("보관함에 넣었습니다."); openItem(it.id);
-});
-
 async function loadLib() { library = await api("/api/library"); $("#libCount").textContent = library.length ? `(${library.length})` : ""; }
 function renderLib() {
-  $("#lib").innerHTML = library.length ? `<div class="grid">${library.map((i) => card(i, true)).join("")}</div>` : `<div class="panel">아직 비어 있어요. '찾기'나 '링크 추가'로 넣어보세요.</div>`;
+  $("#lib").innerHTML = library.length ? `<div class="grid">${library.map((i) => card(i, true)).join("")}</div>` : `<div class="panel">아직 비어 있어요. '찾기'로 넣거나, '연출 기법'에서 참고 링크를 보내보세요.</div>`;
 }
 async function del(id) { if (!confirm("보관함에서 지울까요? (분석·대본도 같이 지워집니다)")) return; await api("/api/delete", { id }); await loadLib(); renderLib(); }
 
@@ -301,7 +280,7 @@ function openItem(id) {
     </div>
     ${(it.scripts || []).slice().reverse().map((s) => `<div class="script"><div class="note" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(s.topic || "주제 자유")} · ${s.length}초 · ${s.at.slice(0, 16).replace("T", " ")}</span><button class="btn sm ghost" onclick="copyText(this)">복사</button></div><div class="md">${md(s.text)}</div><textarea class="hide">${esc(s.text)}</textarea></div>`).join("")}
     ` : `<p>${it.text ? "붙여넣은 글을 보고" : it.platform === "youtube" ? "제미나이가 영상을 직접 보고" : ""} 왜 떴는지 분석합니다.</p>
-      ${it.platform !== "youtube" && !it.text ? `<p class="msg err">틱톡·인스타·스레드는 글이나 자막을 붙여넣어야 분석할 수 있어요. 링크 추가 탭에서 같은 링크로 다시 넣어주세요.</p>` : ""}
+      ${it.platform !== "youtube" && !it.text ? `<p class="msg err">틱톡·인스타·스레드는 글만으로는 분석할 수 없어요. '연출 기법' 탭에서 스크린샷이나 화면 녹화를 같이 올려주세요.</p>` : ""}
       <button class="btn" id="aGo">분석하기 (제미나이)</button>`}`;
   if ($("#aGo")) $("#aGo").onclick = () => busy($("#aGo"), "영상 보는 중… (30초~1분)", async () => { await api("/api/analyze", { id }); await loadLib(); openItem(id); });
   if ($("#sGo")) $("#sGo").onclick = () => busy($("#sGo"), "대본 쓰는 중… (30초~1분)", async () => {
@@ -380,6 +359,23 @@ async function loadDiary() {
     ${(d.files || []).map((f) => `<img src="/upload?p=${encodeURIComponent(f)}" style="max-width:120px;max-height:160px;border-radius:8px;margin:8px 8px 0 0">`).join("")}
     ${d.links ? `<p class="note">🔗 ${esc(d.links)}</p>` : ""}${d.photoNote ? `<details><summary>사진에서 읽은 내용</summary><p class="note">${esc(d.photoNote)}</p></details>` : ""}</div>`).join("");
 }
+// 파일 끌어다 놓기: 파일 칸이 있는 상자(.panel) 아무 데나 놓으면 그 칸에 들어간다 (이미 고른 파일에 더해짐)
+document.querySelectorAll('input[type=file]').forEach((input) => {
+  const box = input.closest('.panel') || input.parentElement;
+  const tip = document.createElement('div'); tip.className = 'note'; tip.textContent = '여기로 파일을 끌어다 놓아도 돼요';
+  input.after(tip);
+  const show = () => { tip.textContent = input.files.length ? `✓ ${[...input.files].map((f) => f.name).join(', ')}` : '여기로 파일을 끌어다 놓아도 돼요'; };
+  input.addEventListener('change', show);
+  box.addEventListener('dragover', (e) => { e.preventDefault(); box.classList.add('drop'); });
+  box.addEventListener('dragleave', (e) => { if (!box.contains(e.relatedTarget)) box.classList.remove('drop'); });
+  box.addEventListener('drop', (e) => {
+    e.preventDefault(); box.classList.remove('drop');
+    const dt = new DataTransfer();
+    [...input.files, ...e.dataTransfer.files].forEach((f) => dt.items.add(f));
+    input.files = dt.files; show();
+  });
+});
+
 // 고른 파일 → [{ name, data(base64) }] (맥북 안에서만 오가므로 그대로 보냄)
 async function readFiles(input) {
   return Promise.all([...input.files].map((f) => new Promise((ok, no) => {
@@ -392,12 +388,12 @@ async function readFiles(input) {
 }
 $("#dsave").onclick = () => busy($("#dsave"), "저장 중…", async () => {
   await api("/api/diary", { text: $("#dtext").value, files: await readFiles($("#dfiles")), links: $("#dlinks").value });
-  ["#dtext", "#dfiles", "#dlinks"].forEach((x) => $(x).value = ""); say("일기를 저장했어요."); loadDiary();
+  ["#dtext", "#dfiles", "#dlinks"].forEach((x) => $(x).value = ""); $("#dfiles").dispatchEvent(new Event("change")); say("일기를 저장했어요."); loadDiary();
 });
 $("#rgo").onclick = () => busy($("#rgo"), "분석 중… (30초~2분)", async () => {
   if (!$("#rnote").value.trim()) throw new Error("어떤 연출을 원하시는지 한 줄이라도 적어주세요.");
   const it = await api("/api/reference", { url: $("#rurl").value, files: await readFiles($("#rfiles")), note: $("#rnote").value, request: true });
-  ["#rurl", "#rfiles", "#rnote"].forEach((x) => $(x).value = ""); await loadLib(); loadTech(); openItem(it.id);
+  ["#rurl", "#rfiles", "#rnote"].forEach((x) => $(x).value = ""); $("#rfiles").dispatchEvent(new Event("change")); await loadLib(); loadTech(); openItem(it.id);
 });
 async function remakeWith(id, btn) {
   if (!confirm("이 참고 자료의 구조·연출로 오늘 영상을 다시 만들까요? (대본·초안만, 무료)")) return;
