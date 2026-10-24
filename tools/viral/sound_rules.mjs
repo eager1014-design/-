@@ -9,7 +9,7 @@ const MUSIC_INDEX = path.join(ROOT, "video/public/music/index.json");
 
 export const SOUND_RULES = (sections) => `[소리·강조 자막 원칙 — 꼭 지킬 것]
 1) 효과음: 장면마다 "sfx": [{"name": "이름", "cue": "그 장면 내레이션 속 단어"}] 로 0~1개(한 문장에 최대 1개), 영상 전체로는 2~4초에 하나꼴.
-   cue 는 문장 첫 단어(문장 시작 직전에 울림)로. 같은 소리를 세 번 넘게 쓰지 말 것.
+   cue 는 문장 첫 단어(문장 시작 직전에 울림)로. 같은 소리를 바로 다음 장면에 연달아 쓰지만 말 것(여러 번 쓰는 건 괜찮음).
    - 질문·호기심·반전: thud(쿵) · drum(쿠궁) · heartbeat(심장)
    - 숫자·결론·핵심: thud(쿵) · camera(찰칵) · ding(띵)
    - 장면·문맥 전환: whoosh(휘익) · swipe(슉) · pageturn(스윽)

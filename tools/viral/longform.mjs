@@ -263,6 +263,7 @@ async function script(p) {
 ${SCENE_GUIDE}
 ${SOUND_RULES(short ? "쇼츠는 2구간" : "롱폼은 4구간: 오프닝·훅 tense → 과거 고백 sad → 깨달음·전환 playful → 다짐·마무리 hopeful (내용에 맞게 조정)")}
 ${short ? SHORT_RULES : "챕터마다 chapter 장면으로 시작, 처음은 hook, 끝은 outro. 장면 하나에 1~2문장(3초 안팎마다 화면이 바뀌게 — 레퍼런스 평균 2.6초), 그래서 장면 40~80개. 짧은 단문·해요체."}${p.episode ? `\n[지난 대본 — 사장님 말대로 고쳐서 다시]\n${JSON.stringify(p.episode.scenes.map((s) => [s.id, s.type, s.narration]))}` : ""}${feedback ? `\n[대본 검사에서 나온 문제 — 고쳐서 다시]\n${feedback}` : ""}
+영상 길이·녹음 여부는 reply 에 쓰지 말 것(모르는 사실 — 프로그램이 실제 값으로 붙임).
 JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민할 점) + 마지막 줄에 '소리: BGM 구간 n개 / 효과음 n개 / 강조 자막 n개'", "music_plan": [{"from": "장면 id", "mood": "tense"}], "episode": {"title": "…", "chapters": ["챕터 이름 짧게"], "scenes": [ … ]}}`);
     const skin = load().settings?.skin || undefined; // 앱 '오늘의 영상'에서 고른 글씨·색
     const ep = short
@@ -284,6 +285,8 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
   const out = path.join(VIDEO, "out", `lf-${p.id}_draft.mp4`);
   run(p, "🎬 목소리 없는 초안 영상 만드는 중 (몇 분)", "npx", ["remotion", "render", "Episode", out, `--props=${path.relative(VIDEO, epFile)}`], { cwd: VIDEO });
   p.draft = rel(out);
+  const ch = await realChapters(p);
+  say(p, `실제 초안 길이: ${ch.mmss ? ch.mmss(ch.total) : "?"} (목소리 없는 초안 기준 — 사장님 녹음 속도에 따라 달라져요)`);
   p.stage = "초안";
   say(p, "목소리 없는 초안이에요. 장면 순서·화면 글씨를 보시고 고칠 점을 말씀해 주세요. 괜찮으면 아래 '녹음용 대본'을 읽어 녹음한 파일을 올려주세요.", { video: p.draft });
 }
@@ -342,15 +345,42 @@ function finish(p, epFile) {
 }
 
 // ⑥ 업로드 문구
+// 챕터 시간은 클로드가 짐작하지 않고 실제 영상 장면 시간으로 계산 (2026-10-24: 4분 영상인데 5분짜리 챕터를 지어냈음)
+// 완성본(목소리·속도 적용)이 있으면 그 episode.json, 없으면 초안 기준 — 영상 공장과 같은 계산(applyPace·sceneFrames·전환 겹침)
+async function realChapters(p) {
+  const epFile = path.join(epDir(p), "episode.json");
+  if (!fs.existsSync(epFile)) return { total: 0, chapters: [] };
+  const T = await import(path.join(VIDEO, "src/timing.js"));
+  const { TRANSITION_FRAMES, FPS } = await import(path.join(VIDEO, "src/theme.js"));
+  const ep = JSON.parse(fs.readFileSync(epFile, "utf8"));
+  const scenes = T.applyPace(ep.scenes, ep.pace);
+  let f = 0;
+  const chapters = [];
+  scenes.forEach((s, i) => {
+    if (s.type === "chapter") chapters.push({ sec: Math.floor(f / FPS), title: s.title || ep.chapters?.[chapters.length] || `챕터 ${chapters.length + 1}` });
+    f += T.sceneFrames(s) - (i < scenes.length - 1 ? TRANSITION_FRAMES : 0);
+  });
+  const mmss = (t) => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+  if (!chapters.length || chapters[0].sec > 0) chapters.unshift({ sec: 0, title: "들어가며" });
+  return { total: Math.round(f / FPS), voiced: scenes.every((s) => s.audio), lines: chapters.map((c) => `${mmss(c.sec)} ${c.title}`), mmss };
+}
+
 async function upload(p) {
+  const ch = p.format === "short" ? null : await realChapters(p);
   const r = askClaude(p, `${context(p)}
 ${p.episode ? `[대본]\n${p.episode.scenes.map((s) => s.narration).join(" ").slice(0, 6000)}` : ""}
 
 유튜브 ${p.format === "short" ? "쇼츠" : ""} 업로드 문구를 써.${p.format === "short" ? " 쇼츠는 챕터 시간 없이." : ""} JSON 하나만:
-{"reply": "한두 줄", "youtube": {"titles": ["제목 후보 3개, 100자 이내, 핵심 키워드 앞"], "description": "설명란 (첫 2줄에 키워드, 챕터 시간은 '0:00 들어가며' 형식으로 대략, 댓글 질문 1개, 해시태그 3개)", "tags": ["태그 10개 이내"]}}`);
+{"reply": "한두 줄", "youtube": {"titles": ["제목 후보 3개, 100자 이내, 핵심 키워드 앞"], "description": "설명란 (첫 2줄에 키워드, 댓글 질문 1개, 해시태그 3개. 챕터 시간·영상 길이는 쓰지 말 것 — 프로그램이 실제 시간으로 붙임)", "tags": ["태그 10개 이내"]}}`);
   p.youtube = r.youtube;
+  // 챕터: 실제 장면 시간으로 계산해 설명란에 붙인다 (유튜브 규칙: 0:00 부터, 3개 이상)
+  let chNote = "";
+  if (ch?.lines?.length >= 3) {
+    p.youtube.description = p.youtube.description.replace(/\n*(\d+:\d{2}.*\n?)+/g, "\n").trim() + "\n\n" + ch.lines.join("\n");
+    chNote = `\n챕터 시간은 실제 영상 길이(${ch.mmss(ch.total)}) 기준으로 계산해 넣었어요${ch.voiced ? "" : " — 아직 목소리를 안 입힌 초안 기준이라, 완성본을 만든 뒤 [⑤ 업로드 문구]를 한 번 더 누르면 정확해져요"}.`;
+  }
   const ab = abKit(p);
-  say(p, r.reply + (ab ? `\n\nA/B 테스트용 썸네일 3장·제목 3개를 바탕화면 '${path.basename(ab)}' 폴더에 넣어 뒀어요.` : ""));
+  say(p, r.reply + chNote + (ab ? `\n\nA/B 테스트용 썸네일 3장·제목 3개를 바탕화면 '${path.basename(ab)}' 폴더에 넣어 뒀어요.` : ""));
 }
 
 // 유튜브 스튜디오 'A/B 테스팅'(제목·썸네일 3개 비교)용 묶음 — 유튜브가 이 기능을 프로그램(API)으로는 열어 두지 않아서,
