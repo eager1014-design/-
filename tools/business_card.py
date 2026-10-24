@@ -24,7 +24,7 @@ CARD = {
     "name_en": next((a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--name-en=")), "William Cheon"),
     "title": "워크플로우 디자이너 · 개발자",
     "title_en": "WORKFLOW DESIGNER & DEVELOPER",
-    "tagline": ["사장님이 안 해도 되는 일,", "대신 돌아가게 만듭니다."],
+    "tagline": ["사장님이 매일 손으로 하던 일,", "자동으로 돌아가게 만듭니다."],
     "contacts": [("T", "010-4763-7063"), ("K", "카카오톡 eager1014"), ("E", "eager1014@gmail.com")],
     "back_title": ["사장님 없으면", "가게가 안 돌아가죠?"],
     # 사장님 입에서 나오는 말 + 실제로 만들어 드릴 수 있는 것만 (2026-10-23 사장님: "키워드가 안 와닿는다")
@@ -305,9 +305,84 @@ def menu_sheet():
     print(f"✅ 메뉴판: {OUT}/menu.png · menu_print.pdf (A5 148×210mm + 사방 2mm 재단 여유)")
 
 
+# ── cute: 흰 바탕 + 신뢰 파랑 + 동그란 안경 캐릭터 (2026-10-24 사장님: "조금 귀엽게, 단순하게, 뭘 하는 사람인지 알 수 있게") ──
+# 캐릭터 그림: business/character/<hair|bald>_<basic|happy|surprised|think|explain>.fill.png (챗GPT로 그려 오려낸 것)
+BLUE, BLUE_DEEP, BLUE_SOFT, CUTE_INK = "#2160D6", "#163F94", "#E8F0FD", "#15223B"
+CHAR_DIR = os.path.join(ROOT, "business", "character")
+JUA = os.path.join(ROOT, "video", "public", "fonts", "Jua-Regular.ttf")
+
+
+def jua(size_pt):
+    return ImageFont.truetype(JUA, round(size_pt * DPI / 72))
+
+
+def char_img(name, height_mm):
+    im = Image.open(os.path.join(CHAR_DIR, f"{name}.fill.png")).convert("RGBA")
+    h = round(height_mm * MM)
+    return im.resize((round(im.width * h / im.height), h), Image.LANCZOS)
+
+
+def front_cute():
+    im = Image.new("RGB", (W, H), "#FFFFFF")
+    d = ImageDraw.Draw(im)
+    x, y = SAFE + round(0.5 * MM), SAFE + round(0.5 * MM)
+    # 하는 일 한 줄 (파란 알약)
+    f = font(6.4, "bold")
+    t = CARD["title"]
+    tw = d.textlength(t, font=f)
+    d.rounded_rectangle([x, y, x + tw + round(5 * MM), y + round(5.4 * MM)], radius=round(2.7 * MM), fill=BLUE)
+    d.text((x + round(2.5 * MM), y + round(0.75 * MM)), t, font=f, fill="#FFFFFF")
+    y += round(9 * MM)
+    d.text((x, y), CARD["name"], font=jua(24), fill=CUTE_INK)
+    nw = d.textlength(CARD["name"], font=jua(24))
+    d.text((x + nw + round(2.5 * MM), y + round(4.6 * MM)), CARD["name_en"], font=font(7, "medium"), fill="#6B7A90")
+    y += round(12.5 * MM)
+    for line in CARD["tagline"]:
+        d.text((x, y), line, font=font(7.4, "medium"), fill=CUTE_INK)
+        y += round(3.9 * MM)
+    yy = H - SAFE - round(3.4 * MM) * len(CARD["contacts"]) + round(0.3 * MM)
+    for _, v in CARD["contacts"]:
+        d.text((x, yy), v, font=font(6.3, "regular"), fill="#4A5870")
+        yy += round(3.4 * MM)
+    c = char_img("hair_explain", 37)
+    im.paste(c, (W - SAFE - c.width + round(1.5 * MM), H - round(BLEED * MM) - c.height - round(2.5 * MM)), c)
+    return im
+
+
+def back_cute():
+    im = Image.new("RGB", (W, H), BLUE)
+    d = ImageDraw.Draw(im)
+    x, y = SAFE + round(0.5 * MM), SAFE + round(1 * MM)
+    for line in ["사장님,", "뭐가 제일 귀찮으세요?"]:
+        d.text((x, y), line, font=jua(15), fill="#FFFFFF")
+        y += round(7.4 * MM)
+    y += round(1.5 * MM)
+    for item in CARD["back_items"][:2]:
+        d.text((x, y), "· " + item, font=font(6.2, "medium"), fill="#DCE7FB")
+        y += round(3.6 * MM)
+    # 캐릭터는 글씨 아래·QR 왼쪽 빈자리에 (글씨와 안 겹치게)
+    c = char_img("hair_think", 19)
+    im.paste(c, (round(W * 0.47) - c.width // 2, H - round(BLEED * MM) - c.height - round(1.2 * MM)), c)
+    # QR (흰 둥근 상자)
+    size, pad = round(18 * MM), round(2 * MM)
+    qr = segno.make(CARD["qr_url"], error="m")
+    tmp = os.path.join(OUT, "_qr.png")
+    qr.save(tmp, scale=20, border=1, dark=CUTE_INK, light="#FFFFFF")
+    q = Image.open(tmp).convert("RGB").resize((size, size), Image.NEAREST)
+    os.remove(tmp)
+    bx2, by2 = W - SAFE, H - SAFE - round(4.5 * MM)
+    bx1, by1 = bx2 - size - 2 * pad, by2 - size - 2 * pad
+    d.rounded_rectangle([bx1, by1, bx2, by2], radius=round(2.4 * MM), fill="#FFFFFF")
+    im.paste(q, (bx1 + pad, by1 + pad))
+    fl = font(5.8, "bold")
+    t = "귀찮은 일 골라보기"
+    d.text(((bx1 + bx2) / 2 - d.textlength(t, font=fl) / 2, by2 + round(1.4 * MM)), t, font=fl, fill="#FFFFFF")
+    return im
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
-    f, b = (front_noir(), back_noir()) if THEME in PALETTES else (front(), back())
+    f, b = (front_cute(), back_cute()) if THEME == "cute" else (front_noir(), back_noir()) if THEME in PALETTES else (front(), back())
     f.save(os.path.join(OUT, "front.png"), dpi=(DPI, DPI))
     b.save(os.path.join(OUT, "back.png"), dpi=(DPI, DPI))
     f.save(os.path.join(OUT, "card_print.pdf"), save_all=True, append_images=[b], resolution=DPI)

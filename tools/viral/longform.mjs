@@ -159,8 +159,8 @@ async function plan(p) {
 {"reply": "사장님께 한두 줄 + 고민할 점 한 줄",
  "plan": {"titles": ["제목 후보 3개, 핵심 키워드를 앞에, 40자 이내"], "hook": "첫 10초에 할 말", "length": "예상 길이(분)",
    "chapters": [{"title": "챕터 이름", "points": ["다룰 내용 2~4개"]}],
-   "thumbnails": [{"lines": ["첫 줄 8자 이내", "**강조** 둘째 줄 8자 이내"], "kicker": "작은 윗글(선택)", "art": "챗GPT에게 줄 그림 설명(영어 아니어도 됨): 장면·표정·색·구도, 글씨 넣지 말 것, 오른쪽 60%에 주인공", "character": true}]}}
-썸네일 아이디어는 서로 다른 방향 3개 (예: 감정 클로즈업 / 대비 / 궁금증). character 가 true 면 채널 캐릭터(안경 쓴 선화 남자)를 그 그림에 넣는다.`);
+   "thumbnails": [{"type": "물건비유|VS대결|반응|글씨만", "lines": ["첫 줄", "둘째 줄(선택)"], "bg": "black|white", "layout": "top|bottom|text", "art": "그릴 것 한 문장 (글씨만이면 빈 문자열)", "note": "손글씨 메모 한 줄(선택, 10자 이내, 예: (하버드대 교수))"}]}}
+${THUMB_RULES}`);
   p.plan = r.plan;
   p.stage = "기획안";
   say(p, r.reply);
@@ -178,29 +178,56 @@ async function planShort(p) {
   say(p, r.reply);
 }
 
-// ③ 썸네일 3개: 챗GPT가 그림 → 영상 공장이 글씨를 얹음
+// 썸네일 공식 — 레퍼런스 채널 Grabity 분석 (video/public/episodes/_refs/grabity.md, 2026-10-24 사장님: "썸네일이 가장 중요, 단순하게, 캐릭터는 안 나와도 됨")
+const THUMB_RULES = `[썸네일 규칙 — 레퍼런스 분석에서]
+- 시안 4개를 서로 다른 type 으로: 물건비유(누구나 0.5초에 아는 소품 하나: 뇌·침대·폰·황금알 등) / VS대결(두 가지 비교) / 반응(사람이나 동물이 상황에 반응) / 글씨만.
+- 글씨: 1~2줄, 줄마다 6자 안팎(최대 8자). 도발·반전·금지형이 잘 됨("억지로 하지 마세요", "이거부터 키우세요"). **노랑** !!빨강!! 표시, 나머지 흰색. 한 줄에 색은 하나만.
+- 썸네일 글씨와 영상 제목은 절대 같은 말 금지: 썸네일 = 감정 자극, 제목 = 설명·근거(예: '자제력의 심리학 (뇌가 갈망하도록 속이는 법)').
+- 학술 용어·추상어 금지(조회수 낮았던 패턴). 그림은 하나만, 단순하게. 캐릭터는 넣지 않아도 됨.
+- note 는 위트 있는 손글씨 한 줄(선택). bg 는 시안끼리 섞어서.`;
+const DOODLE = "굵은 검은 선 손그림 두들, 아주 단순하게, 색은 한두 가지 단색만(노랑·연두·하늘 중), 그림자·질감·글씨 없이, 가운데 큼직하게 하나";
+
+// 챗GPT 그림의 빈 여백을 잘라서 썸네일에서 그림이 크게 보이게 (바탕색과 다른 픽셀 영역 + 여백 4%)
+function trimImage(img, dark) {
+  spawnSync("python3", ["-c", `
+import sys
+from PIL import Image, ImageChops
+im = Image.open(sys.argv[1]).convert("RGB")
+bg = Image.new("RGB", im.size, (0, 0, 0) if sys.argv[2] == "1" else (255, 255, 255))
+diff = ImageChops.difference(im, bg).convert("L").point(lambda v: 255 if v > 40 else 0)
+bb = diff.getbbox()
+if bb:
+    m = int(max(im.size) * 0.04)
+    im.crop((max(0, bb[0] - m), max(0, bb[1] - m), min(im.width, bb[2] + m), min(im.height, bb[3] + m))).save(sys.argv[1])
+`, img, dark ? "1" : "0"]);
+}
+
+// ③ 썸네일 4개: 챗GPT가 손그림 → 영상 공장이 굵은 글씨를 얹음 (style bold)
 async function thumbs(p) {
   if (!p.plan?.thumbnails?.length) throw new Error("기획안이 먼저 있어야 해요. [기획안 만들기]를 눌러주세요.");
   const dir = epDir(p);
   fs.mkdirSync(path.join(dir, "img"), { recursive: true });
   const outDir = path.join(UPLOAD_DIR, `lf-${p.id}`);
   fs.mkdirSync(outDir, { recursive: true });
-  const charRef = path.join(VIDEO, "public/characters/main/think.png");
   const made = [];
-  for (const [i, t] of p.plan.thumbnails.slice(0, 3).entries()) {
+  const list = p.plan.thumbnails.slice(0, 4);
+  for (const [i, t] of list.entries()) {
     const img = path.join(dir, "img", `thumb${i + 1}.png`);
-    const g = run(p, `🎨 챗GPT가 썸네일 그림 ${i + 1}/3 그리는 중 (1분 안팎)`, NODE, [path.join(ROOT, "tools/gpt_image.mjs"), `${t.art}. 유튜브 썸네일 배경 그림, 16:9, 글씨·로고 넣지 말 것, 왼쪽 40%는 글씨 자리로 비교적 단순하게`, `--out=${img}`, "--size=1536x1024", ...(t.character && fs.existsSync(charRef) ? [`--ref=${charRef}`] : [])], { allowFail: true, timeout: 600_000 });
-    const props = { format: "long", kicker: t.kicker, lines: t.lines, ...(g.ok && fs.existsSync(img) ? { scene: { image: path.relative(path.join(VIDEO, "public"), img), focusX: 0.65, focusY: 0.45, zoom: 1.1 } } : {}) };
+    const dark = t.bg !== "white";
+    const wantArt = t.layout !== "text" && t.art;
+    const g = wantArt ? run(p, `🎨 챗GPT가 썸네일 그림 ${i + 1}/${list.length} 그리는 중 (1분 안팎)`, NODE, [path.join(ROOT, "tools/gpt_image.mjs"), `${t.art}. ${DOODLE}, 배경은 완전한 ${dark ? "검정(#000000), 선은 흰색 또는 검정 테두리에 흰 채움" : "흰색(#FFFFFF)"}, 가로로 넓은 구도`, `--out=${img}`, "--size=1536x1024"], { allowFail: true, timeout: 600_000 }) : { ok: false };
+    if (g.ok && fs.existsSync(img)) trimImage(img, dark);
+    const props = { format: "long", style: "bold", bg: t.bg, lines: t.lines, note: t.note, layout: g.ok && fs.existsSync(img) ? t.layout || "top" : "text", ...(g.ok && fs.existsSync(img) ? { image: path.relative(path.join(VIDEO, "public"), img) } : {}) };
     const pf = path.join(dir, `thumb${i + 1}.json`);
     fs.writeFileSync(pf, JSON.stringify({ thumbnail: props }, null, 2)); // 썸네일 틀은 upload.json 모양({ thumbnail: … })을 받는다
     const png = path.join(outDir, `thumb${i + 1}_${Date.now()}.png`);
     run(p, `🖼 썸네일 ${i + 1} 글씨 얹는 중`, "npx", ["remotion", "still", "Thumbnail", png, `--props=${pf}`], { cwd: VIDEO });
     made.push(rel(png));
-    if (!g.ok) log(p, `⚠ 그림 ${i + 1}을 못 그려서 기본 배경으로 (챗GPT 한도나 로그인 확인)`);
+    if (wantArt && !g.ok) log(p, `⚠ 그림 ${i + 1}을 못 그려서 글씨만으로 (챗GPT 한도나 로그인 확인)`);
   }
   p.thumbs = made;
   p.stage = "썸네일";
-  say(p, "썸네일 시안 3개예요. 마음에 드는 번호와 고칠 점을 말씀해 주세요. 다시 그리려면 말을 적고 [썸네일 다시]를 누르세요.", { images: made });
+  say(p, `썸네일 시안 ${made.length}개예요 (${list.map((t) => t.type).join(" · ")}). 마음에 드는 번호와 고칠 점을 말씀해 주세요. 다시 그리려면 말을 적고 [썸네일 다시]를 누르세요.`, { images: made });
 }
 
 // ④ 대본 + 무료 초안 (목소리 없이 글자 수로 길이 어림)

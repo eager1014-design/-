@@ -8,6 +8,9 @@
 //   ① 장면 그림 배경 (자극적, 추천): scene: { image: "episodes/…/s09.png", focusX: 0.62, focusY: 0.45, zoom: 1.6 }
 //      → 그림을 캐릭터 쪽으로 크게 확대, 반대편을 어둡게 해서 흰 글씨(검은 테두리)를 크게
 //   ② 크림 배경 + 오려낸 캐릭터: image: "characters/main/think.cut.png" (scene 이 없을 때)
+//   ③ style: "bold" — 레퍼런스(Grabity) 공식 (2026-10-24): 흰/검은 바탕 + 아주 굵은 글씨 1~2줄(검은 테두리) + 단순한 손그림 하나 + 손글씨 메모
+//      bg: "black" | "white", layout: "top"(그림 위·글씨 아래) | "bottom"(글씨 위·그림 아래) | "text"(글씨만 크게)
+//      lines 안의 **노랑**, !!빨강!!, 나머지 흰색. image: 손그림(흰 바탕이면 흰 바탕 그림, 검은 바탕이면 검은 바탕 그림), note: 손글씨 한 줄, noteX·noteY(0~1)
 import React from "react";
 import { AbsoluteFill, Img, staticFile, useVideoConfig } from "remotion";
 import { loadFont } from "@remotion/fonts";
@@ -16,6 +19,51 @@ import { Background } from "./components.jsx";
 
 loadFont({ family: "Pretendard", url: staticFile("fonts/Pretendard-ExtraBold.woff2"), weight: "800" });
 loadFont({ family: "Pretendard", url: staticFile("fonts/Pretendard-Bold.woff2"), weight: "700" });
+loadFont({ family: "BlackHanSans", url: staticFile("fonts/BlackHanSans-Regular.ttf"), weight: "100 900" });
+loadFont({ family: "NanumPen", url: staticFile("fonts/NanumPenScript-Regular.ttf"), weight: "100 900" });
+
+// ③ bold 썸네일: **노랑** !!빨강!! 나머지 흰색, 모두 굵은 검은 테두리
+function BoldText({ text }) {
+  return String(text)
+    .split(/(\*\*[^*]+\*\*|!![^!]+!!)/g)
+    .filter(Boolean)
+    .map((p, i) => <span key={i} style={{ color: p.startsWith("**") ? "#FFE03A" : p.startsWith("!!") ? "#F2342C" : "#FFFFFF" }}>{p.startsWith("**") || p.startsWith("!!") ? p.slice(2, -2) : p}</span>);
+}
+function BoldThumb({ t, width, height }) {
+  const tall = height > width;
+  const u = Math.min(width, height) / 720;
+  const dark = t.bg !== "white";
+  const layout = t.image ? t.layout || "top" : "text";
+  const lines = t.lines || ["제목"];
+  const longest = Math.max(...lines.map((l) => String(l).replace(/\*\*|!!/g, "").length));
+  const size = Math.min(layout === "text" ? 230 : 150, ((tall ? 1000 : 1200) / Math.max(longest, 3)) * 1.05) * u;
+  const text = (
+    <div style={{ textAlign: "center", zIndex: 2 }}>
+      {lines.map((l, i) => (
+        <div key={i} style={{ fontFamily: "BlackHanSans", fontSize: size, lineHeight: 1.02, letterSpacing: "-0.03em", whiteSpace: "nowrap", WebkitTextStroke: `${size * 0.11}px #0A0A0A`, paintOrder: "stroke fill" }}>
+          <BoldText text={l} />
+        </div>
+      ))}
+    </div>
+  );
+  const art = t.image && (
+    <Img src={staticFile(t.image)} style={{ flex: 1, minHeight: 0, width: "100%", objectFit: "contain", mixBlendMode: dark ? "screen" : "multiply" }} />
+  );
+  return (
+    <AbsoluteFill style={{ background: dark ? "#050505" : "#FFFFFF" }}>
+      <AbsoluteFill style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", padding: `${(layout === "text" ? 40 : 18) * u}px ${30 * u}px`, gap: 6 * u }}>
+        {layout === "bottom" && text}
+        {art}
+        {layout !== "bottom" && text}
+      </AbsoluteFill>
+      {t.note && (
+        <div style={{ position: "absolute", left: `${(t.noteX ?? 0.17) * 100}%`, top: `${(t.noteY ?? (layout === "bottom" ? 0.66 : layout === "top" ? 0.1 : 0.16)) * 100}%`, transform: "translate(-50%, -50%) rotate(-6deg)", fontFamily: "NanumPen", fontSize: 62 * u, color: dark ? "#FFFFFF" : "#111111", whiteSpace: "nowrap" }}>
+          {t.note}
+        </div>
+      )}
+    </AbsoluteFill>
+  );
+}
 
 const KEY_YELLOW = "#FFD84D";
 
@@ -42,6 +90,7 @@ export function Thumbnail({ thumbnail = {} }) {
   const tall = height > width;
   const u = Math.min(width, height) / 720;
   const { lines = ["제목"], kicker, image = "characters/main/think.cut.png", scene, textSide = "left" } = thumbnail;
+  if (thumbnail.style === "bold") return <BoldThumb t={thumbnail} width={width} height={height} />;
 
   if (scene?.image) {
     const zoom = scene.zoom || 1.5;
