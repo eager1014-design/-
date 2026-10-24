@@ -171,7 +171,7 @@ ${feedback ? `\n[사장님 수정 요청 — 반드시 반영]\n${feedback}\n\n[
 3. image·video·pose 칸은 쓰지 말 것. story 장면은 "emoji"(이모지 1개)를 넣고, 그중 이야기의 핵심 장면 2~3개에는 "art": "삽화 설명" 을 추가 — 채널 캐릭터(나)가 무엇을 하는지, 어디인지, 표정을 구체적으로 한 문장(예: "시끄러운 카페에서 두 손으로 귀를 막고 눈을 질끈 감은 나, 주변 사람들은 흐린 회색 실루엣"). 그림은 자동으로 그려지고, 그 장면 글씨는 화면 왼쪽에 나온다. 실존 인물(위인)은 art 로 그리지 말고 photo 장면으로.
 4. 장면 10~14개 — 장면 하나에 1~2문장(3초 안팎마다 화면이 바뀌게, 레퍼런스 평균 2.6초), 짧은 단문·해요체, 내레이션 합계 250~400자 (약 40~55초). 숫자는 내레이션에서 한글("일곱 번"), 화면 글씨에서 숫자.
 5. 모든 cue·at 값은 그 장면 narration 안에 띄어쓰기까지 똑같이 있는 말이어야 함.
-6. frame.title 은 2줄, 줄마다 14자 이내. 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅 (떡상 공식 활용).
+6. ${(load().settings?.look || "full") === "full" ? "frame 칸은 쓰지 말 것 — 화면은 늘 세로 한 화면(위 고정 제목·분할 없음). 제목 역할은 첫 장면 hook 이 함" : "frame.title 은 2줄, 줄마다 14자 이내"}. 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅 (떡상 공식 활용).
 7. 마지막은 outro: 댓글로 답하고 싶은 질문. 사주가 나오는 편이면 channel 에 "내 사주 무료로 보기 → 고정 댓글".
 8. 화면 글씨에서 **강조**는 형광펜, 줄바꿈은 \\n. 한 화면 글씨는 짧게 (그래픽 칸이 가로 16:9 라서 한 줄 12자 이내, 최대 3줄).
 9. 댓글 말풍선: 가운데 장면 2~3곳에 "comments": [{"text": "시청자가 달 법한 공감·질문 한마디(16자 이내)", "at": "그 장면 내레이션 속 단어", "emoji": "😳"}] — 한 장면에 1~2개, 영상 전체 3~5개. 화면에 '예시'라고 자동 표시되니 실제 후기처럼 꾸미지 말 것 (이름·숫자·효과 주장 금지).
@@ -222,18 +222,21 @@ function musicMoods() {
 }
 
 async function script(st, feedback) {
-  const look = load().settings?.look || "one";
+  const look = load().settings?.look || "full";
   const dir = episodeDir(st);
   fs.mkdirSync(dir, { recursive: true });
   let prompt = writingPrompt(st, feedback);
   for (let attempt = 1; attempt <= 3; attempt++) {
     const res = askClaude(st, prompt);
     const ep = {
-      ...res.episode, format: "short", layout: look === "band" ? "band" : "one", castLook: look === "circle" ? "circle" : undefined,
-      style: "punchy", pace: { speed: 1.3, trim: true }, // 레퍼런스(Grabity) 말 속도 1초 6.8자에 맞춤 (2026-10-24) presenter: true, skin: load().settings?.skin || undefined,
+      // full(기본, 2026-10-24 사장님: "화면은 항상 한 화면") = 세로 화면 전체가 한 장면, 위 고정 제목·가로 칸 없음
+      ...res.episode, format: "short", layout: look === "full" ? undefined : look === "band" ? "band" : "one", castLook: look === "circle" ? "circle" : undefined,
+      // 말 1.3배 = 레퍼런스(Grabity) 1초 6.8자에 맞춤 (2026-10-24)
+      style: "punchy", pace: { speed: 1.3, trim: true }, presenter: true, skin: load().settings?.skin || undefined,
       music: pickMusic(st, res.music_mood), musicStart: res.episode.scenes?.[1]?.id, musicVolume: 0.14, voice: VOICE,
     };
-    ep.frame = { ...(ep.frame || {}), brand: "예민한자립가" };
+    if (look === "full") delete ep.frame;
+    else ep.frame = { ...(ep.frame || {}), brand: "예민한자립가" };
     const credits = await fillPhotos(st, ep, dir);
     const epFile = path.join(dir, "episode.json");
     fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
@@ -299,15 +302,16 @@ const ART_STYLE_CHALK = "16:9 가로 삽화. 배경은 완전한 검정(#000000)
 const artStyle = () => (load().settings?.skin === "chalk" ? ART_STYLE_CHALK : ART_STYLE_OLD);
 async function fillArt(st, ep, dir) {
   const scenes = ep.scenes.filter((s) => s.art && !s.image).slice(0, 4);
+  const tall = !ep.layout && !ep.frame; // 한 화면 쇼츠: 세로 그림을 화면 가득 (가로 그림은 가운데만 잘려 보임)
   for (const [i, s] of scenes.entries()) {
     const out = path.join(dir, "art", `${s.id}.png`);
     if (!fs.existsSync(out)) {
       const r = run(st, `🎨 삽화 ${i + 1}/${scenes.length} 그리는 중 (약 1분): ${s.art.slice(0, 40)}`, NODE,
-        ["tools/gpt_image.mjs", artStyle() + s.art, `--out=${path.relative(ROOT, out)}`, "--size=1536x1024", `--ref=${path.relative(ROOT, CHARACTER_REF)}`],
+        ["tools/gpt_image.mjs", (tall ? artStyle().replace("16:9 가로 삽화.", "9:16 세로 삽화.").replace("캐릭터와 주요 사물은 화면 오른쪽 절반에, 왼쪽 40%는 글씨가 들어갈 빈 배경으로 비워둘 것", "캐릭터와 주요 사물은 화면 아래쪽 60%에, 위쪽 35%는 글씨가 들어갈 빈 배경으로 비워둘 것").replace("왼쪽 40%는 글씨가 들어갈 빈 검정으로 비워둘 것", "위쪽 35%는 글씨가 들어갈 빈 검정으로 비워둘 것").replace("화면 오른쪽 절반에", "화면 아래쪽 60%에") : artStyle()) + s.art, `--out=${path.relative(ROOT, out)}`, `--size=${tall ? "1024x1536" : "1536x1024"}`, `--ref=${path.relative(ROOT, CHARACTER_REF)}`],
         { allowFail: true, timeout: 300_000 });
       if (!r.ok || !fs.existsSync(out)) { log(st, `⚠️ 삽화 실패 → 이모지 그대로 (${r.out.trim().split("\n").pop()})`); continue; }
     }
-    Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), out), textSide: "left", motion: s.motion || "zoomIn", focusX: 0.7, cast: "off" });
+    Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), out), textSide: tall ? "center" : "left", motion: s.motion || "zoomIn", focusX: tall ? 0.5 : 0.7, cast: "off" });
     delete s.emoji;
   }
 }

@@ -1,7 +1,7 @@
 // 영상 1편 = 대본(episode.json)의 장면들을 순서대로 이어 붙인 것.
 // 배경은 계속 깔려 있고, 장면은 부드럽게 전환된다. 목소리·자막·효과음·배경음악도 여기서 합친다.
 import React from "react";
-import { AbsoluteFill, Audio, Img, Sequence, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Audio, Img, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 import { slide } from "@remotion/transitions/slide";
@@ -234,7 +234,9 @@ export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm
   if (screen === "band" || screen === "one") return <BandEpisode {...{ items, style, frame, captions, music, musicStart, musicVolume, castLook }} paper={screen === "one"} />;
   const bar = steps?.length ? steps : chapters;
   const Shell = frame ? FrameShell : React.Fragment;
-  const stage = frame ? { W: SIZES.short.width, H: STAGE_H } : { W: SIZES.long.width, H: SIZES.long.height };
+  // 무대 크기 = 실제 화면 크기 (한 화면 쇼츠는 1080×1920 — 예전엔 가로 크기로 계산해 캐릭터가 글씨 위에 겹쳤음)
+  const vc = useVideoConfig();
+  const stage = frame ? { W: SIZES.short.width, H: STAGE_H } : { W: vc.width, H: vc.height };
   const shellProps = frame ? { frame, presenter } : {};
   return (
     <StyleContext.Provider value={style}>

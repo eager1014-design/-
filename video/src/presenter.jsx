@@ -9,11 +9,12 @@
 //   "gesture": "point" 또는 [{ "at": "단어", "is": "idea" }] — idea · point · think · explain. "none" 이면 손짓 끝
 //          손짓 그림이 있는 동안은 손짓 그림이 보인다 (얼굴은 미소)
 // 움직임: 목소리 크기만큼 입이 열림 · 3초쯤마다 눈 깜빡임 · 숨쉬기 · 말할 때 살짝 끄덕임 · 표정/손짓이 바뀌면 통 튀어나옴
-import React from "react";
+import React, { useContext } from "react";
 import { AbsoluteFill, Img, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { useAudioData } from "@remotion/media-utils";
 import { COLORS } from "./theme.js";
 import { cueFrame, voiceSeconds } from "./timing.js";
+import { FrameContext } from "./components.jsx";
 import rigMain from "../public/characters/main/rig.json";
 import rigRound from "../public/characters/round/rig.json";
 
@@ -149,6 +150,15 @@ const STAGE = {
     corner: { cx: 0.82, top: 0.434, s: 0.45, dx: 0, dy: -0.215, k: 0.64, dim: 0 },
     off: { cx: 1.45, top: 0.356, s: 0.62, dx: 0, dy: -0.215, k: 0.64, dim: 0 }, // 퇴장해도 장면은 같은 자리 (자막 줄이 늘 비어 있게)
   },
+  // 한 화면 쇼츠 (frame 없음, 2026-10-24 사장님: "화면은 항상 한 화면"): 1080×1920 전체가 무대.
+  // 캐릭터는 아래쪽(얼굴이 안전 영역 아래선 y 1399 위), 글씨·그래픽은 위로 올라가 캐릭터와 안 겹침
+  full: {
+    right: { cx: 0.74, top: 0.52, s: 0.58, dx: 0, dy: -0.16, k: 0.86, dim: 0 },
+    left: { cx: 0.26, top: 0.52, s: 0.58, dx: 0, dy: -0.16, k: 0.86, dim: 0, flip: true },
+    center: { cx: 0.50, top: 0.50, s: 0.64, dx: 0, dy: -0.17, k: 0.84, dim: 0 },
+    corner: { cx: 0.84, top: 0.60, s: 0.42, dx: 0, dy: -0.10, k: 0.92, dim: 0 },
+    off: { cx: 1.45, top: 0.52, s: 0.58, dx: 0, dy: -0.10, k: 0.92, dim: 0 },
+  },
 };
 
 export function castTimeline(scene) {
@@ -161,7 +171,8 @@ export function castTimeline(scene) {
 function useStage(scene, start) {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
-  const fmt = height > width ? "short" : "long";
+  const framed = useContext(FrameContext);
+  const fmt = height > width ? (framed ? "short" : "full") : "long";
   // 그림 장면에서 캐릭터가 퇴장해 있으면 그림을 화면 가득 (쇼츠도 줄여 올리지 않음)
   const T = scene.image || scene.video ? { ...STAGE[fmt], off: { ...STAGE[fmt].off, dx: 0, dy: 0, k: 1 } } : STAGE[fmt];
   let from = T[start] || T.off;

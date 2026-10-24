@@ -327,7 +327,7 @@ async function loadDaily() {
   const t = kst();
   const busyNow = days.some((d) => ["running", "voicing", "uploading"].includes(d.status));
   const look = (await api("/api/settings")).look || "one"; // (아래 settings 와 같은 값)
-  const looks = { one: "한 배경 + 서 있는 캐릭터", circle: "한 배경 + 동그라미 창 캐릭터", band: "검은 띠 (예전)" };
+  const looks = { full: "한 화면 (세로 전체, 분할 없음)", one: "위 제목 + 가운데 칸 (예전)", circle: "한 배경 + 동그라미 창 캐릭터", band: "검은 띠 (예전)" };
   const settings = await api("/api/settings");
   $("#daily").innerHTML = `<div class="panel"><h3 style="margin-top:0">🎯 다음 영상 주제</h3>
     <textarea id="topicText" style="min-height:80px" placeholder="예: 쇼펜하우어 — 혼자가 편한 예민한 사람 이야기 / 칼 융이 말한 거리 둬야 할 사람">${esc(settings.topic || "")}</textarea>
@@ -572,8 +572,16 @@ function renderLong(p) {
   <div class="panel"><div class="chat">${p.messages.map(msg).join("") || '<p class="note">대화를 시작해 보세요.</p>'}</div>
     <div style="margin-top:14px"><textarea id="lfText" style="min-height:80px" placeholder="하고 싶은 말, 고칠 점, 질문…"></textarea>
     <div class="row" style="margin:8px 0 0"><div><label>링크 (여러 개)</label><input id="lfMsgLinks" placeholder="https://youtu.be/... https://..."></div><div><label>사진·영상 (여러 개)</label><input id="lfMsgFiles" type="file" accept="image/*,video/*" multiple></div></div>
-    <button class="btn" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfSend('chat',this)">보내기</button></div></div>`;
+    <button class="btn" id="lfSendBtn" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfSend('chat',this)">보내기</button> <span class="note">엔터 = 보내기 · Shift+엔터 = 줄바꿈</span></div></div>`;
   bindDrops();
+  // 대화창처럼: 엔터 = 보내기, Shift+엔터 = 줄바꿈 (한글 입력 중 조합 엔터는 무시 — 안 그러면 마지막 글자가 두 번 보내짐)
+  const ta = $("#lfText");
+  if (ta) ta.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+    e.preventDefault();
+    const b = $("#lfSendBtn");
+    if (b && !b.disabled) lfSend("chat", b);
+  });
 }
 async function lfSend(step, b) {
   await busy(b, "보내는 중…", async () => {
