@@ -283,14 +283,14 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
 // 대본의 "art" 장면을 챗GPT 삽화로 (최대 4장, 실패하면 이모지 그대로)
 async function sceneArt(p, dir, epFile) {
   const ep = JSON.parse(fs.readFileSync(epFile, "utf8"));
-  const charRef = path.join(VIDEO, "public/characters/main/think.png");
+  const charRef = path.join(VIDEO, "public/characters/round/ref_sheet.png"); // 새 캐릭터 (2026-10-24)
   let n = 0;
   for (const s of ep.scenes) {
     if (!s.art || s.image || n >= 4) continue;
     n++;
     const img = path.join(dir, "img", `${s.id}.png`);
     fs.mkdirSync(path.dirname(img), { recursive: true });
-    const g = run(p, `🎨 챗GPT 삽화 ${n} (${s.id})`, NODE, [path.join(ROOT, "tools/gpt_image.mjs"), `${s.art}. 부드러운 수채화 배경, 캐릭터는 기준 그림의 검은 선화 그대로, 16:9, 글씨 없이, 왼쪽 40% 비움`, `--out=${img}`, "--size=1536x1024", ...(fs.existsSync(charRef) ? [`--ref=${charRef}`] : [])], { allowFail: true, timeout: 600_000 });
+    const g = run(p, `🎨 챗GPT 삽화 ${n} (${s.id})`, NODE, [path.join(ROOT, "tools/gpt_image.mjs"), `${s.art}. 배경은 완전한 검정 단색, 굵고 둥근 흰색 손그림 두들, 노랑 포인트 하나, 사람은 기준 그림의 동그란 안경 막대 캐릭터, 16:9, 그림자·글씨 없이, 왼쪽 40% 비움`, `--out=${img}`, "--size=1536x1024", ...(fs.existsSync(charRef) ? [`--ref=${charRef}`] : [])], { allowFail: true, timeout: 600_000 });
     if (g.ok && fs.existsSync(img)) Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), img), textSide: "left", cast: "off" });
   }
   fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));

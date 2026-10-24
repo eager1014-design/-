@@ -349,7 +349,7 @@ function Story({ scene, frames }) {
         </div>
         {lines.map((l, i) => (
           <Rise key={i} at={at[i]} style={{ marginTop: 26 * u, textAlign: "center", maxWidth: "88%" }}>
-            <Rich text={l.text} at={at[i]} style={text(u, 56, 800, COLORS.card)} />
+            <Rich text={l.text} at={at[i]} style={text(u, 56, 800, COLORS.dark ? "#FFFFFF" : COLORS.card)} />
           </Rise>
         ))}
       </AbsoluteFill>
@@ -404,8 +404,9 @@ function Story({ scene, frames }) {
         }}
       >
         {lines.map((l, i) => (
+          // 칠판 스킨은 card 가 어두워서 그림 위 글씨는 흰색
           <Rise key={i} at={at[i]} style={{ marginTop: 14 * u, textAlign: emojiRow ? "left" : side === "center" || side === "top" ? "center" : side, maxWidth: emojiRow ? "100%" : side === "center" || side === "top" ? "86%" : "46%" }}>
-            <Rich text={l.text} at={at[i]} style={{ ...text(u, 62, 800, media ? COLORS.card : COLORS.ink), textShadow: media ? `0 ${2 * u}px ${14 * u}px rgba(0,0,0,0.35)` : "none" }} />
+            <Rich text={l.text} at={at[i]} style={{ ...text(u, 62, 800, media ? (COLORS.dark ? "#FFFFFF" : COLORS.card) : COLORS.ink), textShadow: media ? `0 ${2 * u}px ${14 * u}px rgba(0,0,0,0.35)` : "none" }} />
           </Rise>
         ))}
       </AbsoluteFill>

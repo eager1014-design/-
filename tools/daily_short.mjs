@@ -292,15 +292,18 @@ async function fillPhotos(st, ep, dir) {
 
 // 이야기 장면 삽화: 장면의 "art"(그림 설명)를 챗GPT 구독(코덱스, tools/gpt_image.mjs)으로 그린다. 한 장 약 1분, 추가 비용 0.
 // 캐릭터는 채널 기준 그림을 참고로 넣어 같은 얼굴로. 실패하면 이모지 그대로 둔다.
-const CHARACTER_REF = path.join(VIDEO, "public/characters/main/Extract_and_reproduce_ONLY_the_character_from_the_-1790655440530.png");
-const ART_STYLE = "16:9 가로 삽화. 기준 그림의 캐릭터(둥근 안경, 부스스한 머리, 검은 선화)를 그대로 그려줘. 캐릭터는 깔끔한 검은 선화(몸 안은 흰색) 그대로, 배경은 부드러운 크림·세이지색 종이 질감 수채화. 글씨·말풍선·자막은 절대 넣지 말 것. 캐릭터와 주요 사물은 화면 오른쪽 절반에, 왼쪽 40%는 글씨가 들어갈 빈 배경으로 비워둘 것. 장면: ";
+// 2026-10-24 새 캐릭터(동그란 머리+동그란 안경 졸라맨) + 칠판 스타일(완전 검정 바탕 흰 선)
+const CHARACTER_REF = path.join(VIDEO, "public/characters/round/ref_sheet.png");
+const ART_STYLE_OLD = "16:9 가로 삽화. 기준 그림의 캐릭터(둥근 안경, 부스스한 머리, 검은 선화)를 그대로 그려줘. 캐릭터는 깔끔한 검은 선화(몸 안은 흰색) 그대로, 배경은 부드러운 크림·세이지색 종이 질감 수채화. 글씨·말풍선·자막은 절대 넣지 말 것. 캐릭터와 주요 사물은 화면 오른쪽 절반에, 왼쪽 40%는 글씨가 들어갈 빈 배경으로 비워둘 것. 장면: ";
+const ART_STYLE_CHALK = "16:9 가로 삽화. 배경은 완전한 검정(#000000) 단색. 모든 선은 굵고 둥근 흰색 손그림 두들, 아주 단순하게, 포인트 색은 노랑 하나만. 사람은 기준 그림의 캐릭터(동그란 머리, 정수리 머리카락 두세 가닥, 큰 동그란 안경, 막대 팔다리)로, 다른 사람도 같은 막대 사람 그림체로. 그림자·질감·그라데이션·글씨·말풍선 없이. 캐릭터와 주요 사물은 화면 오른쪽 절반에, 왼쪽 40%는 글씨가 들어갈 빈 검정으로 비워둘 것. 장면: ";
+const artStyle = () => (load().settings?.skin === "chalk" ? ART_STYLE_CHALK : ART_STYLE_OLD);
 async function fillArt(st, ep, dir) {
   const scenes = ep.scenes.filter((s) => s.art && !s.image).slice(0, 4);
   for (const [i, s] of scenes.entries()) {
     const out = path.join(dir, "art", `${s.id}.png`);
     if (!fs.existsSync(out)) {
       const r = run(st, `🎨 삽화 ${i + 1}/${scenes.length} 그리는 중 (약 1분): ${s.art.slice(0, 40)}`, NODE,
-        ["tools/gpt_image.mjs", ART_STYLE + s.art, `--out=${path.relative(ROOT, out)}`, "--size=1536x1024", `--ref=${path.relative(ROOT, CHARACTER_REF)}`],
+        ["tools/gpt_image.mjs", artStyle() + s.art, `--out=${path.relative(ROOT, out)}`, "--size=1536x1024", `--ref=${path.relative(ROOT, CHARACTER_REF)}`],
         { allowFail: true, timeout: 300_000 });
       if (!r.ok || !fs.existsSync(out)) { log(st, `⚠️ 삽화 실패 → 이모지 그대로 (${r.out.trim().split("\n").pop()})`); continue; }
     }
