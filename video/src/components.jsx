@@ -69,6 +69,8 @@ export function Background({ tint = "sage" }) {
     return `radial-gradient(circle at ${px}% ${py}%, ${color}66 0%, ${color}00 ${size}%)`;
   };
   const main = tint === "amber" ? COLORS.amber : tint === "terracotta" ? COLORS.terracotta : COLORS.sage;
+  // 단색 배경 스킨(flat): 빛 번짐·질감 없이 한 색으로 딱 (2026-10-24 사장님: 그라데이션에 흰 선이 묻힘)
+  if (COLORS.flat) return <AbsoluteFill style={{ backgroundColor: COLORS.bg }} />;
   return (
     <AbsoluteFill
       style={{
