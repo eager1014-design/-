@@ -169,7 +169,7 @@ ${feedback ? `\n[사장님 수정 요청 — 반드시 반영]\n${feedback}\n\n[
 1. 일기에 없는 사장님 경험·숫자·사건을 지어내지 마. 일기 내용은 사장님 말을 다듬어 1인칭으로.
 2. 연구·통계 인용 금지. 예외: Assary 외 2020(Molecular Psychiatry) 쌍둥이 연구 — 예민함 차이의 47%가 유전. 그 외 숫자가 꼭 필요하면 쓰지 말고 비유로.
 3. image·video·pose 칸은 쓰지 말 것. story 장면은 "emoji"(이모지 1개)를 넣고, 그중 이야기의 핵심 장면 2~3개에는 "art": "삽화 설명" 을 추가 — 채널 캐릭터(나)가 무엇을 하는지, 어디인지, 표정을 구체적으로 한 문장(예: "시끄러운 카페에서 두 손으로 귀를 막고 눈을 질끈 감은 나, 주변 사람들은 흐린 회색 실루엣"). 그림은 자동으로 그려지고, 그 장면 글씨는 화면 왼쪽에 나온다. 실존 인물(위인)은 art 로 그리지 말고 photo 장면으로.
-4. 장면 6~9개, 내레이션 합계 250~400자 (약 40~55초). 숫자는 내레이션에서 한글("일곱 번"), 화면 글씨에서 숫자.
+4. 장면 10~14개 — 장면 하나에 1~2문장(3초 안팎마다 화면이 바뀌게, 레퍼런스 평균 2.6초), 짧은 단문·해요체, 내레이션 합계 250~400자 (약 40~55초). 숫자는 내레이션에서 한글("일곱 번"), 화면 글씨에서 숫자.
 5. 모든 cue·at 값은 그 장면 narration 안에 띄어쓰기까지 똑같이 있는 말이어야 함.
 6. frame.title 은 2줄, 줄마다 14자 이내. 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅 (떡상 공식 활용).
 7. 마지막은 outro: 댓글로 답하고 싶은 질문. 사주가 나오는 편이면 channel 에 "내 사주 무료로 보기 → 고정 댓글".
@@ -230,7 +230,7 @@ async function script(st, feedback) {
     const res = askClaude(st, prompt);
     const ep = {
       ...res.episode, format: "short", layout: look === "band" ? "band" : "one", castLook: look === "circle" ? "circle" : undefined,
-      style: "punchy", pace: { speed: 1.1, trim: true }, presenter: true, skin: load().settings?.skin || undefined,
+      style: "punchy", pace: { speed: 1.3, trim: true }, // 레퍼런스(Grabity) 말 속도 1초 6.8자에 맞춤 (2026-10-24) presenter: true, skin: load().settings?.skin || undefined,
       music: pickMusic(st, res.music_mood), musicStart: res.episode.scenes?.[1]?.id, musicVolume: 0.14, voice: VOICE,
     };
     ep.frame = { ...(ep.frame || {}), brand: "예민한자립가" };

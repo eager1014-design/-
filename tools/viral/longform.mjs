@@ -240,7 +240,7 @@ pillars·elements = 사주 설명 장면 (사주 편일 때만)
 소품: "props": [{"icon": "이름", "at": "그 장면 내레이션 속 단어", "x": 0.2, "y": 0.4, "size": 220, "move": "bob|wiggle|pulse|spin"}] — 장면 뜻에 맞는 손그림 소품이 선으로 그려지며 나타나 계속 살짝 움직임. 쓸 수 있는 아이콘: brain·bulb·phone·battery·heart·clock·lightning·question·exclaim·check·chart·coffee·speech·thought·bed·money·calendar·lock·search·star·people·house·tear·fire. 장면 절반 정도에 1~2개, 글씨·캐릭터와 안 겹치게 빈 쪽(x 0.12~0.22 또는 0.78~0.88).
 규칙: cue·at 은 그 장면 narration 안에 띄어쓰기까지 똑같이 있는 말. 화면 글씨 **강조**=형광펜, 줄바꿈 \\n, 숫자는 내레이션에서 한글("일곱 번")·화면에서 숫자.`;
 
-const SHORT_RULES = `[쇼츠 규칙] 장면 6~9개, 내레이션 합계 250~400자. "frame": {"title": ["첫 줄", "둘째 줄"]} (줄마다 14자 이내). 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅.
+const SHORT_RULES = `[쇼츠 규칙] 장면 10~14개(장면 하나에 1~2문장, 3초 안팎마다 화면이 바뀌게), 내레이션 합계 250~400자. "frame": {"title": ["첫 줄", "둘째 줄"]} (줄마다 14자 이내). 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅.
 화면 글씨는 짧게 (한 줄 12자 이내). compare 항목 2개씩 10자 이내, checklist 3개 14자 이내. 끝은 outro(댓글로 답하고 싶은 질문).
 가운데 장면 2~3곳에 "comments": [{"text": "시청자가 달 법한 한마디 16자 이내", "at": "그 장면 내레이션 속 단어", "emoji": "😳"}] (화면에 '예시' 표시됨, 실제 후기처럼 꾸미지 말 것).`;
 
@@ -256,12 +256,12 @@ async function script(p) {
 
 기획안대로 ${short ? "쇼츠" : "롱폼"} 대본을 episode.json 으로 써. 사장님 목소리로 읽을 문장이니 입말로.
 ${SCENE_GUIDE}
-${short ? SHORT_RULES : "챕터마다 chapter 장면으로 시작, 처음은 hook, 끝은 outro. 장면 20~35개."}${p.episode ? `\n[지난 대본 — 사장님 말대로 고쳐서 다시]\n${JSON.stringify(p.episode.scenes.map((s) => [s.id, s.type, s.narration]))}` : ""}${feedback ? `\n[대본 검사에서 나온 문제 — 고쳐서 다시]\n${feedback}` : ""}
+${short ? SHORT_RULES : "챕터마다 chapter 장면으로 시작, 처음은 hook, 끝은 outro. 장면 하나에 1~2문장(3초 안팎마다 화면이 바뀌게 — 레퍼런스 평균 2.6초), 그래서 장면 40~80개. 짧은 단문·해요체."}${p.episode ? `\n[지난 대본 — 사장님 말대로 고쳐서 다시]\n${JSON.stringify(p.episode.scenes.map((s) => [s.id, s.type, s.narration]))}` : ""}${feedback ? `\n[대본 검사에서 나온 문제 — 고쳐서 다시]\n${feedback}` : ""}
 JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민할 점)", "episode": {"title": "…", "chapters": ["챕터 이름 짧게"], "scenes": [ … ]}}`);
     const skin = load().settings?.skin || undefined; // 앱 '오늘의 영상'에서 고른 글씨·색
     const ep = short
-      ? { ...r.episode, format: "short", layout: "one", style: "punchy", pace: { speed: 1.1, trim: true }, presenter: true, skin, frame: { ...(r.episode.frame || {}), brand: p.channel.split(" (")[0] } }
-      : { ...r.episode, format: "long", style: "calm", presenter: true, captions: true, skin };
+      ? { ...r.episode, format: "short", layout: "one", style: "punchy", pace: { speed: 1.3, trim: true }, presenter: true, skin, frame: { ...(r.episode.frame || {}), brand: p.channel.split(" (")[0] } }
+      : { ...r.episode, format: "long", style: "calm", presenter: true, captions: true, skin, pace: { speed: 1.3, trim: true } };
     fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
     const check = run(p, `대본 검사 (${attempt}번째)`, NODE, ["scripts/check_episode.mjs", path.relative(VIDEO, epFile)], { cwd: VIDEO, allowFail: true });
     if (check.ok) {
@@ -323,7 +323,7 @@ async function eleven(p) {
 function finish(p, epFile) {
   run(p, "✂️ 녹음을 장면별로 자르는 중 (받아쓰기, 몇 분)", NODE, ["scripts/split_voice.mjs", path.relative(VIDEO, epFile)], { cwd: VIDEO, timeout: 3600_000 });
   const ep = JSON.parse(fs.readFileSync(epFile, "utf8"));
-  ep.pace = ep.pace || { speed: 1, trim: true };
+  ep.pace = ep.pace || { speed: 1.3, trim: true };
   p.episode = ep;
   fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
   const out = path.join(VIDEO, "out", `lf-${p.id}_final.mp4`);
