@@ -108,6 +108,26 @@ def main(root):
     for f in files:
         place(f, target / W[f], CX, EYE_Y)
 
+    # 가로 위치는 귀~귀 가운데로 (눈동자는 그림마다 보는 방향이 달라 머리가 좌우로 최대 57px 움찔했음 — 2026-10-24)
+    def ear_mid(f):
+        a = Image.open(f).convert("RGBA").getchannel("A")
+        best = None
+        for y in range(EYE_Y - 40, EYE_Y + 41, 4):
+            xs = [x for x in range(CX - 320, CX + 320) if a.getpixel((x, y)) > 145]
+            if xs and (best is None or xs[-1] - xs[0] > best[1] - best[0]):
+                best = (xs[0], xs[-1])
+        return (best[0] + best[1]) / 2
+
+    for f in files:
+        dx = round(CX - ear_mid(f))
+        for g in (f, f.replace(".png", ".fill.png")):
+            if not os.path.exists(g):
+                continue
+            img = Image.open(g).convert("RGBA")
+            can = Image.new("RGBA", img.size, (0, 0, 0, 0))
+            can.paste(img, (dx, 0), img)
+            can.save(g)
+
     rig = {}
     for f in files:
         a = Image.open(f).convert("RGBA").getchannel("A")
