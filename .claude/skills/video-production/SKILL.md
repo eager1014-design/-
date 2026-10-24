@@ -182,6 +182,7 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
 - 유료(매번 승인): 제미나이 목소리(대본 3분 ≈ 1,500자), 영상 분석
 
 ## 문제가 생겼을 때
+- `--scale=0.6667` 렌더가 "height must be an integer (720.036)"로 실패 → 원본을 뽑은 뒤 `npx remotion ffmpeg -i in.mp4 -vf scale=1280:720 -c:v libx264 -crf 30 -c:a aac out.mp4` 로 줄이기 (2026-10-24)
 - ElevenLabs "키에 OO 권한이 없습니다" → elevenlabs.io/app/settings/api-keys → 키 편집 → 그 권한 켜기 (Music Generation, Sound Effects, Text to Speech, User Read)
 - "제미나이 무료 등급에서 막혀 있습니다 (한도 0)" → 지금 키는 무료 등급이라 **이미지 생성(gemini-*-image)은 쓸 수 없음**. Google AI Studio 에서 결제를 켜야 함. 영상 분석·목소리는 무료 한도 안에서 작동했음 (지금까지 요금 0원)
 - 렌더링이 매우 느림(10초 분량에 1분 이상) → 이전 렌더링이 뒤에서 아직 돌고 있을 수 있음. `pkill -f "remotion render"; pkill -f chrome-headless-shell` 후 다시. 정상 속도는 10초 분량에 약 17초 (맥 8코어)
@@ -191,6 +192,7 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
 - 장면 종류 추가 시: `src/scenes.jsx` 의 SCENES 와 `scripts/scene-types.mjs` 둘 다 고칠 것
 
 ## 변경 기록
+- 2026-10-24: 장면 `shrink` (from→빨간 줄→화살표→to 튀어나옴, example 이면 '예시' 표시) — 시간 단축 같은 비교용. 기존 영상에 한 문장만 더할 땐 그 문장만 담은 편을 따로 만들어 narrate → split_voice 후 장면을 옮겨 붙임(promo-excel, 크레딧 26)
 - 2026-10-24: **칠판 스킨 `"skin": "chalk"`** (진한 파랑 #0D1C3D + 흰 선 캐릭터 + 노랑·하늘 네온, 강조 글씨는 빛나며 켜짐, 장면 전환은 지우개처럼 닦아냄, 글꼴 검은고딕). **소품 `"props"`: [{"icon","at","x","y","size","move": bob·wiggle·pulse·spin}]** — 선이 그려지듯 등장 후 계속 움직임. 아이콘 24개 `public/icons/` (brain bulb phone battery heart clock lightning question exclaim check chart coffee speech thought bed money calendar lock search star people house tear fire), 새로 그리면 `scripts/cut_icons.py`
 - 2026-10-24: **새 기본 캐릭터 round** (동그란 머리+동그란 안경 졸라맨, `public/characters/round`). 시트 → `cut_sheet.py` → `scripts/align_by_eyes.py`(눈동자 기준 정렬 + rig.json). 편 칸 `"character": "main"` 이면 예전 곱슬머리 캐릭터. 쇼츠 아래 자리는 전신이라 bandScale 1.35. 오려낸 정지 그림(명함·포트폴리오용)은 `business/character/*.fill.png`
 - 2026-10-24: 귀여운 스타일 skin cute + stickers (참고 https://youtu.be/v9oeGZiRteE 분석). FONT = "SkinFont, Pretendard" — 글꼴 불러올 때 family 는 "Pretendard"/"SkinFont" 로 따로
