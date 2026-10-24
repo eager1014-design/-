@@ -362,7 +362,7 @@ function abKit(p) {
   fs.mkdirSync(dir, { recursive: true });
   const titles = p.youtube.titles.slice(0, 3);
   fs.writeFileSync(path.join(dir, "제목3개.txt"), titles.map((t, i) => `제목 ${i + 1}: ${t}`).join("\n\n") + "\n");
-  for (const [i, th] of (p.format === "long" ? p.thumbs || [] : []).slice(0, 3).entries()) {
+  for (const [i, th] of (p.format !== "short" ? p.thumbs || [] : []).slice(0, 3).entries()) {
     run(p, `A/B 썸네일 ${i + 1} 만드는 중`, "npx", ["remotion", "ffmpeg", "-y", "-loglevel", "error", "-i", path.join(ROOT, th), "-vf", "scale=1280:720", "-q:v", "3", path.join(dir, `썸네일${i + 1}.jpg`)], { cwd: VIDEO, allowFail: true });
   }
   p.abDir = dir;
@@ -380,7 +380,7 @@ async function publish(p) {
     privacy: "private",
     altered_content: Boolean(p.episode?.voice?.provider === "elevenlabs"), // 복제 목소리를 쓰면 '합성 콘텐츠: 예' (사장님 결정 2026-10-19)
   };
-  const th = p.format === "long" && p.thumbs?.[p.pick?.thumb || 0];
+  const th = p.format !== "short" && p.thumbs?.[p.pick?.thumb || 0];
   if (th) {
     const small = path.join(dir, "thumb_upload.jpg"); // 유튜브 썸네일은 2MB 이하 → jpg 로
     run(p, "썸네일 줄이는 중", "npx", ["remotion", "ffmpeg", "-y", "-loglevel", "error", "-i", path.join(ROOT, th), "-vf", "scale=1280:720", "-q:v", "3", small], { cwd: VIDEO });
