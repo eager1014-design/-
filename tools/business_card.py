@@ -323,60 +323,52 @@ def char_img(name, height_mm):
 
 
 def front_cute():
+    # 2026-10-24 다시: 요소를 줄이고 정돈 — 대표·이름·하는 일 한 줄·연락처, 캐릭터는 오른쪽 아래 작게
     im = Image.new("RGB", (W, H), "#FFFFFF")
     d = ImageDraw.Draw(im)
-    x, y = SAFE + round(0.5 * MM), SAFE + round(0.5 * MM)
-    # 하는 일 한 줄 (파란 알약)
-    f = font(6.4, "bold")
-    t = CARD["title"]
-    tw = d.textlength(t, font=f)
-    d.rounded_rectangle([x, y, x + tw + round(5 * MM), y + round(5.4 * MM)], radius=round(2.7 * MM), fill=BLUE)
-    d.text((x + round(2.5 * MM), y + round(0.75 * MM)), t, font=f, fill="#FFFFFF")
-    y += round(9 * MM)
-    d.text((x, y), CARD["name"], font=jua(24), fill=CUTE_INK)
-    nw = d.textlength(CARD["name"], font=jua(24))
-    d.text((x + nw + round(2.5 * MM), y + round(4.6 * MM)), CARD["name_en"], font=font(7, "medium"), fill="#6B7A90")
-    y += round(12.5 * MM)
-    for line in CARD["tagline"]:
-        d.text((x, y), line, font=font(7.4, "medium"), fill=CUTE_INK)
-        y += round(3.9 * MM)
-    yy = H - SAFE - round(3.4 * MM) * len(CARD["contacts"]) + round(0.3 * MM)
+    x, y = SAFE + round(0.5 * MM), SAFE + round(0.8 * MM)
+    d.rectangle([0, 0, W, round((BLEED + 1.6) * MM)], fill=BLUE)  # 위쪽 파란 띠
+    d.text((x, y + round(1.2 * MM)), "대표", font=font(7, "semibold"), fill=BLUE)
+    y += round(5.4 * MM)
+    d.text((x, y), CARD["name"], font=font(21, "bold"), fill=CUTE_INK)
+    nw = d.textlength(CARD["name"], font=font(21, "bold"))
+    d.text((x + nw + round(2.6 * MM), y + round(4.3 * MM)), CARD["name_en"], font=font(7, "medium"), fill="#8A96A8")
+    y += round(10.6 * MM)
+    d.text((x, y), CARD["title"], font=font(7.2, "semibold"), fill=BLUE)
+    y += round(4.4 * MM)
+    d.text((x, y), "매일 손으로 하던 일을 자동으로", font=font(7.2, "medium"), fill=CUTE_INK)
+    yy = H - SAFE - round(3.3 * MM) * len(CARD["contacts"]) + round(0.4 * MM)
     for _, v in CARD["contacts"]:
-        d.text((x, yy), v, font=font(6.3, "regular"), fill="#4A5870")
-        yy += round(3.4 * MM)
-    c = char_img("hair_explain", 37)
-    im.paste(c, (W - SAFE - c.width + round(1.5 * MM), H - round(BLEED * MM) - c.height - round(2.5 * MM)), c)
+        d.text((x, yy), v, font=font(6.2, "regular"), fill="#4A5870")
+        yy += round(3.3 * MM)
+    c = char_img("hair_explain", 30)
+    im.paste(c, (W - SAFE - c.width + round(2 * MM), H - round(BLEED * MM) - c.height - round(3 * MM)), c)
     return im
 
 
 def back_cute():
+    # 파란 바탕 + 질문 한 줄 + QR. 캐릭터는 질문 아래 작게
     im = Image.new("RGB", (W, H), BLUE)
     d = ImageDraw.Draw(im)
-    x, y = SAFE + round(0.5 * MM), SAFE + round(1 * MM)
-    for line in ["사장님,", "뭐가 제일 귀찮으세요?"]:
-        d.text((x, y), line, font=jua(15), fill="#FFFFFF")
-        y += round(7.4 * MM)
-    y += round(1.5 * MM)
-    for item in CARD["back_items"][:2]:
-        d.text((x, y), "· " + item, font=font(6.2, "medium"), fill="#DCE7FB")
-        y += round(3.6 * MM)
-    # 캐릭터는 글씨 아래·QR 왼쪽 빈자리에 (글씨와 안 겹치게)
-    c = char_img("hair_think", 19)
-    im.paste(c, (round(W * 0.47) - c.width // 2, H - round(BLEED * MM) - c.height - round(1.2 * MM)), c)
-    # QR (흰 둥근 상자)
-    size, pad = round(18 * MM), round(2 * MM)
+    x, y = SAFE + round(0.5 * MM), SAFE + round(3 * MM)
+    for line in ["사장님,", "뭐가 제일", "귀찮으세요?"]:
+        d.text((x, y), line, font=font(13, "bold"), fill="#FFFFFF")
+        y += round(6.6 * MM)
+    c = char_img("hair_think", 15)
+    im.paste(c, (x, H - round(BLEED * MM) - c.height - round(3 * MM)), c)
+    size, pad = round(19 * MM), round(2 * MM)
     qr = segno.make(CARD["qr_url"], error="m")
     tmp = os.path.join(OUT, "_qr.png")
     qr.save(tmp, scale=20, border=1, dark=CUTE_INK, light="#FFFFFF")
     q = Image.open(tmp).convert("RGB").resize((size, size), Image.NEAREST)
     os.remove(tmp)
-    bx2, by2 = W - SAFE, H - SAFE - round(4.5 * MM)
-    bx1, by1 = bx2 - size - 2 * pad, by2 - size - 2 * pad
+    bx2, by1 = W - SAFE, SAFE + round(2 * MM)
+    bx1, by2 = bx2 - size - 2 * pad, by1 + size + 2 * pad
     d.rounded_rectangle([bx1, by1, bx2, by2], radius=round(2.4 * MM), fill="#FFFFFF")
     im.paste(q, (bx1 + pad, by1 + pad))
-    fl = font(5.8, "bold")
+    fl = font(6, "semibold")
     t = "귀찮은 일 골라보기"
-    d.text(((bx1 + bx2) / 2 - d.textlength(t, font=fl) / 2, by2 + round(1.4 * MM)), t, font=fl, fill="#FFFFFF")
+    d.text(((bx1 + bx2) / 2 - d.textlength(t, font=fl) / 2, by2 + round(1.6 * MM)), t, font=fl, fill="#FFFFFF")
     return im
 
 
