@@ -65,7 +65,6 @@ export function postMessage(id, { text = "", links = "", files = [], step = "cha
   if (step === "thumbs" && p.format === "short") throw new Error("쇼츠 표지는 컴퓨터에서 못 바꿔요. 올린 뒤 휴대폰 유튜브 앱에서 장면을 고르세요.");
   if (step === "publish") {
     if (!p.final) throw new Error("완성본이 먼저 있어야 해요 (녹음 올리기 또는 일레븐랩스).");
-    if (!p.youtube) throw new Error("업로드 문구가 먼저 있어야 해요. [⑤ 업로드 문구]를 눌러주세요.");
     p.pick = { title: Number(titleIdx) || 0, thumb: Number(thumbIdx) || 0 };
   }
   if (step === "voice" && !saved.some((f) => /\.(mp3|m4a|wav)$/i.test(f))) throw new Error("녹음 파일(mp3·m4a·wav)을 올려주세요.");
@@ -355,6 +354,7 @@ ${p.episode ? `[대본]\n${p.episode.scenes.map((s) => s.narration).join(" ").sl
 
 // ⑦ 유튜브에 비공개로 올리기 — 사장님이 고른 제목·썸네일로. 공개는 사장님이 스튜디오에서 (매일 쇼츠와 같은 규칙)
 async function publish(p) {
+  if (!p.youtube) await upload(p); // 업로드 문구가 아직 없으면 먼저 쓰고 (제목은 첫 번째 후보)
   const dir = epDir(p);
   const meta = {
     title: p.youtube.titles[p.pick?.title || 0] || p.youtube.titles[0],

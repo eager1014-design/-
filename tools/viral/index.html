@@ -570,7 +570,8 @@ function renderLong(p) {
   $("#lfView").innerHTML = `<div class="panel"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h3 style="margin:0;flex:1">${esc(p.title)}</h3><span class="tag">${short ? "숏폼" : "롱폼"} · ${esc(p.channel)}</span><span class="st ${busy ? "wait" : ""}">${busy ? `<span class="spin"></span>${esc(p.busy)}` : esc(p.stage)}</span>
       <button class="btn sm ghost" onclick="lfDel('${p.id}')">삭제</button></div>
     ${p.brief ? `<p class="note">${esc(p.brief)}</p>` : ""}
-    <div class="steps" style="margin-top:10px">${btn("plan", "① 기획안 만들기", !p.plan)}${short ? "" : btn("thumbs", p.thumbs ? "② 썸네일 다시" : "② 썸네일 그리기", p.plan && !p.thumbs)}${btn("script", p.episode ? "③ 대본·초안 다시" : "③ 대본·초안 만들기", (short ? p.plan : p.thumbs) && !p.episode)}${btn("upload", "⑤ 업로드 문구", p.final && !p.youtube)}</div>
+    <div class="steps" style="margin-top:10px">${btn("plan", "① 기획안 만들기", !p.plan)}${short ? "" : btn("thumbs", p.thumbs ? "② 썸네일 다시" : "② 썸네일 그리기", p.plan && !p.thumbs)}${btn("script", p.episode ? "③ 대본·초안 다시" : "③ 대본·초안 만들기", (short ? p.plan : p.thumbs) && !p.episode)}${btn("upload", "⑤ 업로드 문구", p.final && !p.youtube)}<button class="btn ${p.final && !p.youtubeUrl ? "" : "ghost"}" ${busy || !p.final ? "disabled" : ""} title="${p.final ? "" : "완성본(목소리 입힌 영상)이 있어야 올릴 수 있어요"}" onclick="lfPublish(this)">⑥ 유튜브에 올리기</button></div>
+    ${p.final ? "" : '<p class="note" style="margin:6px 0 0">⑥ 유튜브 올리기는 목소리를 입힌 완성본이 생기면 켜져요 (녹음 파일 올리기 또는 일레븐랩스).</p>'}
     <p class="note">버튼을 누를 때 아래 칸에 적은 말이 같이 전달돼요 (예: "2번 썸네일 느낌으로, 글씨는 더 크게"). ④는 녹음 파일 올리기.</p>
     ${busy && p.log?.length ? `<details open><summary>진행 상황</summary><div class="logbox">${esc(p.log.join("\n"))}</div></details>` : ""}</div>
   ${plan}${thumbs}${read}${yt}
