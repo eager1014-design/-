@@ -237,6 +237,7 @@ citation(authors, year, title, journal, finding, cue, findingCue — 확인된 �
 bars(title, bars[{label,value}], unit, source — 실제 데이터만) · story(emoji, lines[] — 그림 대신 이모지, 핵심 장면 3~4곳에 "art": "삽화 설명") · outro(question, cue, channel, channelCue)
 pillars·elements = 사주 설명 장면 (사주 편일 때만)
 공통: id("s01"…), narration(필수, 사장님이 그대로 읽을 문장), keywords[], face(smile·surprised·serious·laugh·worried·kind), gesture(idea·point·think·explain·none), cast(right·left·center·corner·off)
+소품: "props": [{"icon": "이름", "at": "그 장면 내레이션 속 단어", "x": 0.2, "y": 0.4, "size": 220, "move": "bob|wiggle|pulse|spin"}] — 장면 뜻에 맞는 손그림 소품이 선으로 그려지며 나타나 계속 살짝 움직임. 쓸 수 있는 아이콘: brain·bulb·phone·battery·heart·clock·lightning·question·exclaim·check·chart·coffee·speech·thought·bed·money·calendar·lock·search·star·people·house·tear·fire. 장면 절반 정도에 1~2개, 글씨·캐릭터와 안 겹치게 빈 쪽(x 0.12~0.22 또는 0.78~0.88).
 규칙: cue·at 은 그 장면 narration 안에 띄어쓰기까지 똑같이 있는 말. 화면 글씨 **강조**=형광펜, 줄바꿈 \\n, 숫자는 내레이션에서 한글("일곱 번")·화면에서 숫자.`;
 
 const SHORT_RULES = `[쇼츠 규칙] 장면 6~9개, 내레이션 합계 250~400자. "frame": {"title": ["첫 줄", "둘째 줄"]} (줄마다 14자 이내). 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅.
@@ -260,7 +261,7 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
     const skin = load().settings?.skin || undefined; // 앱 '오늘의 영상'에서 고른 글씨·색
     const ep = short
       ? { ...r.episode, format: "short", layout: "one", style: "punchy", pace: { speed: 1.1, trim: true }, presenter: true, skin, frame: { ...(r.episode.frame || {}), brand: p.channel.split(" (")[0] } }
-      : { ...r.episode, format: "long", style: "calm", presenter: true, captions: true };
+      : { ...r.episode, format: "long", style: "calm", presenter: true, captions: true, skin };
     fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
     const check = run(p, `대본 검사 (${attempt}번째)`, NODE, ["scripts/check_episode.mjs", path.relative(VIDEO, epFile)], { cwd: VIDEO, allowFail: true });
     if (check.ok) {

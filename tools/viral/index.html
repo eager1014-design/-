@@ -341,7 +341,7 @@ async function loadDaily() {
     ${Object.entries(looks).map(([k, v]) => `<option value="${k}" ${k === look ? "selected" : ""}>${v}</option>`).join("")}</select>
     <label style="margin:0 0 0 12px">글씨·색</label>
     <select style="width:auto" onchange="api('/api/settings',{skin:this.value}).then(()=>say('다음 영상부터 바뀝니다. 지금 영상은 [다시 쓰기]로 바꿀 수 있어요.'))">
-    ${[["", "기본 (프리텐다드)"], ["cute", "귀여운 (주아체·파스텔·스티커)"]].map(([k, v]) => `<option value="${k}" ${k === (settings.skin || "") ? "selected" : ""}>${v}</option>`).join("")}</select></div>` + (days[0]?.date !== t ? `<div class="panel"><b>${t}</b> 오늘 영상은 아직 없어요. 매일 새벽 5시에 자동으로 만들어집니다.<div class="acts" style="margin-top:10px"><button class="btn" onclick="daily('run','${t}',this)">지금 만들기</button></div><p class="note">일기를 먼저 써두시면 그 이야기로 만들어요. 10~20분 걸립니다.</p></div>` : "") +
+    ${[["chalk", "칠판 (진한 파랑·네온·움직이는 소품)"], ["", "기본 (프리텐다드)"], ["cute", "귀여운 (주아체·파스텔·스티커)"]].map(([k, v]) => `<option value="${k}" ${k === (settings.skin || "") ? "selected" : ""}>${v}</option>`).join("")}</select></div>` + (days[0]?.date !== t ? `<div class="panel"><b>${t}</b> 오늘 영상은 아직 없어요. 매일 새벽 5시에 자동으로 만들어집니다.<div class="acts" style="margin-top:10px"><button class="btn" onclick="daily('run','${t}',this)">지금 만들기</button></div><p class="note">일기를 먼저 써두시면 그 이야기로 만들어요. 10~20분 걸립니다.</p></div>` : "") +
     (days.map(dayCard).join("") || "");
   clearTimeout(dailyTimer);
   if (busyNow && !$("#tab-daily").classList.contains("hide")) dailyTimer = setTimeout(loadDaily, 5000);
