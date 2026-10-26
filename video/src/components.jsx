@@ -2,7 +2,7 @@
 import React, { createContext, useContext } from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { COLORS, FONT } from "./theme.js";
-import { captionChunks, cueFrame } from "./timing.js";
+import { captionChunks, cueFrame, SFX_LEAD, voiceSafeVolume } from "./timing.js";
 
 // 장면을 그릴 크기를 영상 크기와 다르게 정할 때 (제목 띠 쇼츠: 세로 영상 가운데 칸에 장면을 가로 배치로 그림).
 // 값: { width, height } 또는 null(영상 크기 그대로)
@@ -69,8 +69,9 @@ export function Background({ tint = "sage" }) {
     return `radial-gradient(circle at ${px}% ${py}%, ${color}66 0%, ${color}00 ${size}%)`;
   };
   const main = tint === "amber" ? COLORS.amber : tint === "terracotta" ? COLORS.terracotta : COLORS.sage;
-  // 단색 배경 스킨(flat): 빛 번짐·질감 없이 한 색으로 딱 (2026-10-24 사장님: 그라데이션에 흰 선이 묻힘)
-  if (COLORS.flat) return <AbsoluteFill style={{ backgroundColor: COLORS.bg }} />;
+  // 배경은 모든 스킨에서 단색 (2026-10-24 칠판: 그라데이션에 흰 선이 묻힘 → 2026-10-26 사장님: "초록 그라데이션 별로, 그라데이션은 하지 마")
+  // 빛 번짐 배경으로 되돌리려면 편 episode.json 에 "glowBackground": true 를 넣는 식으로 따로 켜야 함 (지금은 안 씀)
+  if (COLORS.flat || !COLORS.glow) return <AbsoluteFill style={{ backgroundColor: COLORS.bg }} />;
   return (
     <AbsoluteFill
       style={{
@@ -382,9 +383,10 @@ export function PunchSfx({ scene }) {
     const at = p.at ? cueFrame(scene, p.at) ?? 0 : 0;
     const clash = (scene.sfx || []).some((x) => !x.after && Math.abs((cueFrame(scene, x.cue) ?? 0) - at) < 15);
     if (clash) return null;
+    const from = Math.max(0, at - SFX_LEAD);
     return (
-      <Sequence key={i} from={Math.max(0, at - 2)} durationInFrames={60}>
-        <Audio src={staticFile(sfxFile(name))} volume={0.38} />
+      <Sequence key={i} from={from} durationInFrames={60}>
+        <Audio src={staticFile(sfxFile(name))} volume={voiceSafeVolume(scene, from, 0.38)} />
       </Sequence>
     );
   });

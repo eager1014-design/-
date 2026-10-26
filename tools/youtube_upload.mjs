@@ -6,6 +6,7 @@
 //   node tools/youtube_upload.mjs login                       (처음 한 번 — 브라우저에서 사장님이 허락)
 //   node tools/youtube_upload.mjs upload <영상.mp4> <정보.json>         (무엇을 올릴지 보여주기만 함)
 //   node tools/youtube_upload.mjs upload <영상.mp4> <정보.json> --yes   (실제 업로드)
+//   node tools/youtube_upload.mjs comment <영상 주소> <댓글.txt> --yes  (내 채널로 댓글 달기 — 고정은 스튜디오에서)
 //
 // 정보.json: {"title": "...", "description": "...", "tags": ["..."], "thumbnail": "썸네일.png"(선택),
 //             "privacy": "private"(기본) | "unlisted" | "public", "publishAt": "2026-10-20T19:00:00+09:00"(선택, 예약),
@@ -20,7 +21,8 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CRED = path.join(ROOT, "credentials.json");
 const TOKEN = path.join(ROOT, "token.json");
-const SCOPE = "https://www.googleapis.com/auth/youtube.upload";
+// upload = 영상 올리기, force-ssl = 내 채널로 댓글 달기 (2026-10-26 고정 댓글용 — 예전 열쇠엔 없어서 한 번 다시 로그인)
+const SCOPE = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.force-ssl";
 
 function client() {
   if (!fs.existsSync(CRED)) throw new Error("credentials.json 이 없습니다. 구글 클라우드에서 OAuth 클라이언트(데스크톱 앱)를 만들어 맨 위 폴더에 넣어주세요.");
@@ -151,6 +153,24 @@ export async function upload(video, meta) {
   return lines.join("\n");
 }
 
+// 내 채널 이름으로 댓글 달기 (영상이 공개·일부 공개여야 함 — 비공개 영상엔 댓글이 안 달림).
+// '고정'은 유튜브가 API 로 열어 두지 않아서 사장님이 스튜디오에서 ⋮ → 고정 (2026-10-26)
+export const videoId = (s) => String(s).match(/(?:youtu\.be\/|v=|shorts\/|video\/)([\w-]{11})/)?.[1] || (/^[\w-]{11}$/.test(s) ? s : null);
+export async function comment(video, text) {
+  const id = videoId(video);
+  if (!id) throw new Error(`영상 주소가 이상합니다: ${video}`);
+  if (!String(text).trim()) throw new Error("댓글 내용이 비었습니다.");
+  const token = await accessToken();
+  const r = await fetch("https://www.googleapis.com/youtube/v3/commentThreads?part=snippet", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json; charset=UTF-8" },
+    body: JSON.stringify({ snippet: { videoId: id, topLevelComment: { snippet: { textOriginal: String(text).trim() } } } }),
+  });
+  if (!r.ok) throw new Error(`댓글 달기 실패: ${await explain(r)}`);
+  const c = await r.json();
+  return [`댓글 달림: https://www.youtube.com/watch?v=${id}&lc=${c.id}`, `고정하기: 스튜디오 → 댓글 → 이 댓글 ⋮ → 고정`].join("\n");
+}
+
 async function explain(r) {
   const text = await r.text();
   try {
@@ -158,6 +178,8 @@ async function explain(r) {
     const reason = e?.errors?.[0]?.reason;
     if (reason === "quotaExceeded") return "오늘 업로드 한도(하루 약 6편)를 다 썼습니다. 내일 다시.";
     if (reason === "uploadLimitExceeded") return "유튜브 채널 업로드 한도를 넘었습니다. 하루 뒤 다시.";
+    if (reason === "insufficientPermissions" || r.status === 401) return "댓글 권한이 없는 예전 열쇠예요 — `node tools/youtube_upload.mjs login` 으로 한 번 다시 로그인해 주세요.";
+    if (["commentsDisabled", "forbidden", "videoNotFound"].includes(reason)) return `영상이 아직 비공개이거나 댓글이 꺼져 있어요 (${reason}). 스튜디오에서 공개(또는 일부 공개)로 바꾼 뒤 다시.`;
     return `${r.status} ${reason || ""} ${e?.message || ""}`.trim();
   } catch {
     return `${r.status} ${text.slice(0, 300)}`;
@@ -169,6 +191,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const [cmd, video, metaPath] = process.argv.slice(2);
   try {
     if (cmd === "login") console.log(await login());
+    else if (cmd === "comment" && video && metaPath) {
+      const text = fs.readFileSync(metaPath, "utf8");
+      console.log(`영상: ${video}\n댓글:\n${text}`);
+      if (!process.argv.includes("--yes")) console.log("\n(확인만 함. 실제로 달려면 끝에 --yes)");
+      else console.log(`\n${await comment(video, text)}`);
+    }
     else if (cmd === "upload" && video && metaPath) {
       const meta = readMeta(video, metaPath);
       console.log(describe(video, meta));

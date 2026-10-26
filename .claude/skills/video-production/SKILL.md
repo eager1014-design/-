@@ -192,6 +192,9 @@ description: 유튜브 채널 "예민한자립가" 영상(긴 영상·쇼츠·�
 - 장면 종류 추가 시: `src/scenes.jsx` 의 SCENES 와 `scripts/scene-types.mjs` 둘 다 고칠 것
 
 ## 변경 기록
+- 2026-10-26: **배경 그라데이션 금지** (사장님: 초록 그라데이션 별로) — `Background` 는 모든 스킨에서 단색. **주제는 영역을 돌려 폭넓게** — `tools/topic_mix.mjs`(영역 11개, 최근 쓴 영역 건너뜀, 최근 영상 제목을 대본 작가에게 보여줌).
+- 2026-10-26: **효과음은 말을 덮지 않는다** (사장님): 장면 효과음·강조 자막 효과음 모두 `voiceSafeVolume`(video/src/timing.js) — 말 사이 빈틈은 원래 크기, 말하는 중엔 0.3배, 말과 0.6초 넘게 겹치면 꺼짐. 시작은 단어 0.2초 전(숨 쉬는 틈). 받아쓰기(charTimes)가 있어야 빈틈을 정확히 앎.
+- 2026-10-26: **고정 댓글엔 사주 추천 꼭 — 영상마다 빠짐없이** (사장님): 규칙·링크는 `tools/saju_pin.mjs` 하나(영상 만들기·매일 쇼츠 둘 다 씀). `withSaju`가 운결 링크(?src=youtube)와 '채널 프로필 링크에도 운결' 줄을 빠지면 붙임. 댓글 달기 = 앱 [📌 영상에 댓글로 달기] → `node tools/youtube_upload.mjs comment <영상 주소> <댓글.txt> --yes`(공개·일부 공개 영상만, 로그인 권한 force-ssl 필요). 고정은 API 불가 → 사장님이 스튜디오 ⋮ → 고정.
 - 2026-10-24: **소리·자막 원칙** (사장님 Vrew 프롬프트 → `tools/viral/sound_rules.mjs`, 매일 쇼츠·영상 만들기 대본 규칙): 편 `"soundPlan": true`(자동 휙·뽁 끔, 대본이 고른 효과음만, 장면당 1개), `"musicSections": [{from, file}]`(흐름별 BGM, 1.5초 크로스페이드, 기본 볼륨 0.25·말할 때 0.75배), 장면 `"emotion": true`(효과음·강조색 빼고 음악 0.4배), `"pauseBefore": 0.7`(핵심 문장 앞 무음), `"punch": [{text, at, kind: number|turn|hope|question|emotion}]`(가운데 2배 강조 자막, 골드 #FFD700, 뒤 화면 어둡게, kind별 움직임+효과음). 자막은 한 줄 15자. 효과음 파일 확장자는 자동(chime·whoosh·pop 만 wav)
 - 2026-10-24: 장면 `shrink` (from→빨간 줄→화살표→to 튀어나옴, example 이면 '예시' 표시) — 시간 단축 같은 비교용. 기존 영상에 한 문장만 더할 땐 그 문장만 담은 편을 따로 만들어 narrate → split_voice 후 장면을 옮겨 붙임(promo-excel, 크레딧 26)
 - 2026-10-24: **칠판 스킨 `"skin": "chalk"`** (진한 파랑 #0D1C3D + 흰 선 캐릭터 + 노랑·하늘 네온, 강조 글씨는 빛나며 켜짐, 장면 전환은 지우개처럼 닦아냄, 글꼴 검은고딕). **소품 `"props"`: [{"icon","at","x","y","size","move": bob·wiggle·pulse·spin}]** — 선이 그려지듯 등장 후 계속 움직임. 아이콘 24개 `public/icons/` (brain bulb phone battery heart clock lightning question exclaim check chart coffee speech thought bed money calendar lock search star people house tear fire), 새로 그리면 `scripts/cut_icons.py`

@@ -7,6 +7,7 @@
 //   node tools/daily_short.mjs photos <날짜>                              대본은 그대로, 위인 사진·삽화만 다시 채우기 + 초안
 //   node tools/daily_short.mjs voice <날짜>                               일레븐랩스 천성준 녹음 → 장면 자르기 → 완성 영상 (크레딧 사용)
 //   node tools/daily_short.mjs upload <날짜>                              유튜브에 비공개로 올리기
+//   node tools/daily_short.mjs comment <날짜>                             고정 댓글(사주 추천) 달기 — 공개 후
 //
 // 비용: 소싱(유튜브 무료 한도 300점) · 분석(제미나이, 쇼츠 1개 ≈ 2만 토큰 × 3) · 대본(클로드 구독, 추가 0원) · 렌더(무료)
 // 상태: tools/viral/data/daily/<날짜>.json — 앱이 이 파일을 읽어 화면에 보여준다.
@@ -16,6 +17,8 @@ import { spawnSync } from "node:child_process";
 import { ROOT, DATA_DIR, load, save, upsert, searchYoutube, analyze, saveSettings } from "./viral/core.mjs";
 import { fetchPortraits, locateFace, creditLines } from "./commons.mjs";
 import { SOUND_RULES, pickSections } from "./viral/sound_rules.mjs";
+import { PINNED_ASK, withSaju } from "./saju_pin.mjs";
+import { AREA_LIST, pickArea, recentList, TOPIC_AREAS } from "./topic_mix.mjs";
 
 const DAILY_DIR = path.join(DATA_DIR, "daily");
 const VIDEO = path.join(ROOT, "video");
@@ -24,18 +27,20 @@ const NODE = process.execPath;
 const VOICE = { provider: "elevenlabs", id: "vithIMnhyN3GwRbVmrZt", name: "천성준" };
 // 2026-10-23 주제 조사 (쇼츠 24개 주제 × 50개, 최근 3달 떡상 수): 손절·가스라이팅·사주 궁합·직장 인간관계·회피형이 강하고
 // 번아웃·생각 많은·착한아이·혼자가 편한·연락 불안 같은 '자기 돌봄' 주제는 떡상 0개 → 소싱 키워드도 강한 쪽으로
-const DEFAULT_KEYWORDS = ["손절해야 하는 사람", "친구 손절", "가스라이팅", "사주 궁합", "직장 인간관계", "회피형 연애", "예민한 사람", "자존감 낮은 사람", "눈치 많이 보는 사람", "나르시시스트"];
+// 2026-10-26 사장님 "폭넓게" → 돈·뇌·습관·가족·심리 실험·위인까지 넓힘
+const DEFAULT_KEYWORDS = ["손절해야 하는 사람", "가스라이팅", "사주 궁합", "직장 인간관계", "회피형 연애", "돈 심리학", "소비 습관 심리", "뇌과학 상식", "심리 실험", "습관 심리학", "맏이 특징", "자존감 낮은 사람", "철학자 명언", "예민한 사람", "나르시시스트"];
 const PEOPLE_GUIDE = `[철학자·심리학자·위인 편 — 사장님 시리즈 (쇼펜하우어·칼 융·니체·에픽테토스·반 고흐 등, 하루 한 명 천천히)]
 - 틀: 위인의 실제 삶의 장면(사진) → 그가 남긴 관계·고독·예민함에 대한 생각 → 예민한 사람인 나(채널 주인)에게 주는 의미 → 오늘 할 한 가지.
 - 사진 장면 "type": "photo" 를 2~3개: {"person": "영문 전체 이름(위키백과 표기, 예: Arthur Schopenhauer)", "name": "한글 이름", "years": "1788–1860", "lines": [{text, cue}], "circle": {"at": "그 사람을 가리키는 순간의 단어"}}. 사진·얼굴 위치는 자동으로 채워지니 image·x·y 쓰지 말 것.
 - 사실만: 생몰년·잘 알려진 일화·명언은 확실한 것만. 명언은 원문이 확실치 않으면 직접 인용("~라고 했다") 대신 "~라는 생각을 남겼어요" 처럼 뜻만. 지어낸 일화·가짜 명언 절대 금지. 설명란에 출처 책 이름(예: 쇼펜하우어 『소품과 부록』)을 적을 것.
 - 위인을 HSP 라고 단정하지 말 것 ("~였다는 기록이 있어요" 처럼 알려진 성향만).`;
 
-const TOPIC_GUIDE = `[주제 고르는 법 — 2026-10-23 유튜브 쇼츠 조사 결과, 반드시 따를 것]
-- 뜨는 틀: ① "반드시 거리 둬야 할 사람 유형"(손절·가스라이팅·나르시시스트) ② "사주로 보는 피해야 할 인연·최악의 궁합" ③ "~한 사람만 하는 행동"(시청자를 콕 집는 정체성 호출) ④ 회피형·불안형 연애에서 상대가 하는 말·행동 ⑤ 직장에서 휘둘리지 않고 거리 두는 법
-- 안 뜨는 틀: 번아웃·생각 많음·착한아이·혼자가 편함·연락 불안처럼 '내 마음 돌보기'만 하는 주제 → 떡상 0개. 위로는 끝에 한 줄만.
-- 예민한 사람(HSP) 시선은 유지하되, 제목·첫 문장은 '타인' 또는 '관계의 위험 신호'로 시작 (예: "예민한 사람을 무너뜨리는 사람 유형 3", "계수 일간이 절대 만나면 안 되는 사람").
-- 일기가 있으면 일기 속 사건을 위 틀 중 하나로 바꿔서 기획 (예: 일기 속 서운했던 사람 → '이런 말 하는 사람은 거리 두세요').`;
+// 주제 고르는 법 — 2026-10-23 조사(관계·손절이 강함)를 '말하는 방식'으로만 남기고, 영역은 넓게 돌린다 (2026-10-26 사장님: "비슷한 주제만, 폭넓게")
+const topicGuide = (area) => `[주제 고르는 법 — 반드시 따를 것]
+- ★ 오늘의 주제 영역: **${area.name}** (예: ${area.ex}). 일기가 있으면 일기 이야기를 이 영역과 엮거나, 일기에 더 맞는 다른 영역을 써도 됨. 단 아래 '최근에 만든 영상'과 같은 영역·비슷한 주제(예: 연락 빈도·거리 두기·손절을 또)는 금지.
+- 영역 목록(idea.area 에 key 로 적기): ${AREA_LIST}
+- 뜨는 '말하는 방식'은 어느 영역에나 씌울 수 있음: ① "~한 사람만 하는 행동"(시청자를 콕 집는 정체성 호출) ② 위험 신호·피해야 할 것 ③ 통념을 깨는 반전("돈이 많아서가 아닙니다") ④ 숫자 리스트(3가지) ⑤ "이 말을 기억하세요"
+- 안 뜨는 방식: '내 마음 돌보기'만 하는 위로 → 위로는 끝에 한 줄만. 예민한 사람(HSP) 시선은 유지하되 첫 문장은 구체적인 상황·행동으로.`;
 const MIN = { views: 90000, likes: 5000, comments: 50 };
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -138,11 +143,13 @@ function writingPrompt(st, feedback) {
   // 오늘 분석이 없으면 예전에 쌓인 분석 중 최근 것
   const analyses = refs.length ? refs : Object.values(db.items).filter((x) => x.analysis).sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || "")).slice(0, 3);
   const techniques = Object.values(db.techniques || {}).filter((t) => t.status === "auto" || t.status === "done").slice(-12);
-  const past = pastDailies().filter((d) => d.date !== st.date).map((d) => `- ${d.date}: ${d.idea.title}`).join("\n") || "(없음)";
+  const past = recentList(st.idea?.title); // 매일 쇼츠 + 영상 만들기 둘 다
+  const area = TOPIC_AREAS.find((a) => a.key === st.area) || pickArea(Number(st.date.replace(/-/g, "")));
+  st.area = area.key;
   const template = JSON.stringify(stripAudio(JSON.parse(fs.readFileSync(TEMPLATE_EP, "utf8"))), null, 1);
   const diaryText = fresh.length
     ? `[사장님 일기 — 아직 영상에 안 쓴 것]\n${fresh.map((d) => `(${d.id}, ${d.at.slice(0, 10)})\n${d.text}${d.photoNote ? `\n[붙인 사진 내용] ${d.photoNote}` : ""}${d.links ? `\n[붙인 링크] ${d.links}` : ""}`).join("\n\n")}\n\n[예전에 쓴 일기 — 맥락 참고용, 같은 이야기 반복 금지]\n${older.map((d) => d.text.slice(0, 300)).join("\n---\n") || "(없음)"}`
-    : `[사장님 일기] 오늘은 새 일기가 없습니다. → 위 '뜨는 틀' 중 최근에 안 쓴 것으로 기획하세요 (심리학 관점 + 연애·인간관계). 사장님 개인 경험은 지어내지 말고, 시청자의 상황을 묘사하는 2인칭으로.`;
+    : `[사장님 일기] 오늘은 새 일기가 없습니다. → 위 '오늘의 주제 영역'으로 기획하세요. 사장님 개인 경험은 지어내지 말고, 시청자의 상황을 묘사하는 2인칭으로.`;
 
   return `너는 유튜브 채널 "예민한자립가"의 쇼츠 기획자 겸 대본 작가야. 오늘 올릴 세로 쇼츠 1편을 기획하고, 우리 영상 공장이 바로 렌더링할 수 있는 episode.json 을 써.
 
@@ -151,7 +158,7 @@ function writingPrompt(st, feedback) {
 - 시리즈 방향: 예민함 × 사주 × 심리학 × 연애·관계. 사주는 과학처럼 말하지 않는다 ("~래요", "사주에서는 ~라고 봐요").
 - 사장님이 "맨날 같은 얘기(퇴사 7번)"를 지겨워함 → 일기의 새 이야기를 중심으로.
 
-${st.topic ? `[★ 사장님이 정한 오늘 주제 — 반드시 이 주제로. 아래 '주제 고르는 법'보다 우선]\n${st.topic}\n\n` : ""}${TOPIC_GUIDE}
+${st.topic ? `[★ 사장님이 정한 오늘 주제 — 반드시 이 주제로. 아래 '주제 고르는 법'보다 우선]\n${st.topic}\n\n` : ""}${topicGuide(area)}
 
 ${PEOPLE_GUIDE}
 
@@ -163,7 +170,7 @@ ${st.refs?.length ? "(첫 번째 자료는 사장님이 직접 고른 참고 자
 [입혀볼 연출 기법 — 우리 장면으로 흉내 낼 수 있는 것, 어울리면 1~2개 적용]
 ${techniques.map((t) => `- ${t.name} (${t.our_scene}): ${t.how_to_copy}`).join("\n") || "(없음)"}
 
-[최근에 만든 쇼츠 — 겹치지 않게]
+[최근에 만든 영상 — 주제·영역 겹치지 않게]
 ${past}
 ${feedback ? `\n[사장님 수정 요청 — 반드시 반영]\n${feedback}\n\n[직전 대본]\n${JSON.stringify(st.idea)}\n` : ""}
 [절대 규칙]
@@ -186,9 +193,9 @@ ${load().settings?.skin === "chalk" ? `13. 칠판 스타일 소품: "props": [{"
 ${template}
 
 다른 말 없이 JSON 하나만 출력해:
-{"music_plan": [{"from": "s01", "mood": "tense"}, {"from": "마무리 쪽 장면 id", "mood": "hopeful"}], "idea": {"title": "오늘 영상 한 줄 기획", "why": "왜 이게 뜰 것 같은지 (참고한 공식 포함) 2~3문장", "diary_ids": ["사용한 일기 id"], "techniques": ["적용한 연출 기법 이름"]},
+{"music_plan": [{"from": "s01", "mood": "tense"}, {"from": "마무리 쪽 장면 id", "mood": "hopeful"}], "idea": {"title": "오늘 영상 한 줄 기획", "area": "영역 key", "why": "왜 이게 뜰 것 같은지 (참고한 공식 포함) 2~3문장", "diary_ids": ["사용한 일기 id"], "techniques": ["적용한 연출 기법 이름"]},
  "episode": { ...예시와 같은 형식, "title" 은 "#shorts" 포함 ... },
- "youtube": {"title": "검색될 키워드를 앞에 둔 제목 (#HSP 등 해시태그 1~2개)", "description": "첫 2줄 요약 + 댓글 질문 + (사주 편이면) 무료 사주 링크 https://ai-production-1a94.up.railway.app/?src=youtube + '경험 정리' 고지 + 해시태그 3개", "tags": ["10~15개"]}}`;
+ "youtube": {"title": "검색될 키워드를 앞에 둔 제목 (#HSP 등 해시태그 1~2개)", "description": "첫 2줄 요약 + 댓글 질문 + (사주 편이면) 무료 사주 링크 https://ai-production-1a94.up.railway.app/?src=youtube + '경험 정리' 고지 + 해시태그 3개", "tags": ["10~15개"], "pinned": "${PINNED_ASK}"}}`;
 }
 
 function askClaude(st, prompt) {
@@ -258,7 +265,8 @@ async function script(st, feedback) {
       const description = credits.length ? `${res.youtube.description}\n\n📷 사진 출처 (Wikimedia Commons)\n${creditLines(credits)}` : res.youtube.description;
       fs.writeFileSync(path.join(dir, "youtube.json"), JSON.stringify({ ...res.youtube, description, altered_content: true, privacy: "private" }, null, 2));
       st.idea = { ...res.idea, narration: ep.scenes.map((s) => s.narration).join("\n"), chars: ep.scenes.reduce((a, s) => a + s.narration.length, 0) };
-      st.youtube = res.youtube;
+      if (TOPIC_AREAS.some((a) => a.key === res.idea.area)) st.area = res.idea.area;
+      st.youtube = { ...res.youtube, pinned: withSaju(res.youtube.pinned) };
       st.episode = path.relative(ROOT, epFile);
       log(st, `✍️ 기획: ${res.idea.title} (${st.idea.chars}자)`);
       return;
@@ -418,8 +426,19 @@ async function main() {
       st.status = "uploaded";
       log(st, `✅ 비공개 업로드 완료 ${st.youtubeUrl || ""} — 스튜디오에서 확인 후 공개해주세요`);
     } catch (e) { fail(st, e); }
+  } else if (cmd === "comment") {
+    // 고정 댓글 달기 — 사장님이 앱에서 버튼을 누를 때만. 공개된 영상에만 달리고, '고정'은 스튜디오에서 사장님이
+    const st = readState(args[0] || today());
+    try {
+      if (!st?.youtubeUrl) throw new Error("유튜브에 먼저 올려야 해요.");
+      const f = path.join(path.dirname(path.join(ROOT, st.episode)), "pinned.txt");
+      fs.writeFileSync(f, withSaju(st.youtube?.pinned));
+      const r = run(st, "📌 고정 댓글 다는 중", NODE, ["tools/youtube_upload.mjs", "comment", st.youtubeUrl, f, "--yes"]);
+      st.commentUrl = r.out.match(/https:\/\/www\.youtube\.com\/watch\S+/)?.[0] || null;
+      log(st, "✅ 고정 댓글 달림 — 스튜디오 → 댓글 → ⋮ → '고정'을 눌러주세요");
+    } catch (e) { st.error = String(e.message); log(st, `❌ ${st.error}`); }
   } else {
-    console.log("사용법: node tools/daily_short.mjs run | redo <날짜> \"고칠 점\" | voice <날짜> | upload <날짜>");
+    console.log("사용법: node tools/daily_short.mjs run | redo <날짜> \"고칠 점\" | voice <날짜> | upload <날짜> | comment <날짜>");
   }
 }
 

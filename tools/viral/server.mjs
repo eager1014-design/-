@@ -124,6 +124,7 @@ const routes = {
   "POST /api/daily/redo": async (b) => startDaily("redo", b.date, [String(b.feedback || "더 좋게 다시 써줘").slice(0, 2000), ...(b.ref ? [`--ref=${b.ref}`] : [])]),
   "POST /api/daily/voice": async (b) => startDaily("voice", b.date),
   "POST /api/daily/upload": async (b) => startDaily("upload", b.date),
+  "POST /api/daily/comment": async (b) => startDaily("comment", b.date),
 };
 
 http.createServer(async (req, res) => {

@@ -73,6 +73,27 @@ export function cueFrame(scene, cue) {
   return Math.round((before / plain) * voiceSeconds(scene) * FPS);
 }
 
+// 효과음이 말을 덮지 않게 (2026-10-26 사장님: "효과음이 말에 방해 받지 않는 선에서"):
+// 효과음 하나의 볼륨을 프레임마다 정한다. 말 사이 빈틈 = base 그대로, 말하는 중 = 0.3배로 낮추고,
+// 말과 0.6초 넘게 겹치면 서서히 꺼진다. 말하는 순간은 받아쓰기 시각(charTimes), 없으면 목소리 구간 전체로 본다.
+// at = 효과음이 장면 안에서 시작하는 프레임, f = 효과음 시작부터 지난 프레임
+export function voiceSafeVolume(scene, at, base) {
+  const voiced = scene.charTimes?.length ? scene.charTimes.map((t) => heardAt(scene, t) * FPS) : null;
+  const end = voiceSeconds(scene) * FPS;
+  const speaking = (F) => (voiced ? voiced.some((v) => v > F - 5 && v < F + 4) : F >= 0 && F <= end);
+  return (f) => {
+    const F = at + f;
+    if (!speaking(F)) return base;
+    let overlap = 0;
+    for (let k = f; k >= 0 && speaking(at + k); k--) overlap++;
+    const fade = Math.max(0, 1 - Math.max(0, overlap - 18) / 10);
+    return base * 0.3 * fade;
+  };
+}
+
+// 효과음 시작 프레임: 단어를 말하기 직전(숨 쉬는 틈)에 울리도록 6프레임(0.2초) 당긴다
+export const SFX_LEAD = 6;
+
 // 화면 요소가 나타날 프레임. cue(내레이션 속 단어)가 있으면 그 단어를 말하는 순간에 맞춘다.
 // 없으면 목소리 구간의 10%~70% 사이에 고르게 나눈다.
 export function revealFrames(scene, items) {

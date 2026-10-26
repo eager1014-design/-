@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 import { ROOT, DATA_DIR, UPLOAD_DIR, GEMINI_MODEL, load, saveUploads, imageParts, isVideo } from "./core.mjs";
 import { gemini, watchVideo } from "../ai-bridge/gemini.mjs";
 import { SOUND_RULES, pickSections } from "./sound_rules.mjs";
+import { PINNED_ASK, withSaju } from "../saju_pin.mjs";
+import { AREA_LIST, recentList, TOPIC_AREAS } from "../topic_mix.mjs";
 import { SCENES_LIST } from "../../video/scripts/scene-types.mjs";
 
 const DIR = path.join(DATA_DIR, "longform");
@@ -19,7 +21,7 @@ const VIDEO = path.join(ROOT, "video");
 const CLAUDE = process.env.CLAUDE_BIN || path.join(process.env.HOME, ".local/bin/claude");
 const NODE = process.execPath;
 const ID = /^[a-z0-9]{6,20}$/;
-const STEPS = ["chat", "plan", "thumbs", "script", "voice", "eleven", "upload", "publish"];
+const STEPS = ["chat", "plan", "thumbs", "script", "voice", "eleven", "upload", "publish", "next", "comment"];
 const VOICE = { provider: "elevenlabs", id: "vithIMnhyN3GwRbVmrZt", name: "천성준" };
 
 // ---------- 저장 ----------
@@ -67,11 +69,13 @@ export function postMessage(id, { text = "", links = "", files = [], step = "cha
     if (!p.final) throw new Error("완성본이 먼저 있어야 해요 (녹음 올리기 또는 일레븐랩스).");
     p.pick = { title: Number(titleIdx) || 0, thumb: Number(thumbIdx) || 0 };
   }
+  if (step === "comment" && !(p.youtubeUrl && p.youtube?.pinned)) throw new Error("유튜브에 올린 뒤, 업로드 문구(고정 댓글)가 있어야 달 수 있어요.");
   if (step === "voice" && !saved.some((f) => /\.(mp3|m4a|wav)$/i.test(f))) throw new Error("녹음 파일(mp3·m4a·wav)을 올려주세요.");
   for (const u of urls) p.refs.push({ url: u, at: new Date().toISOString() });
   for (const f of saved) p.refs.push({ file: f, at: new Date().toISOString() });
   if (String(text).trim() || urls.length || saved.length) p.messages.push({ role: "me", text: String(text).trim(), links: urls, files: saved, step, at: new Date().toISOString() });
-  p.busy = { chat: "답 쓰는 중", plan: "기획안 만드는 중", thumbs: "썸네일 그리는 중", script: "대본·초안 만드는 중", voice: "목소리 맞추는 중", eleven: "일레븐랩스 녹음 중", upload: "업로드 문구 쓰는 중", publish: "유튜브에 올리는 중" }[step];
+  p.busy = { chat: "답 쓰는 중", plan: "기획안 만드는 중", thumbs: "썸네일 그리는 중", script: "대본·초안 만드는 중", voice: "목소리 맞추는 중", eleven: "일레븐랩스 녹음 중", upload: "업로드 문구 쓰는 중", publish: "유튜브에 올리는 중", next: "다음 편 여는 중", comment: "고정 댓글 다는 중" }[step];
+  p.ask = null;
   p.log = [];
   saveProject(p);
   const out = fs.openSync(path.join(ROOT, ".tmp/longform.out"), "a");
@@ -122,13 +126,32 @@ async function readRefs(p) {
   }
 }
 
+// 보관함(떡상 영상 분석)·연출 기법을 영상 만들기에도 (2026-10-26 사장님 OK). 보관함은 대부분 쇼츠라
+// 롱폼엔 주제·제목·훅·연출만 가져오고, 쇼츠의 길이·속도·구성은 안 가져온다. 3분 넘는 롱폼 분석만 구성까지.
+export function libraryNotes(p) {
+  const db = load();
+  const cut = (s, n = 160) => String(s || "").replace(/\s+/g, " ").slice(0, n);
+  const long = p.format !== "short";
+  const items = Object.values(db.items || {}).filter((x) => x.analysis).sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || "")).slice(0, 6);
+  const techniques = Object.values(db.techniques || {}).filter((t) => t.status === "auto" || t.status === "done").slice(-12);
+  if (!items.length && !techniques.length) return "";
+  const lines = items.map((x) => {
+    const isLong = (x.duration || 0) >= 180;
+    const a = x.analysis;
+    return `■ ${cut(x.title, 80)} (${isLong ? "롱폼" : "쇼츠"}, 조회 ${x.views ?? "?"}) — 왜 떴나: ${cut(a.one_line)} / 훅: ${cut(a.hook)} / 공식: ${cut(a.reusable_formula)}${!long || isLong ? ` / 구성: ${cut(typeof a.structure === "string" ? a.structure : JSON.stringify(a.structure), 240)}` : ""}`;
+  });
+  return `[보관함 — 사장님이 모은 떡상 영상 분석]${long ? " 롱폼엔 주제·제목·썸네일 문구·첫 15초 훅·연출만 참고. 쇼츠의 길이·장면 속도·구성은 따라 하지 말 것 (롱폼 분석만 구성 참고)." : ""} 내용·대사는 베끼지 말고 공식만.
+${lines.join("\n")}
+${techniques.length ? `[연출 기법 — 자동 적용 목록, 장면에 맞으면 섞어 쓰기]\n${techniques.map((t) => `- ${t.name} (${t.our_scene}): ${cut(t.how_to_copy, 120)}`).join("\n")}\n` : ""}`;
+}
+
 function context(p) {
   const refs = p.refs.filter((r) => r.summary).map((r, i) => `[참고 ${i + 1}] ${r.url || path.basename(r.file)}\n${r.summary}`).join("\n\n");
   const talk = p.messages.slice(-20).map((m) => `${m.role === "me" ? "사장님" : "클로드"}: ${m.text}${m.links?.length ? ` (링크 ${m.links.join(" ")})` : ""}${m.files?.length ? ` (파일 ${m.files.length}개)` : ""}`).join("\n");
   const kind = p.format === "short" ? "세로 쇼츠 1080×1920 (40~60초)" : "가로 롱폼 1920×1080 (보통 6~10분)";
   return `[${p.format === "short" ? "숏폼" : "롱폼"} 프로젝트] 가제: ${p.title} / 채널: ${p.channel} / ${kind}
 [사장님이 처음 말한 느낌] ${p.brief || "(없음)"}
-${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약]\n${refs}\n` : ""}[지금까지 대화]\n${talk || "(아직 없음)"}
+${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약 (사장님이 이번에 직접 준 자료라 보관함보다 우선)]\n${refs}\n` : ""}${libraryNotes(p)}[최근에 만든 영상 — 사장님이 "비슷한 주제만 나온다"고 함. 주제를 제안할 땐 이것과 겹치지 않게, 영역을 넓게 (${AREA_LIST})]\n${recentList(p.plan?.titles?.[0])}\n[지금까지 대화]\n${talk || "(아직 없음)"}
 
 [원칙] 사장님은 코드를 모르는 1인 사업가. 쉬운 말로, 짧게. 듣기 좋은 말만 하지 말고 약점도 근거와 함께 (사장님 요청).
 사장님 경험은 대화·메모에 있는 것만 쓰고 지어내지 않는다. 연구·숫자는 확실한 것만, 모르면 '확인 필요'. 다른 유튜버의 문장·화면을 베끼지 않는다.
@@ -145,14 +168,47 @@ function askClaude(p, prompt) {
 }
 const say = (p, text, extra = {}) => p.messages.push({ role: "claude", text, at: new Date().toISOString(), ...extra });
 
-// ① 대화
+// ① 대화 — 사장님은 말만 하면 된다 (2026-10-26 사장님: "필요한 버튼만, 대화 형식으로 영상을 만들어내는 채팅"):
+// 클로드가 말뜻을 보고 다음 단계를 바로 돌린다. 크레딧·바깥으로 나가는 일(일레븐랩스 녹음·유튜브 올리기)은 버튼만 띄운다.
+const AUTO = { plan: "기획안 만드는 중", thumbs: "썸네일 그리는 중", script: "대본·초안 만드는 중", upload: "업로드 문구 쓰는 중" };
+const ready = (p, step) => ({ plan: true, thumbs: p.format !== "short" && !!p.plan, script: !!p.plan, upload: !!p.episode }[step]);
+function state(p) {
+  const has = (x, a, b) => (x ? `${a} 있음` : `${a} ${b || "없음"}`);
+  return `[지금 상태] ${[has(p.plan, "기획안"), p.format === "short" ? "" : has(p.thumbs, "썸네일"), has(p.episode, "대본·초안"), has(p.final, "완성본(목소리)"), has(p.youtube, "업로드 문구"), p.youtubeUrl ? `유튜브 올림 ${p.youtubeUrl}` : "유튜브 안 올림"].filter(Boolean).join(" / ")}${p.prev ? `\n[이전 편] ${p.prev.title} — ${p.prev.summary}` : ""}`;
+}
+
 async function chat(p) {
   const r = askClaude(p, `${context(p)}
+${state(p)}
 
-사장님의 마지막 말에 답해. 기획을 같이 다듬는 대화다: 질문이 필요하면 1~2개만, 제안은 구체적으로(제목·첫 문장·구성 예시).
-기획이 충분히 모였으면 "[기획안 만들기] 버튼을 눌러주세요"라고 안내해.
-JSON 하나만: {"reply": "답 (10줄 이내)"}`);
+사장님의 마지막 말에 답해. 영상을 같이 만드는 대화다: 질문이 필요하면 1~2개만, 제안은 구체적으로(제목·첫 문장·구성 예시).
+"do" = 사장님이 다음 단계를 원하거나 동의했으면 그 일 하나 (고칠 점을 말하면 그 단계를 다시 하는 것도 포함):
+  plan(기획안) · thumbs(롱폼 썸네일, 기획안 있어야) · script(대본+무료 초안, 기획안 있어야) · upload(업로드 문구·고정 댓글, 대본 있어야)
+  · next(이 영상에 이어지는 다음 편을 새로 시작 — 사장님이 '다음 편', '이어서', '다음 이야기'라고 할 때) · ""(그냥 대화).
+  기획이 아직 모자라면 do 는 비우고 질문만.
+"ask" = 일레븐랩스 녹음(크레딧)·유튜브 올리기·고정 댓글 달기를 원하면 직접 하지 말고 "eleven" · "publish" · "comment" (화면에 확인 버튼이 뜬다).
+do 가 있으면 reply 는 "○○ 바로 시작할게요" 한두 줄로 짧게.
+JSON 하나만: {"reply": "답 (10줄 이내)", "do": "", "ask": "", "title": "지금 가제가 '제목 없음'이면 짧은 가제, 아니면 빈 문자열"}`);
   say(p, r.reply);
+  if (r.title && p.title === "제목 없음") p.title = String(r.title).slice(0, 40);
+  p.ask = ["eleven", "publish", "comment"].includes(r.ask) ? r.ask : null;
+  if (r.do === "next") return next(p);
+  if (AUTO[r.do] && ready(p, r.do)) {
+    p.busy = AUTO[r.do];
+    saveProject(p);
+    await JOBS[r.do](p);
+  }
+}
+
+// 다음 편: 이 영상의 이야기를 이어받는 새 프로젝트를 열고, 사장님 마지막 말로 대화를 시작한다
+async function next(p) {
+  const last = [...p.messages].reverse().find((m) => m.role === "me")?.text || "";
+  const summary = [p.plan?.hook, ...(p.plan?.chapters || []).map((c) => c.title)].filter(Boolean).join(" / ").slice(0, 400);
+  const n = createProject({ title: "제목 없음", brief: `「${p.title}」 다음 편${last ? ` — 사장님 말: ${last}` : ""}`, channel: p.channel, format: p.format });
+  n.prev = { id: p.id, title: p.title, summary, url: p.youtubeUrl || null };
+  saveProject(n);
+  postMessage(n.id, { text: last || `「${p.title}」에 이어지는 다음 편을 만들고 싶어요.`, step: "chat" });
+  say(p, `다음 편을 새로 열었어요. 위 목록의 새 영상에서 이어서 이야기해요.`, { open: n.id });
 }
 
 // ② 기획안: 제목 후보·훅·챕터·썸네일 아이디어 3개
@@ -162,11 +218,12 @@ async function plan(p) {
 
 롱폼 기획안을 만들어. JSON 하나만:
 {"reply": "사장님께 한두 줄 + 고민할 점 한 줄",
- "plan": {"titles": ["제목 후보 3개, 핵심 키워드를 앞에, 40자 이내"], "hook": "첫 10초에 할 말", "length": "예상 길이(분)",
+ "plan": {"area": "주제 영역 key 하나", "titles": ["제목 후보 3개, 핵심 키워드를 앞에, 40자 이내"], "hook": "첫 10초에 할 말", "length": "예상 길이(분)",
    "chapters": [{"title": "챕터 이름", "points": ["다룰 내용 2~4개"]}],
    "thumbnails": [{"type": "물건비유|VS대결|반응|글씨만", "lines": ["첫 줄", "둘째 줄(선택)"], "bg": "black|white", "layout": "top|bottom|text", "art": "그릴 것 한 문장 (글씨만이면 빈 문자열)", "note": "손글씨 메모 한 줄(선택, 10자 이내, 예: (하버드대 교수))"}]}}
 ${THUMB_RULES}`);
   p.plan = r.plan;
+  if (TOPIC_AREAS.some((a) => a.key === r.plan?.area)) p.area = r.plan.area;
   p.stage = "기획안";
   say(p, r.reply);
 }
@@ -176,9 +233,10 @@ async function planShort(p) {
 
 쇼츠 기획안을 만들어. JSON 하나만:
 {"reply": "사장님께 한두 줄 + 고민할 점 한 줄",
- "plan": {"titles": ["화면 위 제목 2줄 후보 3개 — 각 '첫 줄 / 둘째 줄', 줄마다 14자 이내"], "hook": "첫 3초에 할 말", "length": "예상 길이(초)",
+ "plan": {"area": "주제 영역 key 하나", "titles": ["화면 위 제목 2줄 후보 3개 — 각 '첫 줄 / 둘째 줄', 줄마다 14자 이내"], "hook": "첫 3초에 할 말", "length": "예상 길이(초)",
    "chapters": [{"title": "흐름 단계(훅·전개·반전·마무리 등)", "points": ["화면에 나올 것·할 말 1~3개"]}]}}`);
   p.plan = r.plan;
+  if (TOPIC_AREAS.some((a) => a.key === r.plan?.area)) p.area = r.plan.area;
   p.stage = "기획안";
   say(p, r.reply);
 }
@@ -365,14 +423,18 @@ async function realChapters(p) {
   return { total: Math.round(f / FPS), voiced: scenes.every((s) => s.audio), lines: chapters.map((c) => `${mmss(c.sec)} ${c.title}`), mmss };
 }
 
+// 고정 댓글 = 영상 이야기 + 운결 사주 추천 (2026-10-26 사장님: "고정댓글에 사주 한번 보라는 추천 메시지 꼭")
+// 유튜브는 댓글 고정을 프로그램(API)으로 열어 두지 않음 → 사장님이 공개 후 붙여넣고 ⋮ → '고정'
 async function upload(p) {
   const ch = p.format === "short" ? null : await realChapters(p);
   const r = askClaude(p, `${context(p)}
 ${p.episode ? `[대본]\n${p.episode.scenes.map((s) => s.narration).join(" ").slice(0, 6000)}` : ""}
 
 유튜브 ${p.format === "short" ? "쇼츠" : ""} 업로드 문구를 써.${p.format === "short" ? " 쇼츠는 챕터 시간 없이." : ""} JSON 하나만:
-{"reply": "한두 줄", "youtube": {"titles": ["제목 후보 3개, 100자 이내, 핵심 키워드 앞"], "description": "설명란 (첫 2줄에 키워드, 댓글 질문 1개, 해시태그 3개. 챕터 시간·영상 길이는 쓰지 말 것 — 프로그램이 실제 시간으로 붙임)", "tags": ["태그 10개 이내"]}}`);
+{"reply": "한두 줄", "youtube": {"titles": ["제목 후보 3개, 100자 이내, 핵심 키워드 앞"], "description": "설명란 (첫 2줄에 키워드, 댓글 질문 1개, 해시태그 3개. 챕터 시간·영상 길이는 쓰지 말 것 — 프로그램이 실제 시간으로 붙임)", "tags": ["태그 10개 이내"],
+  "pinned": "${PINNED_ASK}"}}`);
   p.youtube = r.youtube;
+  p.youtube.pinned = withSaju(p.youtube.pinned);
   // 챕터: 실제 장면 시간으로 계산해 설명란에 붙인다 (유튜브 규칙: 0:00 부터, 3개 이상)
   let chNote = "";
   if (ch?.lines?.length >= 3) {
@@ -392,6 +454,7 @@ function abKit(p) {
   fs.mkdirSync(dir, { recursive: true });
   const titles = p.youtube.titles.slice(0, 3);
   fs.writeFileSync(path.join(dir, "제목3개.txt"), titles.map((t, i) => `제목 ${i + 1}: ${t}`).join("\n\n") + "\n");
+  if (p.youtube.pinned) fs.writeFileSync(path.join(dir, "고정댓글.txt"), p.youtube.pinned + "\n");
   for (const [i, th] of (p.format !== "short" ? p.thumbs || [] : []).slice(0, 3).entries()) {
     run(p, `A/B 썸네일 ${i + 1} 만드는 중`, "npx", ["remotion", "ffmpeg", "-y", "-loglevel", "error", "-i", path.join(ROOT, th), "-vf", "scale=1280:720", "-q:v", "3", path.join(dir, `썸네일${i + 1}.jpg`)], { cwd: VIDEO, allowFail: true });
   }
@@ -422,21 +485,32 @@ async function publish(p) {
   const r = run(p, "📤 유튜브에 비공개로 올리는 중 (몇 분)", NODE, ["tools/youtube_upload.mjs", "upload", path.join(ROOT, p.final), mf, "--yes"], { timeout: 3600_000 });
   p.youtubeUrl = r.out.match(/https:\/\/(?:youtu\.be|www\.youtube\.com|studio\.youtube\.com)\/\S+/)?.[0] || null;
   p.stage = "올림(비공개)";
-  say(p, `유튜브에 비공개로 올렸어요: "${meta.title}"${p.youtubeUrl ? `\n${p.youtubeUrl}` : ""}\n\nA/B 테스트 하는 법: 스튜디오 → 이 영상 '세부정보' → 썸네일 아래 [A/B 테스팅] → '제목과 썸네일' → 바탕화면 '${path.basename(p.abDir || "")}' 폴더의 썸네일1~3을 끌어다 놓고, 제목3개.txt 에서 제목을 복사해 붙여넣기 → 공개로 바꾸면 테스트 시작.`);
+  p.youtube.pinned = withSaju(p.youtube.pinned);
+  say(p, `유튜브에 비공개로 올렸어요: "${meta.title}"${p.youtubeUrl ? `\n${p.youtubeUrl}` : ""}\n\n📌 고정 댓글: 공개로 바꾼 뒤 영상 댓글 칸에 위 '고정 댓글'을 [복사]해서 달고, 댓글 옆 ⋮ → '고정'을 누르세요 (유튜브가 고정은 프로그램으로 못 하게 막아 둬서 이것만 손으로).\n\nA/B 테스트 하는 법: 스튜디오 → 이 영상 '세부정보' → 썸네일 아래 [A/B 테스팅] → '제목과 썸네일' → 바탕화면 '${path.basename(p.abDir || "")}' 폴더의 썸네일1~3을 끌어다 놓고, 제목3개.txt 에서 제목을 복사해 붙여넣기 → 공개로 바꾸면 테스트 시작.`);
 }
 
-const JOBS = { chat, plan, thumbs, script, voice, eleven, upload, publish };
+// ⑧ 고정 댓글 달기 — 사장님이 버튼을 누를 때만 (공개된 영상에만 달림). 고정은 스튜디오에서 사장님이
+async function comment(p) {
+  const f = path.join(epDir(p), "pinned.txt");
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, p.youtube.pinned);
+  const r = run(p, "📌 고정 댓글 다는 중", NODE, ["tools/youtube_upload.mjs", "comment", p.youtubeUrl, f, "--yes"], { timeout: 120_000 });
+  p.commentUrl = r.out.match(/https:\/\/www\.youtube\.com\/watch\S+/)?.[0] || null;
+  say(p, `고정 댓글을 달았어요${p.commentUrl ? `: ${p.commentUrl}` : ""}\n마지막 한 가지만: 스튜디오 → 댓글 → 이 댓글 옆 ⋮ → '고정'을 눌러주세요 (유튜브가 고정은 프로그램으로 못 하게 막아 뒀어요).`);
+}
+
+const JOBS = { comment, chat, plan, thumbs, script, voice, eleven, upload, publish, next };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const [step, id] = process.argv.slice(2);
   const p = getProject(id);
   try {
     if (!JOBS[step]) throw new Error(`모르는 일: ${step}`);
-    if (!["voice", "eleven", "publish"].includes(step)) await readRefs(p);
+    if (!["voice", "eleven", "publish", "next", "comment"].includes(step)) await readRefs(p);
     await JOBS[step](p);
     log(p, "✅ 끝");
   } catch (e) {
-    say(p, `⚠ 문제가 생겼어요: ${String(e.message).slice(0, 400)}${/열쇠|만료|invalid_grant|login/i.test(e.message) ? "\n(유튜브 열쇠가 7일마다 만료돼요 — 저한테 '유튜브 다시 로그인'이라고 말씀해 주세요)" : ""}`);
+    say(p, `⚠ 문제가 생겼어요: ${String(e.message).slice(0, 400)}${/열쇠|만료|invalid_grant|login|권한/i.test(e.message) ? "\n(유튜브 열쇠가 7일마다 만료돼요 — 작업 창의 클로드에게 '유튜브 다시 로그인'이라고 말씀해 주세요)" : ""}`);
     log(p, `❌ ${e.message}`);
   } finally {
     p.busy = null;

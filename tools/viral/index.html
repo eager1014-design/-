@@ -77,6 +77,8 @@
   .bubble img { max-width:100%; border-radius:10px; margin-top:8px; display:block; } .bubble video { width:100%; max-width:640px; border-radius:10px; margin-top:8px; background:#000; }
   .steps { display:flex; flex-wrap:wrap; gap:8px; } .thumbs { display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); } .thumbs img { width:100%; border-radius:10px; }
   .readout { white-space:pre-wrap; background:var(--chip); border-radius:10px; padding:12px; font-size:15px; max-height:360px; overflow:auto; }
+  .tabs .more { display:none; } body.show-more .tabs .more { display:inline-block; }
+  .tabs .more-toggle { color:var(--sub); font-size:13px; }
   details summary { cursor:pointer; color:var(--sub); font-size:13px; margin-top:10px; }
 </style>
 </head>
@@ -84,20 +86,21 @@
 <header>
   <h1>🔥 떡상 <span>소싱</span></h1>
   <div class="tabs">
-    <button data-tab="daily" class="on">오늘의 영상</button>
-    <button data-tab="needs">고객 고충 <span id="needCount"></span></button>
-    <button data-tab="diary">일기장</button>
-    <button data-tab="search">찾기</button>
-    <button data-tab="lib">보관함 <span id="libCount"></span></button>
-    <button data-tab="tech">연출 기법</button>
-    <button data-tab="ideas">아이디어 검증</button>
-    <button data-tab="long">영상 만들기</button>
+    <button data-tab="long" class="on">💬 영상 만들기</button>
+    <button data-tab="daily">오늘의 영상</button>
+    <button class="more-toggle" onclick="document.body.classList.toggle('show-more');this.textContent=document.body.classList.contains('show-more')?'접기 ▴':'더보기 ▾'">더보기 ▾</button>
+    <button data-tab="needs" class="more">고객 고충 <span id="needCount"></span></button>
+    <button data-tab="diary" class="more">일기장</button>
+    <button data-tab="search" class="more">찾기</button>
+    <button data-tab="lib" class="more">보관함 <span id="libCount"></span></button>
+    <button data-tab="tech" class="more">연출 기법</button>
+    <button data-tab="ideas" class="more">아이디어 검증</button>
   </div>
 </header>
 <main>
   <div id="msg" class="msg hide"></div>
 
-  <section id="tab-daily"><div id="daily"></div></section>
+  <section id="tab-daily" class="hide"><div id="daily"></div></section>
   <section id="tab-needs" class="hide"><div id="needs"></div></section>
 
   <section id="tab-diary" class="hide">
@@ -165,21 +168,19 @@
   <div id="ideas"></div>
 </section>
 
-<section id="tab-long" class="hide" style="max-width:1100px;margin:0 auto;padding:0 16px 16px">
+<section id="tab-long" style="max-width:1100px;margin:0 auto;padding:0 16px 16px">
   <div class="lf-list" id="lfList"></div>
   <div class="panel hide" id="lfNew">
-    <h3 style="margin-top:0">🎬 대화로 영상 만들기</h3>
-    <div class="row"><div><label>종류</label><select id="lfFormat"><option value="long">롱폼 (가로, 6~10분)</option><option value="short">숏폼 (세로, 1분 이내)</option></select></div>
-      <div><label>가제</label><input id="lfTitle" placeholder="예: 예민한 사람이 일을 오래 하는 법"></div>
-      <div><label>채널</label><select id="lfChannel"><option>예민한자립가</option><option>사장님, 뭐가 제일 귀찮으세요? (새 채널)</option></select></div></div>
-    <label>이번엔 이런 느낌으로</label>
-    <textarea id="lfBrief" placeholder="예: 이 영상처럼 차분하게, 내 경험 위주로, 10분 정도. 썸네일은 귀엽게"></textarea>
-    <label style="margin-top:10px">참고 링크 (여러 개, 줄바꿈이나 띄어쓰기로)</label>
-    <textarea id="lfLinks" style="min-height:60px" placeholder="https://youtu.be/...&#10;https://youtu.be/..."></textarea>
-    <label style="margin-top:10px">참고 사진·영상 (여러 개)</label>
-    <input id="lfFiles" type="file" accept="image/*,video/*" multiple>
+    <h3 style="margin-top:0">💬 어떤 영상을 만들까요?</h3>
+    <div class="filters" id="lfFormatPick"><button class="on" data-f="long" onclick="lfPickFormat(this)">🖥 롱폼 (가로)</button><button data-f="short" onclick="lfPickFormat(this)">📱 쇼츠 (세로)</button></div>
+    <textarea id="lfBrief" placeholder="그냥 말하듯 적어주세요. 예: 지난주에 회사에서 있었던 일로, 예민한 사람이 거절 못 하는 이유. 차분하게 내 경험 위주로"></textarea>
+    <details><summary>참고 링크·사진 넣기 (선택)</summary>
+      <textarea id="lfLinks" style="min-height:60px;margin-top:8px" placeholder="https://youtu.be/...&#10;https://youtu.be/..."></textarea>
+      <input id="lfFiles" type="file" accept="image/*,video/*" multiple style="margin-top:8px">
+      <label style="margin-top:8px">채널</label><select id="lfChannel"><option>예민한자립가</option><option>사장님, 뭐가 제일 귀찮으세요? (새 채널)</option></select>
+    </details>
     <button class="btn" id="lfCreate" style="margin-top:10px">시작하기</button>
-    <p class="note">유튜브 링크는 제미나이가 직접 보고(무료), 대화·대본은 클로드, 그림은 챗GPT가 맡아요. 목소리는 사장님 녹음 파일을 올리거나, 일레븐랩스(크레딧) 버튼으로 넣어요.</p>
+    <p class="note">그다음부터는 대화만 하시면 돼요. "기획안 만들어줘", "썸네일 다시", "대본 써줘", "다음 편 이어서" — 말하면 클로드가 알아서 진행해요. 녹음(크레딧)과 유튜브 올리기만 확인 버튼을 눌러요.</p>
   </div>
   <div id="lfView"></div>
 </section>
@@ -205,8 +206,8 @@ async function busy(btn, label, fn) {
   try { return await fn(); } catch (e) { say(e.message, true); } finally { btn.disabled = false; btn.innerHTML = old; }
 }
 
-document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
-  document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("on", x === b));
+document.querySelectorAll(".tabs button[data-tab]").forEach((b) => b.onclick = () => {
+  document.querySelectorAll(".tabs button[data-tab]").forEach((x) => x.classList.toggle("on", x === b));
   ["daily", "needs", "diary", "search", "lib", "tech", "ideas", "long"].forEach((t) => $("#tab-" + t).classList.toggle("hide", t !== b.dataset.tab));
   ({ lib: renderLib, diary: loadDiary, daily: loadDaily, tech: loadTech, needs: loadNeeds, ideas: loadIdeas, long: loadLong })[b.dataset.tab]?.();
 });
@@ -360,6 +361,7 @@ function dayCard(d) {
     ${yt.title ? `<p style="margin:10px 0 0"><b>유튜브 제목</b> ${esc(yt.title)}</p>` : ""}
     ${d.idea?.narration ? `<details><summary>대본 보기 (${d.idea.chars}자)</summary><div class="narr">${esc(d.idea.narration)}</div>${yt.description ? `<p class="note"><b>설명란</b><br>${esc(yt.description).replace(/\n/g, "<br>")}</p>` : ""}</details>` : ""}
     ${d.youtubeUrl ? `<p><a href="${esc(d.youtubeUrl)}" target="_blank">유튜브에서 보기 ↗</a> — 스튜디오에서 공개로 바꿔주세요</p>` : ""}
+    ${yt.pinned ? `<details ${d.youtubeUrl && !d.commentUrl ? "open" : ""}><summary>📌 고정 댓글 (사주 추천)</summary><div class="narr" id="pin-${d.date}">${esc(yt.pinned)}</div><div class="acts"><button class="btn sm ghost" onclick="navigator.clipboard.writeText($('#pin-${d.date}').textContent).then(()=>say('고정 댓글을 복사했어요.'))">복사</button>${d.youtubeUrl ? `<button class="btn sm ${d.commentUrl ? "ghost" : ""}" onclick="daily('comment','${d.date}',this,'이 고정 댓글을 사장님 채널 이름으로 영상에 달까요? (영상이 공개 또는 일부 공개여야 달려요)')">📌 ${d.commentUrl ? "다시 달기" : "영상에 댓글로 달기"}</button>` : ""}${d.commentUrl ? `<a href="${esc(d.commentUrl)}" target="_blank">달린 댓글 보기</a>` : ""}</div><p class="note">단 뒤 스튜디오 → 댓글 → ⋮ → '고정'만 눌러주세요.</p></details>` : ""}
     ${!busy ? `<div class="acts">
       ${d.status === "draft_ready" ? `<button class="btn" onclick="daily('voice','${d.date}',this,'일레븐랩스 천성준 목소리로 녹음합니다 (${d.idea?.chars ?? "?"}자 ≈ 크레딧 ${d.idea?.chars ?? "?"}). 진행할까요?')">🎙 목소리 입히고 완성</button>` : ""}
       ${d.status === "final_ready" ? `<button class="btn" onclick="daily('upload','${d.date}',this,'유튜브에 비공개로 올립니다. 진행할까요?')">⬆️ 유튜브에 비공개로 올리기</button>` : ""}
@@ -547,6 +549,26 @@ async function loadLong() {
   clearTimeout(lfTimer);
   if (p.busy && !$("#tab-long").classList.contains("hide")) lfTimer = setTimeout(loadLong, 4000);
 }
+// 지금 필요한 버튼 하나만 (2026-10-26 사장님: "내가 뭔가 필요한 버튼만") — 나머지는 '다른 단계' 안에, 대부분은 대화로
+function lfNext(p, btn) {
+  const short = p.format === "short";
+  if (p.busy) return `<span class="note">⏳ ${esc(p.busy)} — 끝나면 여기에 다음 할 일이 떠요.</span>`;
+  if (p.ask === "eleven" && p.episode) return `<button class="btn" onclick="lfEleven(${p.episode.scenes.reduce((n, s) => n + (s.narration || "").length, 0)}, this)">🎙 일레븐랩스로 녹음하기 (크레딧)</button>`;
+  if (p.ask === "publish" && p.final) return `<button class="btn" onclick="lfPublish(this)">⬆️ 유튜브에 비공개로 올리기</button>`;
+  if (p.ask === "comment" && p.youtubeUrl && p.youtube?.pinned) return `<button class="btn" onclick="lfComment(this)">📌 고정 댓글 달기</button>`;
+  if (!p.plan) return btn("plan", "다음: 기획안 만들기", true);
+  if (!short && !p.thumbs) return btn("thumbs", "다음: 썸네일 그리기", true);
+  if (!p.episode) return btn("script", "다음: 대본·초안 만들기", true);
+  if (!p.final) return `<span class="note">다음: 아래 '녹음용 대본'을 읽어 녹음 파일을 올리거나, 일레븐랩스 버튼을 눌러주세요.</span>`;
+  if (!p.youtube) return btn("upload", "다음: 업로드 문구·고정 댓글 만들기", true);
+  if (!p.youtubeUrl) return `<button class="btn" onclick="lfPublish(this)">다음: ⬆️ 유튜브에 비공개로 올리기</button>`;
+  if (p.youtube?.pinned && !p.commentUrl) return `<button class="btn" onclick="lfComment(this)">다음: 📌 고정 댓글 달기 (영상을 공개로 바꾼 뒤)</button>`;
+  return btn("next", "다음 편 이어서 만들기", true);
+}
+async function lfComment(b) {
+  if (!confirm("이 고정 댓글을 사장님 채널 이름으로 영상에 달까요?\n(영상이 공개 또는 일부 공개여야 달려요)")) return;
+  await busy(b, "보내는 중…", async () => { await api("/api/longform/send", { id: lfId, step: "comment", text: "고정 댓글 달아줘" }); loadLong(); });
+}
 function renderLong(p) {
   const busy = !!p.busy, short = p.format === "short";
   const btn = (step, label, need) => `<button class="btn ${need ? "" : "ghost"}" ${busy ? "disabled" : ""} onclick="lfSend('${step}',this)">${label}</button>`;
@@ -565,15 +587,16 @@ function renderLong(p) {
     ${!short && p.thumbs?.length ? `<p class="note" style="margin-bottom:4px">올릴 썸네일</p><div style="display:flex;gap:8px;flex-wrap:wrap">${p.thumbs.map((t, i) => `<label style="width:150px"><input type="radio" name="lfThumb" value="${i}" ${i === (p.pick?.thumb || 0) ? "checked" : ""} style="width:auto"> ${i + 1}번<img src="/upload?p=${encodeURIComponent(t)}" style="width:100%;border-radius:8px"></label>`).join("")}</div>` : ""}
     ${p.abDir ? `<p class="note">A/B 테스트용 파일: 바탕화면 '${esc(p.abDir.split("/").pop())}' 폴더 (썸네일1~3.jpg · 제목3개.txt) — 제목 옆 [복사]로도 바로 붙여넣을 수 있어요</p>` : ""}
     ${p.youtubeUrl ? `<p>✅ 올림: <a href="${esc(p.youtubeUrl)}" target="_blank">${esc(p.youtubeUrl)}</a></p>` : ""}
-    <button class="btn" style="margin-top:10px" ${busy || !p.final ? "disabled" : ""} onclick="lfPublish(this)">⑥ 유튜브에 비공개로 올리기</button>
-    <span class="note">${p.final ? "공개 전환은 스튜디오에서 사장님이" : "완성본이 있어야 올릴 수 있어요"}</span><div class="readout">${esc(p.youtube.description)}</div><p class="note">태그: ${p.youtube.tags.map(esc).join(", ")}</p></div>` : "";
-  const msg = (m) => `<div class="bubble ${m.role}">${esc(m.text)}${(m.images || []).map((f) => `<img src="/upload?p=${encodeURIComponent(f)}">`).join("")}${m.video ? `<video controls preload="metadata" style="${short ? "max-width:320px" : ""}" src="/video?p=${encodeURIComponent(m.video)}"></video>` : ""}${m.links?.length ? `<div class="note" style="color:inherit">🔗 ${m.links.map(esc).join(" ")}</div>` : ""}${m.files?.length ? `<div class="note" style="color:inherit">📎 파일 ${m.files.length}개</div>` : ""}</div>`;
+    <button class="btn ghost" style="margin-top:10px" ${busy || !p.final ? "disabled" : ""} onclick="lfPublish(this)">유튜브에 비공개로 올리기</button>
+    <span class="note">${p.final ? "공개 전환은 스튜디오에서 사장님이" : "완성본이 있어야 올릴 수 있어요"}</span><div class="readout">${esc(p.youtube.description)}</div>
+    ${p.youtube.pinned ? `<p style="margin:14px 0 4px"><b>📌 고정 댓글</b> <button type="button" class="btn sm ghost" onclick="navigator.clipboard.writeText($('#lfPinned').textContent).then(()=>say('고정 댓글을 복사했어요. 공개 후 댓글로 달고 ⋮ → 고정을 누르세요.'))">복사</button></p><div class="readout" id="lfPinned">${esc(p.youtube.pinned)}</div>${p.youtubeUrl ? `<button class="btn ${p.commentUrl ? "ghost" : ""} sm" ${busy ? "disabled" : ""} onclick="lfComment(this)">📌 ${p.commentUrl ? "다시 달기" : "영상에 댓글로 달기"}</button>` : ""}${p.commentUrl ? ` <a href="${esc(p.commentUrl)}" target="_blank">달린 댓글 보기</a>` : ""}<p class="note">영상이 공개(또는 일부 공개)여야 달려요. 단 뒤 스튜디오 → 댓글 → ⋮ → '고정'만 눌러주세요 (고정은 유튜브가 프로그램으로 못 하게 막아 둠).</p>` : ""}<p class="note">태그: ${p.youtube.tags.map(esc).join(", ")}</p></div>` : "";
+  const msg = (m) => `<div class="bubble ${m.role}">${esc(m.text)}${(m.images || []).map((f) => `<img src="/upload?p=${encodeURIComponent(f)}">`).join("")}${m.video ? `<video controls preload="metadata" style="${short ? "max-width:320px" : ""}" src="/video?p=${encodeURIComponent(m.video)}"></video>` : ""}${m.links?.length ? `<div class="note" style="color:inherit">🔗 ${m.links.map(esc).join(" ")}</div>` : ""}${m.files?.length ? `<div class="note" style="color:inherit">📎 파일 ${m.files.length}개</div>` : ""}${m.open ? `<div style="margin-top:8px"><button class="btn sm" onclick="lfId='${esc(m.open)}';loadLong()">다음 편으로 가기 →</button></div>` : ""}</div>`;
   $("#lfView").innerHTML = `<div class="panel"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h3 style="margin:0;flex:1">${esc(p.title)}</h3><span class="tag">${short ? "숏폼" : "롱폼"} · ${esc(p.channel)}</span><span class="st ${busy ? "wait" : ""}">${busy ? `<span class="spin"></span>${esc(p.busy)}` : esc(p.stage)}</span>
       <button class="btn sm ghost" onclick="lfDel('${p.id}')">삭제</button></div>
     ${p.brief ? `<p class="note">${esc(p.brief)}</p>` : ""}
-    <div class="steps" style="margin-top:10px">${btn("plan", "① 기획안 만들기", !p.plan)}${short ? "" : btn("thumbs", p.thumbs ? "② 썸네일 다시" : "② 썸네일 그리기", p.plan && !p.thumbs)}${btn("script", p.episode ? "③ 대본·초안 다시" : "③ 대본·초안 만들기", (short ? p.plan : p.thumbs) && !p.episode)}${btn("upload", "⑤ 업로드 문구", p.final && !p.youtube)}<button class="btn ${p.final && !p.youtubeUrl ? "" : "ghost"}" ${busy || !p.final ? "disabled" : ""} title="${p.final ? "" : "완성본(목소리 입힌 영상)이 있어야 올릴 수 있어요"}" onclick="lfPublish(this)">⑥ 유튜브에 올리기</button></div>
-    ${p.final ? "" : '<p class="note" style="margin:6px 0 0">⑥ 유튜브 올리기는 목소리를 입힌 완성본이 생기면 켜져요 (녹음 파일 올리기 또는 일레븐랩스).</p>'}
-    <p class="note">버튼을 누를 때 아래 칸에 적은 말이 같이 전달돼요 (예: "2번 썸네일 느낌으로, 글씨는 더 크게"). ④는 녹음 파일 올리기.</p>
+    <div class="steps" style="margin-top:10px">${lfNext(p, btn)}</div>
+    <details><summary>다른 단계 직접 누르기</summary><div class="steps" style="margin-top:8px">${btn("plan", p.plan ? "기획안 다시" : "기획안 만들기")}${short ? "" : btn("thumbs", p.thumbs ? "썸네일 다시" : "썸네일 그리기")}${btn("script", p.episode ? "대본·초안 다시" : "대본·초안 만들기")}${btn("upload", p.youtube ? "업로드 문구·고정 댓글 다시" : "업로드 문구·고정 댓글")}${btn("next", "다음 편 이어서 만들기")}</div>
+      <p class="note">누를 때 아래 칸에 적은 말이 같이 전달돼요 (예: "2번 썸네일 느낌으로, 글씨는 더 크게").</p></details>
     ${busy && p.log?.length ? `<details open><summary>진행 상황</summary><div class="logbox">${esc(p.log.join("\n"))}</div></details>` : ""}</div>
   ${plan}${thumbs}${read}${yt}
   <div class="panel"><div class="chat">${p.messages.map(msg).join("") || '<p class="note">대화를 시작해 보세요.</p>'}</div>
@@ -610,14 +633,16 @@ async function lfEleven(chars, b) {
   await busy(b, "보내는 중…", async () => { await api("/api/longform/send", { id: lfId, step: "eleven", text: "일레븐랩스로 녹음해줘" }); loadLong(); });
 }
 async function lfDel(id) { if (!confirm("이 영상 대화를 지울까요? (만든 영상 파일은 남아요)")) return; await api("/api/longform/delete", { id }); lfId = null; loadLong(); }
+function lfPickFormat(b) { document.querySelectorAll("#lfFormatPick button").forEach((x) => x.classList.toggle("on", x === b)); }
 $("#lfCreate").onclick = () => busy($("#lfCreate"), "시작하는 중…", async () => {
-  const p = await api("/api/longform/new", { format: $("#lfFormat").value, title: $("#lfTitle").value, channel: $("#lfChannel").value, brief: $("#lfBrief").value, links: $("#lfLinks").value, files: await readFiles($("#lfFiles")) });
-  ["#lfTitle", "#lfBrief", "#lfLinks", "#lfFiles"].forEach((x) => $(x).value = ""); $("#lfFiles").dispatchEvent(new Event("change"));
-  lfId = p.id; say("시작했어요! 클로드가 참고 자료를 보고 답하는 중이에요 (1~3분)."); loadLong();
+  const format = document.querySelector("#lfFormatPick button.on")?.dataset.f || "long";
+  const p = await api("/api/longform/new", { format, title: "", channel: $("#lfChannel").value, brief: $("#lfBrief").value, links: $("#lfLinks").value, files: await readFiles($("#lfFiles")) });
+  ["#lfBrief", "#lfLinks", "#lfFiles"].forEach((x) => $(x).value = ""); $("#lfFiles").dispatchEvent(new Event("change"));
+  lfId = p.id; say(""); loadLong();
 });
 
 (async () => {
-  loadDaily();
+  loadLong();
   api("/api/needs").then((d) => { const n = d.items.filter((x) => x.status === "새로 들어옴").length; $("#needCount").textContent = n ? `(${n})` : ""; }).catch(() => {});
   const s = await api("/api/status");
   $("#plat").innerHTML = [["유튜브 자동 검색", s.youtube], ["인스타 (링크)", true], ["틱톡 (링크)", true], ["스레드 (링크)", true], ["분석: 제미나이", s.gemini], ["대본: 챗GPT 구독", s.codex]]

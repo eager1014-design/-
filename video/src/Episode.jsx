@@ -8,7 +8,7 @@ import { slide } from "@remotion/transitions/slide";
 import { wipe } from "@remotion/transitions/wipe";
 import { loadFont } from "@remotion/fonts";
 import { FONT, FRAME, SIZES, SKINS, TRANSITION_FRAMES } from "./theme.js";
-import { applyPace, cueFrame, sceneFrames, voiceSeconds } from "./timing.js";
+import { applyPace, cueFrame, sceneFrames, SFX_LEAD, voiceSafeVolume, voiceSeconds } from "./timing.js";
 import { Background, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, Props, Punch, PunchSfx, SOUND, Stickers, sfxFile, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
 import { SCENES } from "./scenes.jsx";
 import { Cast, castTimeline, setCharacter } from "./presenter.jsx";
@@ -119,10 +119,10 @@ function SceneSfx({ scene }) {
   return (
     <>
       {(scene.sfx || []).slice(0, 1).map((x, i) => {
-        const at = x.after ? Math.ceil(voiceSeconds(scene) * 30) + 2 : cueFrame(scene, x.cue) ?? 0;
+        const at = Math.max(0, x.after ? Math.ceil(voiceSeconds(scene) * 30) + 2 : (cueFrame(scene, x.cue) ?? 0) - SFX_LEAD);
         return (
-          <Sequence key={i} from={Math.max(0, at)} durationInFrames={90}>
-            <Audio src={staticFile(sfxFile(x.name, x.ext))} volume={x.volume ?? 0.35} />
+          <Sequence key={i} from={at} durationInFrames={90}>
+            <Audio src={staticFile(sfxFile(x.name, x.ext))} volume={voiceSafeVolume(scene, at, x.volume ?? 0.35)} />
           </Sequence>
         );
       })}
