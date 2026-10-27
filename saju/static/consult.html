@@ -12,9 +12,10 @@
 <meta property="og:image" content="__PUBLIC_URL__/img/dory.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Song+Myung&family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Song+Myung&family=Black+Han+Sans&family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/toon.css">
+<link rel="stylesheet" href="/chalk.css">
 <style>
   /* 상담실: 도령과 손님이 주고받는 대화 */
   .room { max-width: 600px; margin: 0 auto; padding: 18px 16px 60px; }
@@ -45,7 +46,7 @@
   .ans .chip:hover span { border-color: var(--gold); color: var(--ink); }
   .ans .qcard { max-width: none; margin-top: 4px; }
   .ans textarea { width: 100%; min-height: 90px; }
-  .ans .btn { font: 400 18px "Song Myung", serif; border-radius: 4px; background: linear-gradient(180deg, #c0283a, #8e1625); }
+  .ans .btn { font: 400 18px "Black Han Sans", sans-serif; border-radius: 12px; background: #ffe45c; color: #000; }
   .ans .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .ans .check { color: var(--ink-3); text-align: left; }
   .room-head .pno { margin: 14px 0 0; font: 700 12px "Noto Sans KR", sans-serif; letter-spacing: .3em; color: var(--accent-2); }
@@ -82,16 +83,16 @@
 </head>
 <body class="apply">
 <div class="curtain on"><div class="cseal">運</div><p class="ctitle">셋째 장 · 도령의 상담실</p></div>
-<button id="snd" aria-label="목소리 켜기" hidden>🔇</button>
+<button id="snd" aria-label="목소리 켜기" hidden style="display:none">🔇</button>
 <header class="topbar">
   <a class="brand" href="/" aria-label="운결 처음 화면으로"><span class="seal">運</span>운결</a>
 </header>
 <main class="room" id="app">
   <div class="room-head">
-    <img src="/img/toon/uneasy.jpg" alt="운결 도령">
+    <img src="/img/toon2/ava.jpg" alt="운결 도령">
     <p class="pno">셋째 장</p>
     <h1>도령의 상담실</h1>
-    <p>묻는 말에 답해라. 네 사주로 답해주마. 상담은 무료다.</p>
+    <p>몇 가지만 물어볼게. 네 사주로 답해 줄게. 상담은 무료야.</p>
   </div>
   <div id="chat" aria-live="polite"></div>
   <!-- 넷째 장: 대화가 끝나면 페이지가 넘어가 PDF 받기 -->

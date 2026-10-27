@@ -227,7 +227,7 @@ def _cover(canvas, doc):
     o = doc.order
     name = o["name"]
     canvas.setFillColor(GOLD2)
-    f = title_font(f"…{name},")
+    f = title_font(f"어서 와, {name}")
     canvas.setFont(f, 30)
     canvas.drawCentredString(W / 2, 78 * mm, f"…{name},")
     canvas.setFont("Song", 38)
@@ -317,9 +317,9 @@ def build(order, chart):
     image = K.DAY_MASTER.get(chart["day_master"]["ko"], {}).get("image", "").split("(")[0].strip()
     story = [NextPageTemplate("page"), PageBreak()]
     # 여는 말
-    story += [Spacer(1, 18 * mm), _font_para(f"…왔구나, {name}.", ST["voice"]), Spacer(1, 4 * mm),
-              Paragraph("네가 태어난 날을 들여다봤다.<br/>네 기운이 어디에 쏠려 있고, 지금 어떤 흐름 위에 서 있는지.<br/>"
-                        "천천히 읽어라. 다 읽고 나면, 오늘 할 일 하나는 보일 것이다.", ST["voice_s"]),
+    story += [Spacer(1, 18 * mm), _font_para(f"어서 와, {name}.", ST["voice"]), Spacer(1, 4 * mm),
+              Paragraph("네 생일을 들여다봤어.<br/>네 기운이 어디로 쏠려 있고, 지금 어떤 흐름 위에 있는지.<br/>"
+                        "천천히 읽어 봐. 다 읽고 나면, 오늘 할 일 하나는 보일 거야.", ST["voice_s"]),
               Spacer(1, 12 * mm)]
     who = _birth_text(order["partner"]["birth"] if gift else order["birth"])
     if gift:

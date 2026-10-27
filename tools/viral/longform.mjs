@@ -72,7 +72,10 @@ export function postMessage(id, { text = "", links = "", files = [], step = "cha
   }
   if (step === "shorts" && !(p.format !== "short" && p.final)) throw new Error("롱폼 완성본(목소리 입힌 영상)이 있어야 숏폼을 잘라낼 수 있어요.");
   if (step === "comment" && !(p.youtubeUrl && p.youtube?.pinned)) throw new Error("유튜브에 올린 뒤, 업로드 문구(고정 댓글)가 있어야 달 수 있어요.");
-  if (step === "voice" && !saved.some((f) => /\.(mp3|m4a|wav)$/i.test(f))) throw new Error("녹음 파일(mp3·m4a·wav)을 올려주세요.");
+  // 대화창에 녹음 파일을 올려도 대본이 있으면 바로 목소리 맞추기로 (2026-10-27: 대화로 올린 녹음이 처리되지 않고 멈춰 있었음)
+  if (step === "chat" && p.episode && saved.some((f) => /\.(mp3|m4a|wav)$/i.test(f))) step = "voice";
+  const hasRec = saved.some((f) => /\.(mp3|m4a|wav)$/i.test(f)) || p.messages.some((m) => (m.files || []).some((f) => /\.(mp3|m4a|wav)$/i.test(f)));
+  if (step === "voice" && !hasRec) throw new Error("녹음 파일(mp3·m4a·wav)을 올려주세요.");
   for (const u of urls) p.refs.push({ url: u, at: new Date().toISOString() });
   for (const f of saved) p.refs.push({ file: f, at: new Date().toISOString() });
   if (String(text).trim() || urls.length || saved.length) p.messages.push({ role: "me", text: String(text).trim(), links: urls, files: saved, step, at: new Date().toISOString() });

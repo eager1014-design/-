@@ -84,8 +84,8 @@ function shareBox(r) {
 function showDone(r) {
   $("#app").innerHTML = `
     <div class="card done-box">
-      ${r.returning ? `<p class="line">…또 왔구나, ${esc(r.name)}. 반갑다.</p>
-      <p class="line small">네 이야기는 기억하고 있다. 이번에도 들여다봐 주마.</p>`
+      ${r.returning ? `<p class="line">또 왔네, ${esc(r.name)}! 반가워.</p>
+      <p class="line small">네 이야기 기억하고 있어. 이번에도 잘 봐 줄게.</p>`
         : `<p class="line">…좋다. ${esc(r.name)}, 네 이름 기억해 두지.</p>
       <p class="line small">네 운명을 들여다볼 준비를 하마.</p>`}
       <h2 style="margin-top:22px">신청이 접수되었어요</h2>
@@ -310,7 +310,7 @@ function enter(withSound) {
 
 if ($("#gate") && REF) {  // 친구가 보낸 링크로 온 손님
   const sub = document.querySelector(".gate-sub.free-only");
-  if (sub) sub.textContent = "친구가 보낸 링크로 왔구나. 너의 첫 풀이도… 그냥 봐주지.";
+  if (sub) sub.textContent = "친구가 보낸 링크로 왔구나? 네 첫 풀이도 공짜로 봐 줄게.";
 }
 if ($("#gate")) {
   $("#enter-sound").onclick = () => enter(true);
@@ -425,14 +425,14 @@ function showQuick(r, birth) {
     ["match", "궁합", "그 사람과 나"], ["career", "직업 · 재물", "일과 돈의 길"], ["pet", "반려동물", "우리 아이 (재미로)"]];
   quickPanel(`<img class="cutimg" src="/img/toon2/t6.jpg" alt="도령이 설명서를 펼쳐 보임"><p class="line small">이게 너야. 마음에 걸리는 게 있으면 물어봐. 같이 보자.</p>
     <div class="topics">${T.map(([k, l, d]) => `<a href="/consult?t=${k}${INV ? `&inv=${encodeURIComponent(INV)}` : ""}">${l}<small>${d}</small></a>`).join("")}</div>
-    <p class="small muted" style="margin-top:12px">도령의 상담은 무료. 네 이야기를 듣고 네 사주로 답한다.</p>`, "askpanel", "q01")
+    <p class="small muted" style="margin-top:12px">도령 상담은 무료야. 네 이야기 듣고 네 사주로 답해 줄게.</p>`, "askpanel", "q01")
     .querySelectorAll(".topics a").forEach((a) => (a.onclick = (e) => { e.preventDefault(); turnPage("셋째 장 · 도령의 상담실", a.href); }));
   // 기본 사주도 PDF로 정리해준다 (친구가 와서 사주를 보면 무료 — 사장님 결정 2026-10-22)
   const full = window.PRODUCTS.full;
   if (full) {
-    const fp = quickPanel(`<p class="kicker">네 사주, 한 권으로</p>${say("방금 본 너를… PDF 한 권으로 정리해주마.", "small")}
+    const fp = quickPanel(`<p class="kicker">네 사주, 한 권으로</p>${say("방금 본 너를 PDF 한 권으로 정리해 줄게.", "small")}
       <p class="small muted">타고난 성향 · 다섯 기운 · 일과 돈 · 사람 · 올해의 흐름 · 약 ${full.pages}쪽.
-        친구에게 운결을 보내서 친구가 자기 사주를 보면 <b style="color:var(--gold)">무료</b>로 보내주마 (<a href="/consult" style="color:var(--gold)">상담실</a>에서 링크 받기 · 1인 1회).</p>
+        친구에게 운결을 보내서 친구가 자기 사주를 보면 <b style="color:var(--gold)">무료</b>로 보내 줄게 (<a href="/consult" style="color:var(--gold)">상담실</a>에서 링크 받기 · 1인 1회).</p>
       ${tocToggle("full")}
       <button class="btn ghost lockbtn" id="pick-full">기본 사주 PDF 받기 · ${won(full.price)}</button>`, "lockpanel");
     fp.querySelector("#pick-full").onclick = () => pickProduct("full", QUICK.birth);

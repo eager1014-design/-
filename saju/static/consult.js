@@ -15,11 +15,12 @@ const INV = (() => {  // 친구가 보낸 링크(?inv=)로 왔으면 기억
 })();
 
 /* 도령 목소리: 첫 화면에서 소리를 켜고 왔으면, 장면마다 static/voice/<id>.mp3 를 튼다 (파일이 없으면 조용히 넘어감) */
+const VOICE_OFF = true; // 2026-10-27: 대사가 바뀌어 예전 녹음과 안 맞음 → 새로 녹음하기 전까지 끔
 const VOICE = {
   on: (() => { try { return sessionStorage.getItem("ungyeol_sound") === "1"; } catch (e) { return false; } })(),
   cur: null, last: null, pending: null,
   play(id) {
-    if (!id) return;
+    if (!id || VOICE_OFF) return;
     this.last = id;
     if (!this.on) return;
     if (this.cur) this.cur.pause();
@@ -41,14 +42,15 @@ addEventListener("pointerdown", () => { if (VOICE.pending) { const id = VOICE.pe
 const S = { topic: null, birth: null, answers: {}, partner: null, story: "" };
 let CFG = null;
 let FRIEND = { ready: false };  // 친구가 내 링크로 와서 사주를 봤는지 (할인·무료 PDF)
-const AVA = '<img src="/img/toon/uneasy.jpg" alt="" class="ava">';
+const AVA = '<img src="/img/toon2/ava.jpg" alt="" class="ava">';
 const chat = () => $("#chat");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const down = (el) => el.scrollIntoView({ behavior: "smooth", block: "end" });
 
-/* 사장님이 그린 웹툰 컷 (static/img/toon/<id>.jpg). 그 대사는 말풍선 대신 컷으로 보여준다 */
+/* 웹툰 컷 (2026-10-27 칠판 스타일 새 도령, static/img/toon2/). 예전 목소리(c01~c07)는 옛 대사라 끔 — 컷 아래에 대사를 글씨로 */
 const CUTS = new Set(["c01", "c02", "c03", "c04", "c05", "c06", "c07"]);
-const cutImg = (id, alt) => `<img class="cutimg" src="/img/toon/${id}.jpg" alt="${esc(alt)}">`;
+const CUT_FILE = { c01: "t8", c02: "t6", c03: "t5", c04: "c04", c05: "t5", c06: "c06", c07: "c07" };
+const cutImg = (id, alt) => `<img class="cutimg" src="/img/toon2/${CUT_FILE[id] || id}.jpg" alt="${esc(alt)}"><p class="cutline">${esc(alt)}</p>`;
 
 async function dory(text, title, voice) {
   VOICE.play(voice);
@@ -108,7 +110,7 @@ async function askBirth() {
     await dory(`네가 태어난 날은 ${birthText(saved)}. 그대로 보면 되겠지?`);
     if (await pick([{ label: "그래, 맞다", value: true }, { label: "다시 적을게", value: false }])) return saved;
   } else {
-    await dory("먼저, 네가 태어난 날을 알려다오. 태어난 시간은 몰라도 된다.", "", "c02");
+    await dory("먼저 생일 알려 줘. 태어난 시간은 몰라도 돼.", "", "c02");
   }
   return new Promise((done) => {
     const a = answerBox(`<div class="qcard">${birthFields("me")}<button class="btn block" id="b-go">다음</button><p class="err" id="b-err"></p></div>`);
@@ -127,9 +129,9 @@ async function askBirth() {
 
 async function askPartner(need) {
   const pet = need === "pet";
-  await dory(pet ? "그 아이의 이름과 생일을 알려다오. 생일을 모르면 데려온 날도 괜찮다."
-    : need === "required" ? "그 사람의 생년월일을 알려다오. 두 사주를 나란히 놓고 보마."
-    : "그 사람의 생년월일을 아느냐? 알면 훨씬 정확하다. 모르면 넘겨도 된다.");
+  await dory(pet ? "그 아이 이름이랑 생일 알려 줘. 생일 모르면 데려온 날도 괜찮아."
+    : need === "required" ? "그 사람 생일도 알려 줘. 둘을 나란히 놓고 볼게."
+    : "그 사람 생일 알아? 알면 훨씬 정확해. 모르면 넘겨도 돼.");
   return new Promise((done) => {
     const a = answerBox(`<div class="qcard">
       <label for="p-name">${pet ? "아이 이름" : "그 사람 이름 (별명도 된다)"}</label><input id="p-name" maxlength="20">
@@ -150,7 +152,7 @@ async function askPartner(need) {
 }
 
 async function askStory(t) {
-  await dory("이제 네 이야기를 해봐라. 한 줄이면 된다.", "", "c03");
+  await dory("이제 네 이야기 해 봐. 한 줄이면 돼.", "", "c03");
   await dory(t.story);
   return new Promise((done) => {
     const a = answerBox(`<textarea id="s-text" maxlength="500" placeholder="편하게 적어라. 길게 써도 된다."></textarea>
@@ -158,7 +160,7 @@ async function askStory(t) {
       <button class="btn block" id="s-go">도령에게 상담받기 · 무료</button><p class="err" id="s-err"></p>`);
     a.querySelector("#s-go").onclick = () => {
       const story = a.querySelector("#s-text").value.trim();
-      if (story.length < 5) { a.querySelector("#s-err").textContent = "한 줄이라도 적어다오. 그래야 네 고민에 맞게 답한다."; return; }
+      if (story.length < 5) { a.querySelector("#s-err").textContent = "한 줄이라도 적어 줘. 그래야 네 고민에 맞게 답할 수 있어."; return; }
       if (!a.querySelector("#s-ok").checked) { a.querySelector("#s-err").textContent = "동의해야 상담해줄 수 있다."; return; }
       a.remove();
       me(story);
@@ -170,7 +172,7 @@ async function askStory(t) {
 async function start() {
   CFG = await api("/api/consult/config");
   const topics = CFG.topics;
-  await dory("…왔구나. 앉아라. 오늘은 무엇을 물으러 왔느냐?", "", "c01");
+  await dory("어서 와. 오늘은 뭐가 궁금해?", "", "c01");
   const want = new URLSearchParams(location.search).get("t");
   if (topics[want]) { me(topics[want].label); S.topic = want; }
   else S.topic = await pick(Object.entries(topics).map(([k, t]) => ({ label: t.label, value: k })));
@@ -190,7 +192,7 @@ async function runConsult() {
   w.className = "msg wait";
   VOICE.play("c04");
   w.className = "msg cut wait";
-  w.innerHTML = `${cutImg("c04", "네 사주를 펼쳐 보는 중이다… 조금만 기다려라.")}<p class="small muted" style="text-align:center;margin:6px 0 0">들여다보는 중<span class="dots"></span> (길면 30초)</p>`;
+  w.innerHTML = `${cutImg("c04", "네 설명서 펼쳐 보는 중… 조금만 기다려.")}<p class="small muted" style="text-align:center;margin:6px 0 0">들여다보는 중<span class="dots"></span> (길면 30초)</p>`;
   chat().appendChild(w);
   down(w);
   let r;
@@ -252,13 +254,13 @@ function offer() {
   box.innerHTML = `<h3>📄 ${esc(t.label)} PDF · 약 ${p.pages}쪽</h3>
     ${p.toc?.length ? `<details class="toc"><summary>PDF에 들어가는 것 보기 · ${p.toc.length}개 장</summary><ol>${p.toc.map((c) => `<li><b>${esc(c.t)}</b><span>${esc(c.d)}</span></li>`).join("")}</ol></details>` : ""}
     ${CFG.free_first ? `<div class="way gift" id="w-first">
-      <p style="margin:0">🎁 <b>처음이라면, 이 PDF를 무료로 보내주마.</b></p>
+      <p style="margin:0">🎁 <b>처음이라면, 이 PDF는 무료로 보내 줄게.</b></p>
       <p class="muted small" style="margin:6px 0 0">이름과 이메일만 적어라. 1인 1회 (이메일·이름+생년월일 기준). 받고 나서 마음에 들면 친구에게 알려줘라.</p>
       <button class="btn" id="first-go">PDF 무료로 받기</button>
     </div>
     <p class="muted small" style="margin:14px 0 6px">하나 더 받고 싶다면 —</p>` : ""}
     <div class="way gift" id="w-gift">
-      ${cutImg("c06", "친구에게 이 사이트를 보내라. 친구가 와서 자기 사주를 보면… 더 깊은 풀이를 PDF로 보내주마.")}
+      ${cutImg("c06", "친구한테 여기 보내 줘. 친구가 와서 자기 사주를 보면, 더 깊은 풀이를 PDF로 보내 줄게.")}
       <p style="margin:10px 0 0">💌 <b>친구에게 이 사이트를 보내면, ${esc(CFG.products.full?.label || "내 사주 기본 리포트")}(${won(CFG.products.full?.price || 9900)})를 PDF로 무료로 보내주마.</b></p>
       <p class="muted small" style="margin:6px 0 0">친구가 네 링크로 들어와 <b>자기 사주를 보면</b>, 이 화면에 'PDF 무료로 받기'가 열린다. (1인 1회 · 이 폰에서. 위에서 먼저 신청했다면 친구가 오는 순간 메일로 자동으로 보내준다)</p>
       <div class="linkline" id="g-link">${esc(link)}</div>
@@ -295,7 +297,7 @@ function watchFriend(box) {
     FRIEND = st;
     if (st.pdf_ready) {
       opened = true;
-      el.innerHTML = `${cutImg("c07", "친구가 왔구나. 약속대로, PDF를 보내주마.")}<span class="ready">친구가 왔다. 약속대로 기본 리포트를 무료로 보내주마 ✓</span>`;
+      el.innerHTML = `${cutImg("c07", "친구 왔다! 약속대로 PDF 보내 줄게.")}<span class="ready">친구가 왔다. 약속대로 기본 리포트를 무료로 보내주마 ✓</span>`;
       VOICE.play("c07");
       orderForm(box.querySelector("#w-gift"), "full", true);
     }

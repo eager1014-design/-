@@ -55,7 +55,7 @@ async function drawCert(canvas, r, name) {
 function certPanel(r) {
   const p = quickPanel(`<p class="kicker">무료 · 공유용</p>
     <p class="line gold big2" data-type>공식 예민인 인증서</p>
-    <p class="small muted">네 기운으로 발급해 주마. 이름(별명)을 넣고 저장해서 친구에게 보여줘라.</p>
+    <p class="small muted">네 기운으로 발급해 줄게. 이름(별명) 넣고 저장해서 친구한테 자랑해.</p>
     <div class="cert-row"><input id="cert-name" maxlength="10" placeholder="인증서에 넣을 이름"><button type="button" class="btn ghost" id="cert-make">발급</button></div>
     <canvas id="cert-canvas" class="cert" aria-label="공식 예민인 인증서 그림"></canvas>
     <div class="cert-row"><button type="button" class="btn" id="cert-save">이미지로 저장</button><button type="button" class="btn ghost" id="cert-share" hidden>공유하기</button></div>
