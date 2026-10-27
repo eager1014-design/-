@@ -22,7 +22,7 @@ const VIDEO = path.join(ROOT, "video");
 const CLAUDE = process.env.CLAUDE_BIN || path.join(process.env.HOME, ".local/bin/claude");
 const NODE = process.execPath;
 const ID = /^[a-z0-9]{6,20}$/;
-const STEPS = ["chat", "plan", "thumbs", "script", "voice", "eleven", "upload", "publish", "next", "comment"];
+const STEPS = ["chat", "plan", "thumbs", "script", "voice", "eleven", "upload", "publish", "next", "comment", "shorts"];
 const VOICE = { provider: "elevenlabs", id: "vithIMnhyN3GwRbVmrZt", name: "천성준" };
 
 // ---------- 저장 ----------
@@ -70,12 +70,13 @@ export function postMessage(id, { text = "", links = "", files = [], step = "cha
     if (!p.final) throw new Error("완성본이 먼저 있어야 해요 (녹음 올리기 또는 일레븐랩스).");
     p.pick = { title: Number(titleIdx) || 0, thumb: Number(thumbIdx) || 0 };
   }
+  if (step === "shorts" && !(p.format !== "short" && p.episode)) throw new Error("숏폼은 롱폼 대본이 생긴 뒤에 뽑을 수 있어요.");
   if (step === "comment" && !(p.youtubeUrl && p.youtube?.pinned)) throw new Error("유튜브에 올린 뒤, 업로드 문구(고정 댓글)가 있어야 달 수 있어요.");
   if (step === "voice" && !saved.some((f) => /\.(mp3|m4a|wav)$/i.test(f))) throw new Error("녹음 파일(mp3·m4a·wav)을 올려주세요.");
   for (const u of urls) p.refs.push({ url: u, at: new Date().toISOString() });
   for (const f of saved) p.refs.push({ file: f, at: new Date().toISOString() });
   if (String(text).trim() || urls.length || saved.length) p.messages.push({ role: "me", text: String(text).trim(), links: urls, files: saved, step, at: new Date().toISOString() });
-  p.busy = { chat: "답 쓰는 중", plan: "기획안 만드는 중", thumbs: "썸네일 그리는 중", script: "대본·초안 만드는 중", voice: "목소리 맞추는 중", eleven: "일레븐랩스 녹음 중", upload: "업로드 문구 쓰는 중", publish: "유튜브에 올리는 중", next: "다음 편 여는 중", comment: "고정 댓글 다는 중" }[step];
+  p.busy = { chat: "답 쓰는 중", plan: "기획안 만드는 중", thumbs: "썸네일 그리는 중", script: "대본·초안 만드는 중", voice: "목소리 맞추는 중", eleven: "일레븐랩스 녹음 중", upload: "업로드 문구 쓰는 중", publish: "유튜브에 올리는 중", next: "다음 편 여는 중", comment: "고정 댓글 다는 중", shorts: "숏폼 뽑는 중" }[step];
   p.ask = null;
   p.log = [];
   saveProject(p);
@@ -173,7 +174,7 @@ function context(p) {
   const kind = p.format === "short" ? "세로 쇼츠 1080×1920 (40~60초)" : "가로 롱폼 1920×1080 (보통 6~10분)";
   return `[${p.format === "short" ? "숏폼" : "롱폼"} 프로젝트] 가제: ${p.title} / 채널: ${p.channel} / ${kind}
 [사장님이 처음 말한 느낌] ${p.brief || "(없음)"}
-${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약 (사장님이 이번에 직접 준 자료라 보관함보다 우선)]\n${refs}\n` : ""}${diaryNotes(p)}${libraryNotes(p)}[최근에 만든 영상 — 사장님이 "비슷한 주제만 나온다"고 함. 주제를 제안할 땐 이것과 겹치지 않게, 영역을 넓게 (${AREA_LIST})]\n${recentList(p.plan?.titles?.[0])}\n[지금까지 대화]\n${talk || "(아직 없음)"}
+${p.parent ? `[원본 롱폼 「${p.parent.title}」에서 뽑은 쇼츠 — 이 구간의 내용·표현을 살려서, 롱폼을 안 본 사람도 이해되게 40~55초로]\n${p.parent.segment}\n${p.parent.url ? `롱폼 링크: ${p.parent.url} (끝에서 '전체 영상은 롱폼에서'로 이어 주기)\n` : ""}` : ""}${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약 (사장님이 이번에 직접 준 자료라 보관함보다 우선)]\n${refs}\n` : ""}${diaryNotes(p)}${libraryNotes(p)}[최근에 만든 영상 — 사장님이 "비슷한 주제만 나온다"고 함. 주제를 제안할 땐 이것과 겹치지 않게, 영역을 넓게 (${AREA_LIST})]\n${recentList(p.plan?.titles?.[0])}\n[지금까지 대화]\n${talk || "(아직 없음)"}
 
 [원칙] 사장님은 코드를 모르는 1인 사업가. 쉬운 말로, 짧게. 듣기 좋은 말만 하지 말고 약점도 근거와 함께 (사장님 요청).
 사장님 경험은 대화·메모에 있는 것만 쓰고 지어내지 않는다. 연구·숫자는 확실한 것만, 모르면 '확인 필요'. 다른 유튜버의 문장·화면을 베끼지 않는다.
@@ -192,8 +193,8 @@ const say = (p, text, extra = {}) => p.messages.push({ role: "claude", text, at:
 
 // ① 대화 — 사장님은 말만 하면 된다 (2026-10-26 사장님: "필요한 버튼만, 대화 형식으로 영상을 만들어내는 채팅"):
 // 클로드가 말뜻을 보고 다음 단계를 바로 돌린다. 크레딧·바깥으로 나가는 일(일레븐랩스 녹음·유튜브 올리기)은 버튼만 띄운다.
-const AUTO = { plan: "기획안 만드는 중", thumbs: "썸네일 그리는 중", script: "대본·초안 만드는 중", upload: "업로드 문구 쓰는 중" };
-const ready = (p, step) => ({ plan: true, thumbs: p.format !== "short" && !!p.plan, script: !!p.plan, upload: !!p.episode }[step]);
+const AUTO = { plan: "기획안 만드는 중", thumbs: "썸네일 그리는 중", script: "대본·초안 만드는 중", upload: "업로드 문구 쓰는 중", shorts: "숏폼 뽑는 중" };
+const ready = (p, step) => ({ plan: true, thumbs: p.format !== "short" && !!p.plan, script: !!p.plan, upload: !!p.episode, shorts: p.format !== "short" && !!p.episode }[step]);
 function state(p) {
   const has = (x, a, b) => (x ? `${a} 있음` : `${a} ${b || "없음"}`);
   return `[지금 상태] ${[has(p.plan, "기획안"), p.format === "short" ? "" : has(p.thumbs, "썸네일"), has(p.episode, "대본·초안"), has(p.final, "완성본(목소리)"), has(p.youtube, "업로드 문구"), p.youtubeUrl ? `유튜브 올림 ${p.youtubeUrl}` : "유튜브 안 올림"].filter(Boolean).join(" / ")}${p.prev ? `\n[이전 편] ${p.prev.title} — ${p.prev.summary}` : ""}`;
@@ -206,7 +207,8 @@ ${state(p)}
 사장님의 마지막 말에 답해. 영상을 같이 만드는 대화다: 질문이 필요하면 1~2개만, 제안은 구체적으로(제목·첫 문장·구성 예시).
 "do" = 사장님이 다음 단계를 원하거나 동의했으면 그 일 하나 (고칠 점을 말하면 그 단계를 다시 하는 것도 포함):
   plan(기획안) · thumbs(롱폼 썸네일, 기획안 있어야) · script(대본+무료 초안, 기획안 있어야) · upload(업로드 문구·고정 댓글, 대본 있어야)
-  · next(이 영상에 이어지는 다음 편을 새로 시작 — 사장님이 '다음 편', '이어서', '다음 이야기'라고 할 때) · ""(그냥 대화).
+  · next(이 영상에 이어지는 다음 편을 새로 시작 — 사장님이 '다음 편', '이어서', '다음 이야기'라고 할 때)
+  · shorts(롱폼 대본이 있을 때 이 롱폼으로 숏폼 3개 뽑기 — '쇼츠로', '숏폼 만들어') · ""(그냥 대화).
   기획이 아직 모자라면 do 는 비우고 질문만.
 "ask" = 일레븐랩스 녹음(크레딧)·유튜브 올리기·고정 댓글 달기를 원하면 직접 하지 말고 "eleven" · "publish" · "comment" (화면에 확인 버튼이 뜬다).
 do 가 있으면 reply 는 "○○ 바로 시작할게요" 한두 줄로 짧게.
@@ -231,6 +233,34 @@ async function next(p) {
   saveProject(n);
   postMessage(n.id, { text: last || `「${p.title}」에 이어지는 다음 편을 만들고 싶어요.`, step: "chat" });
   say(p, `다음 편을 새로 열었어요. 위 목록의 새 영상에서 이어서 이야기해요.`, { open: n.id });
+}
+
+// 롱폼 → 숏폼 (2026-10-27 사장님: "롱폼을 만들면 그 롱폼을 토대로 숏폼을 만들자"):
+// 클로드가 롱폼 대본에서 따로 떼어도 통하는 구간 3개를 고르고, 구간마다 숏폼 프로젝트를 열어 기획안까지 바로 만든다
+async function shorts(p) {
+  if (p.format === "short" || !p.episode) throw new Error("숏폼은 롱폼 대본이 생긴 뒤에 뽑을 수 있어요.");
+  const lines = p.episode.scenes.map((s) => `${s.id} [${s.type}] ${s.narration}`).join("\n").slice(0, 12000);
+  const r = askClaude(p, `${context(p)}
+
+[롱폼 대본 — 장면 id · 종류 · 읽는 문장]
+${lines}
+
+이 롱폼에서 쇼츠 3개를 뽑아. 조건: 각 구간만 떼어 봐도 이해되는 하나의 이야기(훅 → 핵심 → 마무리), 3초 안에 멈추게 하는 첫 문장을 만들 수 있는 구간,
+셋은 서로 다른 감정·각도(예: 찔림 / 웃음 / 써먹을 팁). 롱폼 문장을 최대한 살리되 쇼츠 첫 문장은 새로 세게.
+JSON 하나만: {"reply": "사장님께 두세 줄: 어떤 기준으로 골랐는지", "shorts": [{"title": "화면 위 제목 '첫 줄 / 둘째 줄' (줄마다 14자 이내)", "hook": "첫 3초 문장", "from": "시작 장면 id", "to": "끝 장면 id", "angle": "이 쇼츠의 감정·각도 한 줄"}]}`);
+  const ids = new Map(p.episode.scenes.map((s, i) => [s.id, i]));
+  const made = [];
+  for (const sh of (r.shorts || []).slice(0, 3)) {
+    const a = ids.get(sh.from) ?? 0, b = Math.max(a, ids.get(sh.to) ?? a);
+    const segment = p.episode.scenes.slice(a, b + 1).map((s) => s.narration).join(" ").slice(0, 3000);
+    const n = createProject({ title: sh.title || "롱폼에서 뽑은 쇼츠", brief: `롱폼 「${p.title}」에서 뽑은 쇼츠 — ${sh.angle || ""} / 첫 문장: ${sh.hook || ""}`, channel: p.channel, format: "short" });
+    n.parent = { id: p.id, title: p.title, url: p.youtubeUrl || null, from: sh.from, to: sh.to, segment };
+    saveProject(n);
+    postMessage(n.id, { text: `롱폼 「${p.title}」의 ${sh.from}~${sh.to} 구간으로 쇼츠 기획안 만들어줘. 각도: ${sh.angle || "자유"}`, step: "plan" });
+    made.push(n.id);
+  }
+  p.shortsMade = [...(p.shortsMade || []), ...made];
+  say(p, `${r.reply}\n\n숏폼 ${made.length}개를 열고 기획안을 만들고 있어요 (각 1~3분). 아래 버튼으로 가서 이어서 이야기하면 돼요.`, { opens: made });
 }
 
 // ② 기획안: 제목 후보·훅·챕터·썸네일 아이디어 3개
@@ -535,14 +565,14 @@ async function comment(p) {
   say(p, `고정 댓글을 달았어요${p.commentUrl ? `: ${p.commentUrl}` : ""}\n마지막 한 가지만: 스튜디오 → 댓글 → 이 댓글 옆 ⋮ → '고정'을 눌러주세요 (유튜브가 고정은 프로그램으로 못 하게 막아 뒀어요).`);
 }
 
-const JOBS = { comment, chat, plan, thumbs, script, voice, eleven, upload, publish, next };
+const JOBS = { comment, chat, plan, thumbs, script, voice, eleven, upload, publish, next, shorts };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const [step, id] = process.argv.slice(2);
   const p = getProject(id);
   try {
     if (!JOBS[step]) throw new Error(`모르는 일: ${step}`);
-    if (!["voice", "eleven", "publish", "next", "comment"].includes(step)) await readRefs(p);
+    if (!["voice", "eleven", "publish", "next", "comment", "shorts"].includes(step)) await readRefs(p);
     await JOBS[step](p);
     log(p, "✅ 끝");
   } catch (e) {
