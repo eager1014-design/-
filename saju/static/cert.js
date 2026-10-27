@@ -42,13 +42,13 @@ async function drawCert(canvas, r, name) {
   y += 62; c.fillStyle = INK; c.font = `400 40px ${serif}`; c.fillText(`·  ${L.charge}`, x, y);
   c.textAlign = "center"; c.font = `400 31px ${serif}`; c.fillStyle = "#3d3125";
   ["위 사람은 남들이 지나치는 마음을 알아채는", "섬세한 감각을 갖추었기에 이 증서를 드립니다.", "고장 난 게 아니라, 섬세하게 만들어졌습니다."]
-    .forEach((t, i) => c.fillText(t, W / 2, 1010 + i * 50));
+    .forEach((t, i) => c.fillText(t, W / 2, 1012 + i * 50));
   // 도장
-  c.save(); c.translate(W - 230, 1150); c.rotate(-0.12);
-  c.strokeStyle = RED; c.lineWidth = 6; c.beginPath(); c.arc(0, 0, 70, 0, Math.PI * 2); c.stroke();
-  c.fillStyle = RED; c.font = `700 46px ${serif}`; c.textAlign = "center"; c.fillText("運結", 0, 16); c.restore();
+  c.save(); c.translate(W - 175, 1165); c.rotate(-0.12);  // 글씨와 안 겹치게 오른쪽 아래
+  c.strokeStyle = RED; c.lineWidth = 6; c.beginPath(); c.arc(0, 0, 58, 0, Math.PI * 2); c.stroke();
+  c.fillStyle = RED; c.font = `700 38px ${serif}`; c.textAlign = "center"; c.fillText("運結", 0, 13); c.restore();
   c.textAlign = "center"; c.font = `400 26px ${serif}`; c.fillStyle = "#7a6a55";
-  c.fillText(`내 사용설명서 · 무료 성향 보기  ${location.host}`, W / 2, H - 100);
+  c.fillText(`내 사용설명서 · 무료 성향 보기  ${location.host}`, W / 2 - 40, H - 92);
 }
 
 /* 무료 결과 끝에 붙는 칸: 이름 넣기 → 인증서 → 저장·공유 → 사용설명서 */
