@@ -150,7 +150,8 @@ function FrameShell({ frame, presenter, children }) {
       {presenter ? (
         <div style={{ position: "absolute", top: boxTop, left: 0, width: SIZES.short.width, height: STAGE_H, overflow: "hidden" }}>
           <SizeContext.Provider value={{ width: SIZES.short.width, height: STAGE_H }}>
-            <CaptionBottomContext.Provider value={Math.round(STAGE_H * 0.605)}>{children}</CaptionBottomContext.Provider>
+            {/* frame.captionLift: 자막 높이(무대 아래에서의 비율). 롱폼에서 잘라 온 쇼츠는 장면 그래픽이 커서 아래로(0.1) — 2026-10-27 자막이 비교 카드를 가림 */}
+            <CaptionBottomContext.Provider value={Math.round(STAGE_H * (frame.captionLift ?? 0.605))}>{children}</CaptionBottomContext.Provider>
           </SizeContext.Provider>
         </div>
       ) : (

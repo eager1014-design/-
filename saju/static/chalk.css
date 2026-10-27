@@ -1,0 +1,41 @@
+/* 운결 칠판 스킨 (2026-10-27 사장님: "운결도 가볍게, 영상 분위기와 맞게" → 채널과 같은 완전 검정 + 흰 선 + 노랑, 그라데이션 금지).
+   toon.css·style.css 뒤에 불러서 색·글꼴·효과만 덮는다. 되돌리려면 apply.html·consult.html 에서 이 파일 한 줄만 빼면 된다. */
+:root, :root:not([data-theme="light"]), :root[data-theme="dark"] {
+  --bg: #000000; --paper: #111111; --ink: #ffffff; --ink-2: #d6d6d6; --ink-3: #9a9a9a; --line: #2a2a2a;
+  --accent: #ffe45c; --accent-2: #ffe45c; --gold: #ffe45c; --shadow: none;
+  --chalk-head: "Black Han Sans", "Noto Sans KR", sans-serif;
+  color-scheme: dark;
+}
+body.apply, body.consult { background: #000; color: #fff; font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; }
+
+/* 글꼴: 붓글씨(Song Myung) → 채널 제목 글꼴 */
+.gate-big, .gate-small, .line.gold, .pagehead h2, .curtain .ctitle, .rec b, details.toc li b, .topics a, .brand,
+#gate .btn, .qcard .btn, .askpanel .btn, #submit, .line.big2 { font-family: var(--chalk-head) !important; letter-spacing: 0 !important; }
+
+/* 빛 번짐·그라데이션·불씨·연기 끄기 */
+.gate-big, .line.gold, .verdict, .gate-small { text-shadow: none !important; }
+.ember, .smoke, .neon, .couple { display: none !important; }
+#gate, .curtain { background: #000 !important; }
+#form, .qcard, .rec, .lock, .opt, .opt.me, .topics a, .product, .linkline, .chip span, .apply input, .apply select, .apply textarea, .apply .seg span {
+  background: #111 !important; background-image: none !important; box-shadow: none !important; }
+.gate-big, .line.gold, .rec b, details.toc li b, .opt.me h4, .opt.me .price, .pagehead h2, .curtain .ctitle, .lock.open .blurred { color: #fff !important; }
+.line.gold { color: #ffe45c !important; }
+
+/* 버튼: 노란 바탕 + 검은 글씨, 그림자 없이 */
+.btn, #gate .btn, .qcard .btn, .askpanel .btn, #submit, .lockbtn, #pick-me {
+  background: #ffe45c !important; background-image: none !important; color: #000 !important; border: 0 !important;
+  border-radius: 12px !important; box-shadow: none !important; }
+.btn.ghost, .lockbtn.ghost, .certpanel .btn.ghost { background: transparent !important; color: #fff !important; border: 2px solid #fff !important; }
+.curtain .cseal, .seal { background: #ffe45c !important; color: #000 !important; }
+.product:has(input:checked), .chip input:checked + span { border-color: #ffe45c !important; outline-color: #ffe45c !important; background: #1a1a0a !important; box-shadow: none !important; }
+.topics a { border: 2px solid #fff !important; color: #fff !important; }
+a { color: #ffe45c; }
+
+/* 새 웹툰 컷 (흰 선 그림): 정사각형, 테두리 없이, 천천히 확대만 */
+.cut.chalk .frame { background: #000; aspect-ratio: 1 / 1; max-width: 560px; margin: 0 auto; border-radius: 0; }
+.cut.chalk .frame img { width: 100%; height: 100%; object-fit: contain; }
+.line.bubble { background: #fff !important; color: #000 !important; border-radius: 18px !important; box-shadow: none !important; }
+.line.bubble::after { border-top-color: #fff !important; }
+
+.gate-small { color: #ffe45c !important; }
+.gate-sub { font-family: "Noto Sans KR", sans-serif !important; color: #d6d6d6 !important; }
