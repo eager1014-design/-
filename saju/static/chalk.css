@@ -40,9 +40,7 @@ a { color: #ffe45c; }
 .gate-small { color: #ffe45c !important; }
 .gate-sub { font-family: "Noto Sans KR", sans-serif !important; color: #d6d6d6 !important; }
 
-/* 상담실 (consult.html): 컷 아래 대사 글씨, 아바타 둥글게 */
-.cutline { margin: 8px 0 0; text-align: center; color: #fff; font-size: 15px; }
-.msg.cut .cutimg { max-width: 360px; display: block; margin: 0 auto; border-radius: 0; }
+/* 상담실 (consult.html): 카톡처럼 동그란 프로필 + 말풍선 */
 .ava, .room-head img { border-radius: 50%; background: #000; border: 2px solid #fff; }
 .room-head h1 { font-family: var(--chalk-head) !important; color: #fff !important; text-shadow: none !important; }
 
@@ -51,6 +49,6 @@ body.apply, body.consult {
   --bg: #000000; --paper: #111111; --ink: #ffffff; --ink-2: #d6d6d6; --ink-3: #9a9a9a; --line: #2a2a2a;
   --accent: #ffe45c; --accent-2: #ffe45c; --gold: #ffe45c; --shadow: none;
 }
-.msg.me .say { background: #fff !important; color: #000 !important; border-color: #fff !important; }
+.msg.me .say { background: #ffe45c !important; color: #000 !important; }
 .room-head img { box-shadow: none !important; }
 .seg input:checked + span { color: #000 !important; background: #ffe45c !important; border-color: #ffe45c !important; }

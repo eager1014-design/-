@@ -18,28 +18,33 @@
 <link rel="stylesheet" href="/chalk.css">
 <style>
   /* 상담실: 도령과 손님이 주고받는 대화 */
-  .room { max-width: 600px; margin: 0 auto; padding: 18px 16px 60px; }
-  .room-head { text-align: center; padding: 26px 0 10px; }
-  .room-head img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; object-position: 30% 30%;
-    box-shadow: 0 0 0 2px var(--gold), 0 0 30px rgba(192,40,58,.5); }
-  .room-head h1 { margin: 12px 0 4px; font: 400 28px "Song Myung", serif; color: #f6e7c4; }
-  .room-head p { margin: 0; color: var(--ink-3); font-size: 14px; }
-  .msg { display: flex; gap: 10px; margin: 16px 0; align-items: flex-start; animation: rise .5s ease-out both; }
+  .room { max-width: 600px; margin: 0 auto; padding: 0 16px 60px; }
+  .topbar { position: static; }  /* 위에 붙는 건 대화방 머리 하나만 */
+  /* 카톡처럼: 위에 작은 대화방 머리, 도령은 동그란 프로필 + 말풍선 */
+  .room-head { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; text-align: left;
+    padding: 12px 0; margin-bottom: 6px; background: #000; border-bottom: 1px solid var(--line); }
+  .room-head img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
+  .room-head h1 { margin: 0; font: 400 19px "Song Myung", serif; color: #f6e7c4; }
+  .room-head p { margin: 2px 0 0; color: var(--ink-3); font-size: 13px; }
+  .msg { display: flex; gap: 8px; margin: 14px 0 0; align-items: flex-start; animation: rise .4s ease-out both; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
-  .msg .ava { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: 30% 30%; flex: none;
-    box-shadow: 0 0 0 1px var(--gold); }
-  .msg .say { padding: 12px 16px; border: 1px solid rgba(217,178,106,.35); background: #15111b; border-radius: 4px 14px 14px 14px;
-    font: 400 17px/1.75 "Song Myung", serif; color: var(--ink); white-space: pre-wrap; max-width: calc(100% - 50px); }
-  .msg .say h3 { margin: 0 0 4px; font: 700 12px "Noto Sans KR", sans-serif; letter-spacing: .18em; color: var(--accent-2); }
-  .msg.cut { display: block; }
-  .cutimg { display: block; width: 100%; border-radius: 6px; border: 1px solid rgba(217,178,106,.3); box-shadow: 0 8px 30px rgba(0,0,0,.5); }
-  #g-state .cutimg { margin: 4px 0 8px; }
+  .msg .ava { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: none; }
+  .msg .body { min-width: 0; max-width: calc(100% - 90px); }
+  .msg .who { margin: 0 0 4px 2px; font-size: 12px; color: var(--ink-2); }
+  .msg.cont { margin-top: 5px; }
+  .msg.cont .ava { visibility: hidden; height: 0; }
+  .msg.cont .who { display: none; }
+  .msg .say { padding: 10px 14px; background: #1c1c1c; border: 0; border-radius: 4px 16px 16px 16px;
+    font: 400 16px/1.65 "Noto Sans KR", sans-serif; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg .say h3 { margin: 0 0 4px; font: 700 12px "Noto Sans KR", sans-serif; letter-spacing: .1em; color: var(--accent-2); }
   .msg.me { justify-content: flex-end; }
-  .msg.me .say { background: #2a1219; border-color: rgba(192,40,58,.5); border-radius: 14px 4px 14px 14px; font: 500 15px/1.6 "Noto Sans KR", sans-serif; }
+  .msg.me { margin-top: 14px; }
+  .msg.me .say { max-width: 78%; background: #ffe45c; color: #000; border-radius: 16px 4px 16px 16px; font: 500 15px/1.6 "Noto Sans KR", sans-serif; }
+  .way .msg { margin: 0 0 10px; }
   .msg.wait .say { color: var(--ink-3); }
   .dots::after { content: "…"; animation: dots 1.2s steps(3) infinite; display: inline-block; width: 1.2em; overflow: hidden; vertical-align: bottom; }
   @keyframes dots { from { width: 0; } to { width: 1.2em; } }
-  .ans { margin: 4px 0 6px 50px; animation: rise .5s .15s ease-out both; }
+  .ans { margin: 10px 0 6px 48px; animation: rise .5s .15s ease-out both; }
   .ans .chips { justify-content: flex-start; margin: 4px 0; }
   .ans .chip { border: 0; padding: 0; background: none; }
   .ans .chip span { font-size: 15px; padding: 9px 15px; }
@@ -90,9 +95,10 @@
 <main class="room" id="app">
   <div class="room-head">
     <img src="/img/toon2/ava.jpg" alt="운결 도령">
-    <p class="pno">셋째 장</p>
-    <h1>도령의 상담실</h1>
-    <p>몇 가지만 물어볼게. 네 사주로 답해 줄게. 상담은 무료야.</p>
+    <div>
+      <h1>운결 도령 · 상담실</h1>
+      <p>네 사주로 답해 줄게. 상담은 무료야.</p>
+    </div>
   </div>
   <div id="chat" aria-live="polite"></div>
   <!-- 넷째 장: 대화가 끝나면 페이지가 넘어가 PDF 받기 -->

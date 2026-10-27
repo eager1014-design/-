@@ -47,30 +47,22 @@ const chat = () => $("#chat");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const down = (el) => el.scrollIntoView({ behavior: "smooth", block: "end" });
 
-/* 웹툰 컷 (2026-10-27 칠판 스타일 새 도령, static/img/toon2/). 예전 목소리(c01~c07)는 옛 대사라 끔 — 컷 아래에 대사를 글씨로 */
-const CUTS = new Set(["c01", "c02", "c03", "c04", "c05", "c06", "c07"]);
-const CUT_FILE = { c01: "t8", c02: "t6", c03: "t5", c04: "c04", c05: "t5", c06: "c06", c07: "c07" };
-const cutImg = (id, alt) => `<img class="cutimg" src="/img/toon2/${CUT_FILE[id] || id}.jpg" alt="${esc(alt)}"><p class="cutline">${esc(alt)}</p>`;
+/* 카톡처럼: 도령은 동그란 프로필 + 말풍선. 이어서 말하면 프로필·이름은 첫 말풍선에만 (2026-10-27 사장님: 큰 그림 빼기) */
+const doryLine = (text) => `<div class="msg">${AVA}<div class="body"><p class="who">운결 도령</p><div class="say">${esc(text)}</div></div></div>`;
 
 async function dory(text, title, voice) {
   VOICE.play(voice);
-  if (CUTS.has(voice)) {
-    const m = document.createElement("div");
-    m.className = "msg cut";
-    m.innerHTML = cutImg(voice, text);
-    chat().appendChild(m);
-    down(m);
-    await wait(1200);
-    return m;
-  }
+  const prev = chat().lastElementChild;
   const w = document.createElement("div");
-  w.className = "msg wait";
-  w.innerHTML = `${AVA}<div class="say"><span class="dots"></span></div>`;
+  w.className = "msg wait" + (prev?.classList.contains("dory") ? " cont" : "");
+  w.innerHTML = `${AVA}<div class="body"><p class="who">운결 도령</p><div class="say"><span class="dots"></span></div></div>`;
   chat().appendChild(w);
   down(w);
   await wait(Math.min(400 + text.length * 8, 1100));
-  w.className = "msg";
+  w.classList.remove("wait");
+  w.classList.add("dory");
   w.querySelector(".say").innerHTML = (title ? `<h3>${esc(title)}</h3>` : "") + esc(text);
+  down(w);
   return w;
 }
 function me(text) {
@@ -188,11 +180,10 @@ async function start() {
 }
 
 async function runConsult() {
+  await dory("좋아, 네 설명서 펼쳐 볼게. 조금만 기다려. 길면 30초야.", "", "c04");
   const w = document.createElement("div");
-  w.className = "msg wait";
-  VOICE.play("c04");
-  w.className = "msg cut wait";
-  w.innerHTML = `${cutImg("c04", "네 설명서 펼쳐 보는 중… 조금만 기다려.")}<p class="small muted" style="text-align:center;margin:6px 0 0">들여다보는 중<span class="dots"></span> (길면 30초)</p>`;
+  w.className = "msg wait cont";
+  w.innerHTML = `${AVA}<div class="body"><div class="say"><span class="dots"></span></div></div>`;
   chat().appendChild(w);
   down(w);
   let r;
@@ -210,16 +201,10 @@ async function runConsult() {
   const sec = Object.fromEntries(r.sections.map((s) => [s.id, s]));
   await dory(sec.core.text, sec.core.title);
   await dory(sec.do.text, sec.do.title);
-  // 더 깊이: 진짜 이유와 움직일 때 — 잠그지 않고 다 보여준다. 그다음은 PDF로
-  await wait(500);
-  const deep = document.createElement("div");
-  deep.className = "lock open deep";
-  deep.innerHTML = `<p class="kicker">🔓 더 깊이: 이 고민이 반복되는 진짜 이유와 움직일 때</p>
-    <p class="blurred">${esc(sec.why.text)}</p><p class="blurred">${esc(sec.when.text)}</p>
-    <p class="small muted" style="margin:6px 0 0">친구에게 이 사이트를 보내면, 더 깊은 풀이를 <b style="color:var(--gold)">PDF로 목차 그대로</b> 보내주마.</p>`;
-  chat().appendChild(deep);
-  down(deep);
-  await wait(1200);
+  // 더 깊이: 진짜 이유와 움직일 때 — 잠그지 않고 말풍선으로 다 보여준다. 그다음은 PDF로
+  await dory(sec.why.text, "이 고민이 반복되는 진짜 이유");
+  await dory(sec.when.text, "움직일 때");
+  await wait(600);
   // PDF 미리 읽기: 받을 PDF의 앞 장을 이 사람 사주로 조금, 나머지는 제목만 (잠그지 않음)
   if (r.preview?.length) {
     const pv = document.createElement("div");
@@ -234,7 +219,7 @@ async function runConsult() {
     down(pv);
     await wait(1400);
   }
-  await dory("여기까지가 오늘의 상담이다. 달마다 언제 움직이고 언제 숨을 고를지, 무엇을 어떻게 할지는… 네 이름으로 PDF에 정확히 적어 보내주마.", "", "c05");
+  await dory("여기까지가 오늘 상담이야. 달마다 언제 움직이고 언제 쉴지, 뭘 어떻게 할지는 네 이름으로 PDF에 자세히 적어 줄게.", "", "c05");
   const a = answerBox('<button class="nextbtn" id="to-pdf">넷째 장 · PDF로 받기 →</button>');
   a.querySelector("#to-pdf").onclick = () => turnPage("넷째 장 · 네 이름으로 쓴 PDF", () => {
     $(".room-head").hidden = true; $("#chat").hidden = true; $("#page-pdf").hidden = false;
@@ -260,7 +245,7 @@ function offer() {
     </div>
     <p class="muted small" style="margin:14px 0 6px">하나 더 받고 싶다면 —</p>` : ""}
     <div class="way gift" id="w-gift">
-      ${cutImg("c06", "친구한테 여기 보내 줘. 친구가 와서 자기 사주를 보면, 더 깊은 풀이를 PDF로 보내 줄게.")}
+      ${doryLine("친구한테 여기 보내 줘. 친구가 와서 자기 사주를 보면, 더 깊은 풀이를 PDF로 보내 줄게.")}
       <p style="margin:10px 0 0">💌 <b>친구에게 이 사이트를 보내면, ${esc(CFG.products.full?.label || "내 사주 기본 리포트")}(${won(CFG.products.full?.price || 9900)})를 PDF로 무료로 보내주마.</b></p>
       <p class="muted small" style="margin:6px 0 0">친구가 네 링크로 들어와 <b>자기 사주를 보면</b>, 이 화면에 'PDF 무료로 받기'가 열린다. (1인 1회 · 이 폰에서. 위에서 먼저 신청했다면 친구가 오는 순간 메일로 자동으로 보내준다)</p>
       <div class="linkline" id="g-link">${esc(link)}</div>
@@ -297,7 +282,7 @@ function watchFriend(box) {
     FRIEND = st;
     if (st.pdf_ready) {
       opened = true;
-      el.innerHTML = `${cutImg("c07", "친구 왔다! 약속대로 PDF 보내 줄게.")}<span class="ready">친구가 왔다. 약속대로 기본 리포트를 무료로 보내주마 ✓</span>`;
+      el.innerHTML = `${doryLine("친구 왔다! 약속대로 PDF 보내 줄게.")}<span class="ready">친구가 왔다. 약속대로 기본 리포트를 무료로 보내주마 ✓</span>`;
       VOICE.play("c07");
       orderForm(box.querySelector("#w-gift"), "full", true);
     }
