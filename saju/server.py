@@ -833,16 +833,16 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("풀이를 받을 이메일을 정확히 입력해 주세요.")
         birth = parse_birth(b.get("birth") or {})
         partner = None
-        need = orders.PRODUCTS[product]["partner"]  # None | required | optional | pet
+        need = orders.PRODUCTS[product]["partner"]  # None | required | optional | pet | gift(선물 받는 사람)
         p = b.get("partner") or {}
         given = bool(str((p.get("birth") or {}).get("year") or "").strip())
-        if need in ("required", "pet") or (need == "optional" and given):
-            who = "반려동물 정보: " if need == "pet" else "상대방 정보: "
+        if need in ("required", "pet", "gift") or (need == "optional" and given):
+            who = "반려동물 정보: " if need == "pet" else "선물 받는 사람 정보: " if need == "gift" else "상대방 정보: "
             try:
                 pbirth = parse_birth(p.get("birth") or {}, min_year=1900)
             except ValueError as e:
                 raise ValueError(who + str(e))
-            default_name = "우리 아이" if need == "pet" else "상대"
+            default_name = "우리 아이" if need == "pet" else "선물 받는 분" if need == "gift" else "상대"
             partner = {"name": (p.get("name") or "").strip()[:20] or default_name,
                        "relation": (p.get("relation") or "").strip()[:20] or ("반려동물" if need == "pet" else ""),
                        "birth": pbirth, "kind": "pet" if need == "pet" else "person"}
@@ -1164,7 +1164,9 @@ class Handler(BaseHTTPRequestHandler):
     def order_pdf(self, o):
         import pdf_report  # reportlab 이 없는 환경에서도 나머지 기능은 돌아가게 필요할 때만 불러옴
         name = f"운결_{o['name']}_{o['product_label'].split(' (')[0].replace(' ', '')}.pdf"
-        return name, pdf_report.build(o, chart_of_birth(o["birth"]))
+        # 선물용 설명서는 받는 사람 사주가 표지·사주표의 주인공
+        gift = orders.PRODUCTS.get(o["product"], {}).get("gift") and o.get("partner")
+        return name, pdf_report.build(o, chart_of_birth(o["partner"]["birth"] if gift else o["birth"]))
 
     def api_admin_pdf(self, q):
         """보내기 전 미리보기: 브라우저 새 탭에서 PDF 열기."""

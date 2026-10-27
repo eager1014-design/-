@@ -310,8 +310,10 @@ def _ref_link(url, email):
 
 def build(order, chart):
     buf = io.BytesIO()
-    doc = _Doc(buf, order, title=f"{order['name']}님의 {order['product_label']}", author="운결")
-    name = order["name"]
+    gift = order.get("product") == "manual_gift" and order.get("partner")
+    title = f"{order['partner']['name']}님 사용설명서" if gift else f"{order['name']}님의 {order['product_label']}"
+    doc = _Doc(buf, order, title=title, author="운결")
+    name = order["partner"]["name"] if gift else order["name"]
     image = K.DAY_MASTER.get(chart["day_master"]["ko"], {}).get("image", "").split("(")[0].strip()
     story = [NextPageTemplate("page"), PageBreak()]
     # 여는 말
@@ -319,8 +321,10 @@ def build(order, chart):
               Paragraph("네가 태어난 날을 들여다봤다.<br/>네 기운이 어디에 쏠려 있고, 지금 어떤 흐름 위에 서 있는지.<br/>"
                         "천천히 읽어라. 다 읽고 나면, 오늘 할 일 하나는 보일 것이다.", ST["voice_s"]),
               Spacer(1, 12 * mm)]
-    who = _birth_text(order["birth"])
-    if order.get("partner"):
+    who = _birth_text(order["partner"]["birth"] if gift else order["birth"])
+    if gift:
+        who += f"<br/>선물하는 사람: {_esc(order['name'])} ({_esc(order['partner'].get('relation') or '소중한 사람')})"
+    elif order.get("partner"):
         p = order["partner"]
         who += (f"<br/>우리 아이: {_esc(p['name'])} · {_birth_text(p['birth'], pet=True)}" if p.get("kind") == "pet"
                 else f"<br/>함께 본 사람: {_esc(p['name'])} ({_esc(p.get('relation') or '관계')}) · {_birth_text(p['birth'])}")

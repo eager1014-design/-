@@ -65,6 +65,14 @@ function partnerFields(need) {
       <div><label for="p-rel">종류</label><select id="p-rel"><option>강아지</option><option>고양이</option><option>그 밖의 반려동물</option></select></div>
     </div>
     ${birthFields("p", true)}`;
+  if (need === "gift") return `
+    <legend>선물 받을 사람 정보</legend>
+    <div class="birth2">
+      <div><label for="p-name">받는 분 이름(별명 가능)</label><input id="p-name" maxlength="20" placeholder="예) 민지"></div>
+      <div><label for="p-rel">나와의 관계</label>
+        <select id="p-rel"><option>연인</option><option>배우자</option><option>친구</option><option>가족</option><option>직장 동료</option></select></div>
+    </div>
+    ${birthFields("p")}`;
   return `
     <legend>상대방 정보${need === "optional" ? ' <span class="muted small">(알면 더 정확해요 · 선택)</span>' : ""}</legend>
     <div class="birth2">

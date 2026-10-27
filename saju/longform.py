@@ -37,9 +37,23 @@ def _daeun_text(chart, luck):
                      + (" ← 지금" if d["age"] == cur else "") for d in chart["daeun"])
 
 
+def gift_context(order, chart, luck, giver_chart):
+    """선물용 설명서: 주인공 = 선물 받는 사람(partner), 선물하는 사람(주문자)은 호환성·마음 전하기에만."""
+    rec, giver = order["partner"], order["name"]
+    comp = compatibility(giver_chart, chart)
+    return "\n\n".join([
+        f"[선물 받는 사람 {rec['name']}님 사주 — 이 설명서의 주인공]\n{interpret.chart_summary(chart, luck)}",
+        f"[선물하는 사람] {giver}님 · 관계: {rec.get('relation') or '소중한 사람'}\n{interpret.chart_summary(giver_chart, None)}",
+        f"[{giver}님과 {rec['name']}님의 궁합 계산]\n{interpret.match_summary(comp, rec['name'])}",
+        f"[선물하는 사람이 적은 말]\n{interpret.situation_text(order['situation'])}",
+        f"※ 설명서는 선물하는 {giver}님이 읽고 {rec['name']}님에게 건네는 글입니다. {rec['name']}님을 3인칭('이 제품', '{rec['name']}님')으로 쓰세요."])
+
+
 def build_context(order, chart, luck, partner_chart=None):
     """모든 장이 함께 보는 자료."""
     p = products.PRODUCTS[order["product"]]
+    if p.get("gift") and partner_chart is not None:
+        return gift_context(order, chart, luck, partner_chart)
     name = order["name"]
     parts = [f"[{name}님 사주 계산 결과]\n{interpret.chart_summary(chart, luck)}",
              f"[{name}님 현재 상황]\n{interpret.situation_text(order['situation'])}"]
@@ -97,8 +111,10 @@ def _rules(order, chart, luck, partner_chart):
 
 def generate(order, chart, partner_chart=None, progress=None):
     """→ {"markdown", "engine"}. progress(끝난 장 수, 전체 장 수) 를 장마다 부른다."""
-    luck = current_luck(chart)
     p = products.PRODUCTS[order["product"]]
+    if p.get("gift") and partner_chart is not None:
+        chart, partner_chart = partner_chart, chart  # 선물용: 받는 사람 사주가 주인공, 주문자 사주는 호환성용
+    luck = current_luck(chart)
     chapters = p["chapters"]
     if not chapters or not llm.available():
         return {"markdown": _rules(order, chart, luck, partner_chart), "engine": "rules"}
@@ -109,7 +125,8 @@ def generate(order, chart, partner_chart=None, progress=None):
 
     def work(i):
         t, ins, chars = chapters[i]
-        results[i] = _chapter(context, toc, i, t, ins, chars, order["name"])
+        reader = f"선물하는 {order['name']}" if p.get("gift") else order["name"]
+        results[i] = _chapter(context, toc, i, t, ins, chars, reader)
         done[0] += 1
         if progress:
             progress(done[0], len(chapters))

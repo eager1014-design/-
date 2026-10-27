@@ -70,7 +70,7 @@ def main():
     ok(st == 200 and b'id="form"' in body and "너의 인생이".encode() in body, "첫 화면 = 웹툰 + 신청서")
     ok(guest("/app", raw=True)[0] in (200, 302) and b"app.js" not in guest("/app", raw=True)[1], "예전 구독 앱(/app)은 닫힘")
     st, c = guest("/api/apply/config")
-    ok(st == 200 and len(c["products"]) == 10 and c["bank"], f"상품 {len(c['products'])}개 + 계좌")
+    ok(st == 200 and len(c["products"]) == 12 and c["bank"], f"상품 {len(c['products'])}개 + 계좌")
     ok(apply(guest, "full", "동의없음", agree_ai=False)[0] == 400, "AI 동의 없으면 거절")
     st, r = apply(guest, "newyear", "신년첫손님")
     ok(st == 200 and not r["free"] and r["amount"] == 14900, "처음 온 손님도 신년운세는 유료 (첫 무료는 가벼운 풀이만)")

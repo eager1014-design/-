@@ -219,3 +219,8 @@ details.learn summary { cursor: pointer; font-weight: 700; }
 
 /* 약관·방침 */
 .legal h3 { margin-top: 22px; }
+
+/* 공식 예민인 인증서 (cert.js) */
+.certpanel .cert { width: 100%; max-width: 420px; aspect-ratio: 4 / 5; display: block; margin: 14px auto; border-radius: 6px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+.certpanel .cert-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+.certpanel .cert-row input { flex: 1 1 160px; min-width: 0; max-width: 260px; }

@@ -9,7 +9,7 @@ function onProduct() {
   box.hidden = !need;
   if (need && need !== PARTNER_FOR) box.innerHTML = partnerFields(need);  // 같은 종류로 바꾸면 입력값 유지
   if (need) PARTNER_FOR = need;
-  $("#story-label").textContent = p === "counsel" ? "궁금한 질문 하나" : "지금 상황과 고민";
+  $("#story-label").textContent = p === "counsel" ? "궁금한 질문 하나" : p === "manual_gift" ? "선물하며 전하고 싶은 말 (설명서 마지막 장에 담겨요)" : "지금 상황과 고민";
   const sub = p && window.PRODUCTS[p].subscription;
   const nofree = p && window.PRODUCTS[p].no_free;
   const lifeDisc = p && DISCOUNT.ready ? window.PRODUCTS[p].friend_discount || 0 : 0;  // 친구가 왔으면: 평생 9,900원 · 신년 10%
@@ -418,6 +418,7 @@ function showQuick(r, birth) {
     ${r.notes.slice(0, 1).map((n) => say(n, "small")).join("")}`);
   quickPanel(`<p class="kicker">올해 ${r.year.year}년 · ${esc(r.year.ko)}</p>${say(r.year.text)}
     <p class="kicker" style="margin-top:22px">오늘 ${esc(r.today.date)} · ${esc(r.today.ko)}일</p>${say(r.today.text)}`, "fortune");
+  if (window.PRODUCTS.manual) certPanel(r);  // 공식 예민인 인증서 (무료·공유용) → 사용설명서 (2026-10-27)
   // 다음: 고민은 도령의 상담실에서 (묻고 답하며 제대로). 생년월일은 이 탭에서만 넘겨준다
   try { sessionStorage.setItem("ungyeol_birth", JSON.stringify(birth)); } catch (e) { /* 상담실에서 다시 물음 */ }
   const T = [["counsel", "고민 상담", "무엇이든 하나"], ["love", "연애운 · 인연", "언제, 누구와"], ["reunion", "재회운", "다시 닿을까"],
