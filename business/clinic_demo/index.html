@@ -1,0 +1,247 @@
+<title>성형외과 상담 데스크</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  /* Layout: 병원 상담 데스크 한 장 — 왼쪽 손님 휴대폰 화면, 오른쪽 상담실장 접수 대장. 손님이 물으면 대장에 한 줄씩 쌓인다 */
+  :root {
+    --bg: #F3F5F4;
+    --paper: #FFFFFF;
+    --ink: #17302E;
+    --muted: #5A6B69;
+    --line: #D5DEDC;
+    --accent: #0F6E68;
+    --accent-soft: #E1F0EE;
+    --bubble: #EEF2F1;
+    --warn: #A15C07;
+    --warn-soft: #FBEFD9;
+    --alert: #B42323;
+    --alert-soft: #FBE3E1;
+    --display: "Noto Serif KR", "Apple SD Gothic Neo", serif;
+    --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1716; --paper: #152221; --ink: #E3ECEA; --muted: #9AABA8; --line: #263735;
+      --accent: #5FC2B9; --accent-soft: #173A37; --bubble: #1C2C2A;
+      --warn: #E8A84E; --warn-soft: #3A2A12; --alert: #F08A80; --alert-soft: #3D1A18; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1716; --paper: #152221; --ink: #E3ECEA; --muted: #9AABA8; --line: #263735;
+    --accent: #5FC2B9; --accent-soft: #173A37; --bubble: #1C2C2A;
+    --warn: #E8A84E; --warn-soft: #3A2A12; --alert: #F08A80; --alert-soft: #3D1A18; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.6; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-block: 36px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+  h1, h2 { margin: 0; text-wrap: balance; }
+  .label { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+  header { display: grid; gap: 10px; }
+  h1 { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4.4vw, 38px); line-height: 1.25; }
+  header p { margin: 0; color: var(--muted); max-width: 64ch; }
+  .demo-tag { justify-self: start; font-size: 13px; color: var(--warn); background: var(--warn-soft); border-radius: 6px; padding: 4px 10px; }
+
+  .desk { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .desk { grid-template-columns: 1fr; } }
+
+  /* 손님 화면 */
+  .phone { background: var(--paper); border: 1px solid var(--line); border-radius: 22px; display: grid; grid-template-rows: auto 1fr auto; height: 640px; max-height: 80vh; overflow: hidden; }
+  .phone-top { padding: 14px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 2px; }
+  .phone-top b { font-size: 16px; }
+  .phone-top span { font-size: 12.5px; color: var(--muted); }
+  .chat { overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .msg { max-width: 86%; padding: 9px 13px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14.5px; }
+  .msg.guest { align-self: flex-end; background: var(--accent); color: var(--paper); border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: var(--bubble); border-bottom-left-radius: 4px; }
+  .msg.bot.handoff { background: var(--warn-soft); }
+  .msg.bot.urgent { background: var(--alert-soft); }
+  .msg small { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .composer { border-top: 1px solid var(--line); padding: 10px; display: grid; gap: 8px; }
+  .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .chips button { flex: none; font: inherit; font-size: 13px; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px; padding: 6px 11px; cursor: pointer; }
+  .send { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .send input { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+  .send button { font: inherit; font-weight: 700; color: var(--paper); background: var(--accent); border: 0; border-radius: 10px; padding: 0 16px; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* 상담실장 대장 */
+  .ledger { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; display: grid; min-width: 0; }
+  .ledger-head { padding: 16px 18px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 16px; align-items: baseline; }
+  .ledger-head h2 { font-family: var(--display); font-size: 20px; }
+  .counts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .count { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--bg); font-variant-numeric: tabular-nums; }
+  .count b { font-family: var(--mono); font-weight: 500; }
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-weight: 500; font-size: 12px; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.time { font-family: var(--mono); font-size: 12.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.q { min-width: 200px; }
+  tr.new td { background: var(--accent-soft); }
+  @media (prefers-reduced-motion: no-preference) { tr.new td { transition: background 1.6s; } }
+  .pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill.auto { color: var(--accent); background: var(--accent-soft); }
+  .pill.hand { color: var(--warn); background: var(--warn-soft); }
+  .pill.urgent { color: var(--alert); background: var(--alert-soft); }
+  .ex { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 4px; }
+  .ledger-foot { padding: 12px 18px; color: var(--muted); font-size: 13px; }
+
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 22px; }
+  .rules div { border-top: 2px solid var(--ink); padding-top: 10px; min-width: 0; }
+  .rules b { display: block; font-size: 15.5px; }
+  .rules p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="label">시연 · 병원 상담 1차 응대</span>
+    <h1>문의는 밤에도 받고,<br>판단은 상담실장이.</h1>
+    <p>왼쪽은 손님이 보는 상담 창, 오른쪽은 상담실장이 아침에 보는 접수 대장입니다. 손님 자리에서 질문을 눌러 보세요. 병원이 미리 승인한 안내만 답하고, 의료 판단이 필요한 질문은 답하지 않고 넘깁니다.</p>
+    <span class="demo-tag">가상 병원 ‘데모성형외과’ · 안내 문구는 모두 시연용이며 실제 의료 정보가 아닙니다</span>
+  </header>
+
+  <div class="desk">
+    <section class="phone" aria-label="손님 상담 창">
+      <div class="phone-top"><b>데모성형외과 상담</b><span>평일 10:00–19:00 · 토 10:00–15:00 · 답변은 자동, 상담은 실장이</span></div>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="composer">
+        <div class="chips" id="chips"></div>
+        <form class="send" id="sendForm">
+          <input id="q" autocomplete="off" placeholder="궁금한 걸 적어 주세요" aria-label="질문">
+          <button type="submit">보내기</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="ledger" aria-label="상담실장 접수 대장">
+      <div class="ledger-head">
+        <h2>상담실장 접수 대장</h2>
+        <div class="counts" id="counts"></div>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>시각</th><th>손님 질문</th><th>분류</th><th>관심 시술</th><th>처리</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="ledger-foot">실제로는 구글 시트에 쌓이고, 실장 확인이 필요한 문의만 아침에 카톡으로 모아 알려 드립니다.</p>
+    </section>
+  </div>
+
+  <section class="rules" aria-label="안전 장치">
+    <div><b>승인된 문장만 답합니다</b><p>병원이 미리 확인한 안내문 안에서만 고릅니다. AI가 문장을 지어내지 않아서 과장 광고나 잘못된 안내가 나가지 않습니다.</p></div>
+    <div><b>의료 판단은 답하지 않습니다</b><p>“제 경우 가능한가요”, 부작용, 통증 같은 질문은 진료 상담이 필요하다고 안내하고 실장에게 넘깁니다.</p></div>
+    <div><b>위험 신호는 바로 전화로</b><p>심한 출혈·고열·숨이 찬 증상처럼 급한 말이 나오면 병원 전화와 119를 먼저 안내하고 ‘긴급’으로 표시합니다.</p></div>
+    <div><b>할인·후기로 끌지 않습니다</b><p>의료법상 문제가 될 수 있는 할인 유인이나 치료 후기는 자동 답변에서 빼고, 비용은 비급여 진료비 고지와 상담으로 안내합니다.</p></div>
+  </section>
+
+  <footer>만든 사람: 천성준 · 워크플로우 디자이너 · 개발자. 실제 병원에 맞출 때는 그 병원의 안내문, 진료 시간, 시술 목록으로 바꾸고 병원 확인을 받은 뒤 엽니다.</footer>
+</div>
+
+<script>
+  // 병원이 승인한 안내문 (가상). 실제 병원에선 이 표만 그 병원 것으로 바꾼다.
+  const PROCS = [
+    ["쌍꺼풀", /쌍꺼풀|쌍수|눈매|눈 ?수술/], ["코", /코 ?성형|콧대|코끝|코 ?수술|코(를|도|가|는|만) /], ["리프팅", /리프팅|실 ?리프팅|처짐/],
+    ["보톡스", /보톡스|보톨|사각턱/], ["필러", /필러|팔자|애교살/], ["지방흡입", /지방 ?흡입|지흡|허벅지|팔뚝/],
+  ];
+  const DOWNTIME = {
+    "쌍꺼풀": "쌍꺼풀은 보통 5~7일 뒤 실밥을 풀고, 큰 붓기는 2주 안팎에 빠지는 편이에요.",
+    "코": "코는 보통 1주일 뒤 부목을 떼고, 자연스러워지기까지 몇 달이 걸리는 편이에요.",
+    "리프팅": "리프팅은 시술 종류에 따라 당일 일상생활이 가능한 경우가 많아요.",
+    "보톡스": "보톡스는 시술 직후 일상생활이 가능하고, 효과는 며칠에 걸쳐 나타나는 편이에요.",
+    "필러": "필러는 당일 일상생활이 가능한 편이고, 며칠간 살짝 붓거나 멍이 들 수 있어요.",
+    "지방흡입": "지방흡입은 압박복을 몇 주 입는 경우가 많고, 회복 기간은 부위와 양에 따라 달라요.",
+  };
+  const NOTE = "개인마다 다르니 정확한 건 진료 상담에서 확인해 주세요.";
+  const INTENTS = [
+    { key: "urgent", kind: "urgent", label: "긴급", re: /피가 (안 ?멈|계속|많이)|출혈|고열|열이 (나|많)|숨(이|쉬기)|호흡|의식|심하게 (아파|부어)|응급/,
+      say: () => "지금 바로 병원 대표 전화로 연락해 주세요. 진료 시간이 아니거나 숨쉬기 힘들 만큼 급하면 119에 먼저 전화해 주세요.\n상담실장에게 ‘긴급’으로 바로 알렸어요." },
+    { key: "medical", kind: "hand", label: "의료 질문", re: /부작용|염증|통증|아파|아픈|괜찮(을까|은가|나)|가능(할까|한가|해요\?|한지)|될까요|제 (얼굴|눈|코|경우)|사진 (보내|봐)|재수술|흉터|비대칭|약 먹|임신|수유/,
+      say: () => "이 질문은 의료진이 직접 봐야 정확히 답할 수 있어서 제가 답하지 않을게요.\n상담실장에게 넘겼고, 진료 시간에 연락드려요. 연락 받기 편한 시간을 남겨 주시면 더 빨라요." },
+    { key: "discount", kind: "hand", label: "이벤트·할인", re: /할인|이벤트|싸게|프로모션|특가|후기/,
+      say: () => "이벤트나 후기는 자동 답변으로 안내하지 않아요. 병원이 공식으로 공지한 내용만 상담실장이 안내해 드릴게요. 상담실장에게 넘겼어요." },
+    { key: "downtime", kind: "auto", label: "회복 기간", re: /회복|붓기|부기|다운타임|출근|실밥|언제부터|멍|일상/,
+      say: (p) => p ? `${DOWNTIME[p]}\n${NOTE}` : `어떤 시술이 궁금하세요? 쌍꺼풀, 코, 리프팅, 보톡스, 필러, 지방흡입 중에 골라 주세요.\n${NOTE}` },
+    { key: "price", kind: "auto", label: "비용", re: /비용|가격|얼마|견적|금액|돈/,
+      say: (p) => `${p ? `${p} ` : ""}비용은 병원 홈페이지의 ‘비급여 진료비 안내’에 항목별로 올라가 있어요. 실제 비용은 상태와 방법에 따라 달라서, 상담 뒤에 정확히 알려 드려요.\n상담 예약을 원하시면 ‘예약’이라고 보내 주세요.` },
+    { key: "booking", kind: "auto", label: "예약", re: /예약|상담 ?받|방문|내원|시간 ?(돼|되|있)|토요일|주말|내일/,
+      say: () => "상담 예약 도와드릴게요. 평일 10:00–19:00, 토요일 10:00–15:00에 상담할 수 있어요.\n성함과 편한 요일·시간을 남겨 주시면 상담실장이 확인 전화를 드려요." },
+    { key: "pay", kind: "auto", label: "결제", re: /카드|할부|현금|결제|분할/,
+      say: () => "카드, 현금, 계좌이체 모두 가능해요. 할부는 카드사 기준에 따라요. 자세한 건 상담 때 안내해 드려요." },
+    { key: "place", kind: "auto", label: "위치·주차", re: /위치|어디|주차|역|오시는|주소|찾아/,
+      say: () => "데모역 3번 출구에서 걸어서 3분, 데모빌딩 5층이에요. 건물 지하 주차장을 쓰실 수 있고, 상담·진료 시 2시간 무료예요." },
+  ];
+  INTENTS.push({ key: "hello", kind: "auto", label: "인사", re: /^(안녕|하이|hi|hello|문의|저기요)/i,
+    say: () => "안녕하세요! 비용, 회복 기간, 예약, 위치 중에 궁금한 걸 편하게 물어봐 주세요." });
+  const FALLBACK = { key: "etc", kind: "hand", label: "기타", say: () => "이 질문은 상담실장이 직접 답해 드리는 게 좋겠어요. 넘겨 두었고 진료 시간에 연락드려요." };
+
+  function classify(text) {
+    const proc = (PROCS.find(([, re]) => re.test(text)) || [""])[0];
+    const it = INTENTS.find((i) => i.re.test(text)) || (proc ? INTENTS.find((i) => i.key === "price" && /얼마|비용|가격/.test(text)) : null) || (proc ? { ...FALLBACK, label: "시술 문의" } : FALLBACK);
+    return { it, proc };
+  }
+
+  const chat = document.getElementById("chat"), rows = document.getElementById("rows"), counts = document.getElementById("counts");
+  const KIND = { auto: ["자동 답변", "auto"], hand: ["실장 확인", "hand"], urgent: ["긴급", "urgent"] };
+  // 처음 화면이 비어 보이지 않게 넣어 둔 예시 접수 (표시: 예시)
+  const ledger = [
+    { t: "어제 23:41", q: "코 수술하면 회사 언제부터 나갈 수 있어요?", label: "회복 기간", proc: "코", kind: "auto", ex: true },
+    { t: "어제 23:58", q: "쌍수 했는데 한쪽만 계속 부어요 괜찮을까요", label: "의료 질문", proc: "쌍꺼풀", kind: "hand", ex: true },
+    { t: "오늘 07:12", q: "토요일 오전에 상담 예약 되나요?", label: "예약", proc: "", kind: "auto", ex: true },
+  ];
+  function now() { const d = new Date(); return `오늘 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; }
+  function renderLedger(fresh) {
+    rows.innerHTML = "";
+    [...ledger].reverse().forEach((r, i) => {
+      const tr = document.createElement("tr");
+      if (fresh && i === 0) tr.className = "new";
+      const [kl, kc] = KIND[r.kind];
+      tr.innerHTML = `<td class="time"></td><td class="q"></td><td></td><td></td><td><span class="pill ${kc}">${kl}</span></td>`;
+      tr.children[0].textContent = r.t;
+      tr.children[1].textContent = r.q;
+      if (r.ex) { const e = document.createElement("span"); e.className = "ex"; e.textContent = "예시"; tr.children[1].append(e); }
+      tr.children[2].textContent = r.label;
+      tr.children[3].textContent = r.proc || "—";
+      rows.append(tr);
+      if (fresh && i === 0) setTimeout(() => tr.classList.remove("new"), 50);
+    });
+    const n = (k) => ledger.filter((r) => r.kind === k).length;
+    counts.innerHTML = `<span class="count">전체 <b>${ledger.length}</b></span><span class="count">자동 답변 <b>${n("auto")}</b></span><span class="count">실장 확인 <b>${n("hand")}</b></span><span class="count">긴급 <b>${n("urgent")}</b></span>`;
+  }
+  function bubble(text, who, cls = "", note = "") {
+    const m = document.createElement("div");
+    m.className = `msg ${who} ${cls}`;
+    m.textContent = text;
+    if (note) { const s = document.createElement("small"); s.textContent = note; m.append(s); }
+    chat.append(m);
+    chat.scrollTop = chat.scrollHeight;
+  }
+  let lastProc = "";
+  function ask(text) {
+    text = String(text).trim();
+    if (!text) return;
+    bubble(text, "guest");
+    const { it, proc } = classify(text);
+    const p = proc || (it.key === "downtime" || it.key === "price" ? lastProc : "");
+    if (proc) lastProc = proc;
+    const cls = it.kind === "urgent" ? "urgent" : it.kind === "hand" ? "handoff" : "";
+    setTimeout(() => {
+      bubble(it.say(p), "bot", cls, it.kind === "auto" ? "병원 승인 안내문" : it.kind === "urgent" ? "긴급 · 실장에게 바로 알림" : "실장에게 넘김");
+      ledger.push({ t: now(), q: text, label: it.label, proc: p, kind: it.kind });
+      renderLedger(true);
+    }, 380);
+  }
+
+  const SAMPLES = ["쌍꺼풀 붓기 얼마나 가요?", "코 성형 비용 얼마예요?", "토요일에 상담 예약 돼요?", "필러 맞고 멍들었는데 괜찮을까요?", "이벤트 할인 있어요?", "주차 돼요?", "수술 부위에서 피가 안 멈춰요"];
+  const chips = document.getElementById("chips");
+  SAMPLES.forEach((s) => { const b = document.createElement("button"); b.type = "button"; b.textContent = s; b.onclick = () => ask(s); chips.append(b); });
+  document.getElementById("sendForm").addEventListener("submit", (e) => { e.preventDefault(); const q = document.getElementById("q"); ask(q.value); q.value = ""; });
+
+  bubble("안녕하세요, 데모성형외과예요. 비용·회복 기간·예약·위치는 바로 안내해 드리고, 진료가 필요한 질문은 상담실장에게 전해 드려요.", "bot");
+  renderLedger(false);
+</script>
