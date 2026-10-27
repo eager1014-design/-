@@ -65,8 +65,9 @@ _CATALOG = [
                   ("돈과 커리어 실천법", "용신을 쓰는 일 습관, 재물 관리 습관. 이번 달/올해 체크리스트", 1300)],
      "data": ["months"]},
     # 펫락처럼 '정보'가 아니라 '설명서'를 판다 (2026-10-27 사장님: 제안 ①②). 가전제품 설명서 말투로, 예민함을 놀리지 않고 자랑하고 싶게.
-    # 가격은 제안가 — 사장님 확정 전 (PRICE_MANUAL·PRICE_MANUAL_GIFT 로 바꿀 수 있음). 첫 1회 무료 대상 아님(사장님 결정은 '가벼운 6종'만)
-    {"key": "manual", "label": "예민한 나 사용설명서", "price": 4900, "tier": "가볍게", "pages": 6, "partner": None, "no_free": True,
+    # 지금은 무료 (2026-10-27 사장님: "사람들이 무겁게 생각해서 안 오지 않게, 재미를 주자") — always_free: 첫 1회 무료와 별개, 이메일당 상품마다 1번.
+    # 유료로 바꾸려면 price 를 넣고 always_free 를 지우면 된다 (제안가였던 값: 4,900 / 5,900)
+    {"key": "manual", "label": "예민한 나 사용설명서", "price": 0, "tier": "가볍게", "pages": 6, "partner": None, "always_free": True,
      "desc": "가전제품 설명서처럼 정리한 나: 잘 돌아가는 환경, 과부하 경고, 충전법, 같이 사는 사람을 위한 사용법까지",
      "chapters": [("제품 사양", "가전제품 설명서 말투(제품명·주요 기능·소비 전력)로 이 사람을 소개. 제품명은 일간 상징을 살린 별명(예: '조용한 샘물 1호'). 주요 기능 = 강점 3가지, 소비 전력 = 에너지를 많이 쓰는 곳. 재치 있게, 그러나 놀리지 말 것", 1100),
                   ("정상 작동 환경", "이 사람이 가장 잘 돌아가는 환경: 공간·소리·사람 수·하루 리듬·일하는 방식. 용신(균형 기운)을 근거로 구체적 장면", 1200),
@@ -76,7 +77,7 @@ _CATALOG = [
                   ("올해 업데이트 안내", "올해·내년 월운 중 과부하 주의 달 3개와 충전이 잘 되는 달 3개를 '몇 년 몇 월, 왜'로", 1100),
                   ("함께 쓰는 사람에게", "가족·연인·동료가 이 사람을 대할 때 알아두면 좋은 사용법 7줄 (캡처해서 보내기 좋게 짧게). 마지막은 '이 제품은 고장 난 게 아니라 섬세하게 만들어졌습니다' 같은 따뜻한 한 줄", 900)],
      "data": ["months"]},
-    {"key": "manual_gift", "label": "내 사람 사용설명서 (선물용)", "price": 5900, "tier": "가볍게", "pages": 6, "partner": "gift", "no_free": True, "gift": True,
+    {"key": "manual_gift", "label": "내 사람 사용설명서 (선물용)", "price": 0, "tier": "가볍게", "pages": 6, "partner": "gift", "always_free": True, "gift": True,
      "desc": "연인·친구·가족의 생일로 만드는 그 사람 설명서. 선물로 건네고, 나와의 호환성까지",
      "chapters": [("제품 사양", "선물 받는 사람을 가전제품 설명서 말투로 소개(제품명·주요 기능·소비 전력). 제품명은 일간 상징을 살린 별명. 놀리지 말고 아껴 주는 시선으로", 1100),
                   ("정상 작동 환경", "그 사람이 가장 편하고 잘 지내는 환경·리듬·대화 방식. 용신 근거", 1100),
@@ -185,6 +186,6 @@ def public():
     """신청서에 보여줄 상품 (묶음 순서 → 가격 낮은 순)."""
     order = lambda kv: (TIER_ORDER.index(kv[1]["tier"]) if kv[1]["tier"] in TIER_ORDER else 9, kv[1]["price"])
     return {k: dict({kk: p[kk] for kk in ("label", "price", "tier", "pages", "partner", "desc")},
-                    subscription=bool(p.get("subscription")), no_free=bool(p.get("no_free") or p.get("subscription")), invite_free=k == INVITE_FREE,
+                    subscription=bool(p.get("subscription")), always_free=bool(p.get("always_free")), no_free=bool(p.get("no_free") or p.get("subscription")), invite_free=k == INVITE_FREE,
                     toc=toc(p), friend_discount=friend_discount(k))
             for k, p in sorted(PRODUCTS.items(), key=order) if not p.get("hidden")}

@@ -1,7 +1,7 @@
 /* 운결 — 공용 입력 도구 (신청서·사장님 화면이 함께 씀) */
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const won = (n) => n.toLocaleString("ko-KR") + "원";
+const won = (n) => (n ? n.toLocaleString("ko-KR") + "원" : "무료");
 
 async function api(path, body) {
   const r = await fetch(path, {

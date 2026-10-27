@@ -866,11 +866,14 @@ class Handler(BaseHTTPRequestHandler):
             return self.error(str(e))
         src = str(b.get("src") or "").strip().lower()[:20]
         product, name, email, birth = form[:4]
+        if orders.PRODUCTS[product].get("always_free") and db.one(
+                "SELECT id FROM orders WHERE email=? AND product=? AND status!='canceled' LIMIT 1", email, product):
+            return self.error("이 설명서는 이미 받았어요 (이메일당 1번). 메일함을 확인해 주세요.")
         is_sub = bool(orders.PRODUCTS[product].get("subscription") or orders.PRODUCTS[product].get("no_free"))  # 무료 안 되는 상품
         is_new = orders.free_eligible(name, email, birth)  # 처음 온 사람인가 (첫 무료·초대 보상 기준)
         # 무료: 첫 1회, 아니면 친구 초대로 쌓아둔 무료가 있으면 그걸 쓴다
         first_ok = orders.FREE_FIRST and not orders.used_free(name, email, birth)
-        free = False if is_sub else ("first" if first_ok else ("ref" if referral.use_credit(email) else False))
+        free = "promo" if orders.PRODUCTS[product].get("always_free") else False if is_sub else ("first" if first_ok else ("ref" if referral.use_credit(email) else False))
         vid = str(b.get("vid") or "")
         if not free and b.get("use_invite") and product == products.INVITE_FREE and invite.status(vid, email)["pdf_ready"]:
             free = "invite"  # 친구가 내 링크로 와서 사주를 봤다 → 기본 리포트 1개 무료 (1인 1회)
@@ -900,7 +903,7 @@ class Handler(BaseHTTPRequestHandler):
                         f"네가 보낸 링크로 친구가 운결에 왔다.\n\n약속대로 무료 풀이 한 번을 쌓아두었다 (지금 {referral.credits(ref_owner)}회).\n"
                         f"다음에 이 이메일로 신청하면 자동으로 무료가 된다.\n{PUBLIC_URL}/?p=love")
         if free:
-            why = {"ref": "친구 초대로 받은 무료", "invite": "친구에게 보내서 받은 무료"}.get(free, "첫 1회 무료")
+            why = {"ref": "친구 초대로 받은 무료", "invite": "친구에게 보내서 받은 무료", "promo": "지금은 무료"}.get(free, "첫 1회 무료")
             mailer.send(o["email"], f"[운결] 무료 풀이 신청이 접수되었습니다 ({o['code']})",
                         f"{o['name']}님, 운결에 사주 풀이를 신청해 주셔서 감사합니다.\n\n"
                         f"신청번호: {o['code']}\n상품: {prod['label']} ({why})\n\n"
@@ -911,7 +914,7 @@ class Handler(BaseHTTPRequestHandler):
                         f"신청번호: {o['code']}\n상품: {prod['label']}\n금액: {o['amount']:,}원\n입금 계좌: {bank}\n"
                         f"입금자명: {o['name']}\n\n입금이 확인되면 풀이를 정성껏 작성해 이 메일 주소로 PDF로 보내드립니다.\n"
                         "보통 입금 확인 후 1~2일 안에 받아보실 수 있어요." + invite_note)
-        price = {"first": "무료(첫 1회)", "ref": "무료(친구 초대)", "invite": "무료(친구에게 보냄)"}.get(free, f"{o['amount']:,}원")
+        price = {"first": "무료(첫 1회)", "ref": "무료(친구 초대)", "invite": "무료(친구에게 보냄)", "promo": "무료(지금은 무료)"}.get(free, f"{o['amount']:,}원")
         if free:
             auto_generate(o)  # 무료 신청은 바로 풀이 쓰기 시작
         for admin_email in orders.ADMIN_EMAILS:
