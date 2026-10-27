@@ -17,7 +17,7 @@ import { spawnSync } from "node:child_process";
 import { ROOT, DATA_DIR, load, save, upsert, searchYoutube, analyze, saveSettings } from "./viral/core.mjs";
 import { fetchPortraits, locateFace, creditLines } from "./commons.mjs";
 import { SOUND_RULES, pickSections } from "./viral/sound_rules.mjs";
-import { PINNED_ASK, withSaju } from "./saju_pin.mjs";
+import { ensureSajuOutro, OUTRO_ASK, PINNED_ASK, withSaju } from "./saju_pin.mjs";
 import { AREA_LIST, pickArea, recentList, TOPIC_AREAS } from "./topic_mix.mjs";
 
 const DAILY_DIR = path.join(DATA_DIR, "daily");
@@ -180,7 +180,7 @@ ${feedback ? `\n[사장님 수정 요청 — 반드시 반영]\n${feedback}\n\n[
 4. 장면 10~14개 — 장면 하나에 1~2문장(3초 안팎마다 화면이 바뀌게, 레퍼런스 평균 2.6초), 짧은 단문·해요체, 내레이션 합계 250~400자 (약 40~55초). 숫자는 내레이션에서 한글("일곱 번"), 화면 글씨에서 숫자.
 5. 모든 cue·at 값은 그 장면 narration 안에 띄어쓰기까지 똑같이 있는 말이어야 함.
 6. ${(load().settings?.look || "title") === "full" ? "frame 칸은 쓰지 말 것 — 화면은 늘 세로 한 화면(위 고정 제목·분할 없음). 제목 역할은 첫 장면 hook 이 함" : "frame.title 은 2줄, 줄마다 14자 이내"}. 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅 (떡상 공식 활용).
-7. 마지막은 outro: 댓글로 답하고 싶은 질문. 사주가 나오는 편이면 channel 에 "내 사주 무료로 보기 → 고정 댓글".
+7. 마지막은 outro: 댓글로 답하고 싶은 질문. ${OUTRO_ASK}
 8. 화면 글씨에서 **강조**는 형광펜, 줄바꿈은 \\n. 한 화면 글씨는 짧게 (그래픽 칸이 가로 16:9 라서 한 줄 12자 이내, 최대 3줄).
 9. 댓글 말풍선: 가운데 장면 2~3곳에 "comments": [{"text": "시청자가 달 법한 공감·질문 한마디(16자 이내)", "at": "그 장면 내레이션 속 단어", "emoji": "😳"}] — 한 장면에 1~2개, 영상 전체 3~5개. 화면에 '예시'라고 자동 표시되니 실제 후기처럼 꾸미지 말 것 (이름·숫자·효과 주장 금지).
 10. compare 의 항목(items)은 2개씩, 각 10자 이내. checklist 는 3개, 각 14자 이내.
@@ -252,6 +252,7 @@ async function script(st, feedback) {
         ? { musicSections: pickMusicSections(st, res.music_plan, res.episode.scenes || []) }
         : { music: pickMusic(st, res.music_mood || "calm"), musicStart: res.episode.scenes?.[1]?.id }),
     };
+    ensureSajuOutro(ep); // 모든 영상 마지막에 사주 안내 한 문장 (사장님 2026-10-27)
     if (look === "full") delete ep.frame;
     else ep.frame = { ...(ep.frame || {}), brand: "예민한자립가" };
     const credits = await fillPhotos(st, ep, dir);

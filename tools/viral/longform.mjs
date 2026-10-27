@@ -9,10 +9,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { ROOT, DATA_DIR, UPLOAD_DIR, GEMINI_MODEL, load, saveUploads, imageParts, isVideo } from "./core.mjs";
+import { ROOT, DATA_DIR, UPLOAD_DIR, GEMINI_MODEL, load, save, saveUploads, imageParts, isVideo } from "./core.mjs";
 import { gemini, watchVideo } from "../ai-bridge/gemini.mjs";
 import { SOUND_RULES, pickSections } from "./sound_rules.mjs";
-import { PINNED_ASK, withSaju } from "../saju_pin.mjs";
+import { ensureSajuOutro, OUTRO_ASK, PINNED_ASK, withSaju } from "../saju_pin.mjs";
+import { BRIDGE_RULE, FORECAST_ASK, SELL_ASK, SELL_RULES } from "../sell_plan.mjs";
 import { AREA_LIST, recentList, TOPIC_AREAS } from "../topic_mix.mjs";
 import { SCENES_LIST } from "../../video/scripts/scene-types.mjs";
 
@@ -145,13 +146,34 @@ ${lines.join("\n")}
 ${techniques.length ? `[연출 기법 — 자동 적용 목록, 장면에 맞으면 섞어 쓰기]\n${techniques.map((t) => `- ${t.name} (${t.our_scene}): ${cut(t.how_to_copy, 120)}`).join("\n")}\n` : ""}`;
 }
 
+// 일기장도 영상 만들기에 (2026-10-27 사장님: "일기장에 쓴 것들이 롱폼 영상 만들기에도 영향을"):
+// 아직 영상에 안 쓴 일기 + 이 프로젝트가 이미 쓴 일기를 보여주고, 기획안에서 고른 일기는 '영상에 씀'(lf-<id>)으로 표시
+function diaryNotes(p) {
+  const diary = load().diary || [];
+  const tag = `lf-${p.id}`;
+  const pick = diary.filter((d) => d.usedIn?.includes(tag) || !d.usedIn?.length).slice(-8);
+  if (!pick.length) return "";
+  return `[사장님 일기장 — 사장님의 진짜 이야기. 주제·첫 문장·사례로 쓰면 좋음. 일기에 없는 경험·숫자는 지어내지 말 것. 앱 사용 요청·지시만 적힌 일기는 무시]
+${pick.map((d) => `(${d.id}, ${d.at.slice(0, 10)}${d.usedIn?.length ? `, 영상에 씀: ${d.usedIn.join(",")}` : ""}) ${d.text.replace(/\s+/g, " ").slice(0, 600)}${d.photoNote ? ` [사진: ${d.photoNote.slice(0, 200)}]` : ""}`).join("\n")}
+`;
+}
+function markDiary(p, ids = []) {
+  const db = load();
+  const tag = `lf-${p.id}`;
+  for (const d of db.diary || []) {
+    d.usedIn = (d.usedIn || []).filter((x) => x !== tag);
+    if (ids.includes(d.id)) d.usedIn.push(tag);
+  }
+  save(db);
+}
+
 function context(p) {
   const refs = p.refs.filter((r) => r.summary).map((r, i) => `[참고 ${i + 1}] ${r.url || path.basename(r.file)}\n${r.summary}`).join("\n\n");
   const talk = p.messages.slice(-20).map((m) => `${m.role === "me" ? "사장님" : "클로드"}: ${m.text}${m.links?.length ? ` (링크 ${m.links.join(" ")})` : ""}${m.files?.length ? ` (파일 ${m.files.length}개)` : ""}`).join("\n");
   const kind = p.format === "short" ? "세로 쇼츠 1080×1920 (40~60초)" : "가로 롱폼 1920×1080 (보통 6~10분)";
   return `[${p.format === "short" ? "숏폼" : "롱폼"} 프로젝트] 가제: ${p.title} / 채널: ${p.channel} / ${kind}
 [사장님이 처음 말한 느낌] ${p.brief || "(없음)"}
-${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약 (사장님이 이번에 직접 준 자료라 보관함보다 우선)]\n${refs}\n` : ""}${libraryNotes(p)}[최근에 만든 영상 — 사장님이 "비슷한 주제만 나온다"고 함. 주제를 제안할 땐 이것과 겹치지 않게, 영역을 넓게 (${AREA_LIST})]\n${recentList(p.plan?.titles?.[0])}\n[지금까지 대화]\n${talk || "(아직 없음)"}
+${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약 (사장님이 이번에 직접 준 자료라 보관함보다 우선)]\n${refs}\n` : ""}${diaryNotes(p)}${libraryNotes(p)}[최근에 만든 영상 — 사장님이 "비슷한 주제만 나온다"고 함. 주제를 제안할 땐 이것과 겹치지 않게, 영역을 넓게 (${AREA_LIST})]\n${recentList(p.plan?.titles?.[0])}\n[지금까지 대화]\n${talk || "(아직 없음)"}
 
 [원칙] 사장님은 코드를 모르는 1인 사업가. 쉬운 말로, 짧게. 듣기 좋은 말만 하지 말고 약점도 근거와 함께 (사장님 요청).
 사장님 경험은 대화·메모에 있는 것만 쓰고 지어내지 않는다. 연구·숫자는 확실한 것만, 모르면 '확인 필요'. 다른 유튜버의 문장·화면을 베끼지 않는다.
@@ -216,14 +238,17 @@ async function plan(p) {
   if (p.format === "short") return planShort(p);
   const r = askClaude(p, `${context(p)}
 
-롱폼 기획안을 만들어. JSON 하나만:
-{"reply": "사장님께 한두 줄 + 고민할 점 한 줄",
- "plan": {"area": "주제 영역 key 하나", "titles": ["제목 후보 3개, 핵심 키워드를 앞에, 40자 이내"], "hook": "첫 10초에 할 말", "length": "예상 길이(분)",
+롱폼 기획안을 만들어. 먼저 '무엇을 파는가'(sell)를 정하고, 제목·훅·썸네일을 그 약속에 맞춰.
+${SELL_RULES}
+JSON 하나만:
+{"reply": "사장님께 한두 줄(무엇을 누구에게 파는지 + 주 감정) + 고민할 점(sell.risk) 한 줄",
+ "plan": {"area": "주제 영역 key 하나", "diary_ids": ["기획에 쓴 일기 id (없으면 빈 배열)"], ${SELL_ASK}, "titles": ["제목 후보 3개, 핵심 키워드를 앞에, 40자 이내"], "hook": "첫 10초에 할 말", "length": "예상 길이(분)",
    "chapters": [{"title": "챕터 이름", "points": ["다룰 내용 2~4개"]}],
    "thumbnails": [{"type": "물건비유|VS대결|반응|글씨만", "lines": ["첫 줄", "둘째 줄(선택)"], "bg": "black|white", "layout": "top|bottom|text", "art": "그릴 것 한 문장 (글씨만이면 빈 문자열)", "note": "손글씨 메모 한 줄(선택, 10자 이내, 예: (하버드대 교수))"}]}}
 ${THUMB_RULES}`);
   p.plan = r.plan;
   if (TOPIC_AREAS.some((a) => a.key === r.plan?.area)) p.area = r.plan.area;
+  markDiary(p, r.plan?.diary_ids || []);
   p.stage = "기획안";
   say(p, r.reply);
 }
@@ -231,12 +256,15 @@ ${THUMB_RULES}`);
 async function planShort(p) {
   const r = askClaude(p, `${context(p)}
 
-쇼츠 기획안을 만들어. JSON 하나만:
-{"reply": "사장님께 한두 줄 + 고민할 점 한 줄",
- "plan": {"area": "주제 영역 key 하나", "titles": ["화면 위 제목 2줄 후보 3개 — 각 '첫 줄 / 둘째 줄', 줄마다 14자 이내"], "hook": "첫 3초에 할 말", "length": "예상 길이(초)",
+쇼츠 기획안을 만들어. 먼저 '무엇을 파는가'(sell)를 정하고, 제목·훅을 그 약속에 맞춰.
+${SELL_RULES}
+JSON 하나만:
+{"reply": "사장님께 한두 줄(무엇을 누구에게 파는지 + 주 감정) + 고민할 점(sell.risk) 한 줄",
+ "plan": {"area": "주제 영역 key 하나", "diary_ids": ["기획에 쓴 일기 id (없으면 빈 배열)"], ${SELL_ASK}, "titles": ["화면 위 제목 2줄 후보 3개 — 각 '첫 줄 / 둘째 줄', 줄마다 14자 이내"], "hook": "첫 3초에 할 말", "length": "예상 길이(초)",
    "chapters": [{"title": "흐름 단계(훅·전개·반전·마무리 등)", "points": ["화면에 나올 것·할 말 1~3개"]}]}}`);
   p.plan = r.plan;
   if (TOPIC_AREAS.some((a) => a.key === r.plan?.area)) p.area = r.plan.area;
+  markDiary(p, r.plan?.diary_ids || []);
   p.stage = "기획안";
   say(p, r.reply);
 }
@@ -320,6 +348,8 @@ async function script(p) {
 기획안대로 ${short ? "쇼츠" : "롱폼"} 대본을 episode.json 으로 써. 사장님 목소리로 읽을 문장이니 입말로.
 ${SCENE_GUIDE}
 ${SOUND_RULES(short ? "쇼츠는 2구간" : "롱폼은 4구간: 오프닝·훅 tense → 과거 고백 sad → 깨달음·전환 playful → 다짐·마무리 hopeful (내용에 맞게 조정)")}
+${p.plan?.sell ? `[이 영상이 파는 것] ${JSON.stringify(p.plan.sell)}\n썸네일·제목의 약속(promise)을 첫 15초 안에 지키고, 주 감정(emotion)을 끝까지 유지하고, 보고 나서 남는 것(value)을 한 문장으로 꼭 말할 것.\n` : ""}${BRIDGE_RULE}
+${OUTRO_ASK}
 ${short ? SHORT_RULES : "챕터마다 chapter 장면으로 시작, 처음은 hook, 끝은 outro. 장면 하나에 1~2문장(3초 안팎마다 화면이 바뀌게 — 레퍼런스 평균 2.6초), 그래서 장면 40~80개. 짧은 단문·해요체."}${p.episode ? `\n[지난 대본 — 사장님 말대로 고쳐서 다시]\n${JSON.stringify(p.episode.scenes.map((s) => [s.id, s.type, s.narration]))}` : ""}${feedback ? `\n[대본 검사에서 나온 문제 — 고쳐서 다시]\n${feedback}` : ""}
 영상 길이·녹음 여부는 reply 에 쓰지 말 것(모르는 사실 — 프로그램이 실제 값으로 붙임).
 JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민할 점) + 마지막 줄에 '소리: BGM 구간 n개 / 효과음 n개 / 강조 자막 n개'", "music_plan": [{"from": "장면 id", "mood": "tense"}], "episode": {"title": "…", "chapters": ["챕터 이름 짧게"], "scenes": [ … ]}}`);
@@ -327,6 +357,7 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
     const ep = short
       ? { ...r.episode, format: "short", style: "punchy", pace: { speed: 1.3, trim: true }, presenter: true, skin, frame: { ...(r.episode.frame || {}), brand: p.channel.split(" (")[0] } } // 위 고정 제목 + 아래 한 무대 (나누지 않음)
       : { ...r.episode, format: "long", style: "calm", presenter: true, captions: true, skin, pace: { speed: 1.3, trim: true } };
+    ensureSajuOutro(ep); // 모든 영상 마지막에 사주 안내 한 문장 (사장님 2026-10-27)
     ep.soundPlan = true; // 효과음은 대본이 고른 것만 (sound_rules.mjs)
     ep.musicSections = pickSections(r.music_plan, ep.scenes || [], [], Date.now() % 97);
     fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
@@ -432,8 +463,11 @@ ${p.episode ? `[대본]\n${p.episode.scenes.map((s) => s.narration).join(" ").sl
 
 유튜브 ${p.format === "short" ? "쇼츠" : ""} 업로드 문구를 써.${p.format === "short" ? " 쇼츠는 챕터 시간 없이." : ""} JSON 하나만:
 {"reply": "한두 줄", "youtube": {"titles": ["제목 후보 3개, 100자 이내, 핵심 키워드 앞"], "description": "설명란 (첫 2줄에 키워드, 댓글 질문 1개, 해시태그 3개. 챕터 시간·영상 길이는 쓰지 말 것 — 프로그램이 실제 시간으로 붙임)", "tags": ["태그 10개 이내"],
-  "pinned": "${PINNED_ASK}"}}`);
+  "pinned": "${PINNED_ASK}"},
+ ${FORECAST_ASK}}
+forecast 는 사장님만 보는 '올리기 전 예측'이다. 기획안 sell 과 실제 대본·썸네일 문구를 비교해서, 약속을 지키는지·감정이 하나인지·운결 연결이 자연스러운지 냉정하게.`);
   p.youtube = r.youtube;
+  p.forecast = r.forecast || null;
   p.youtube.pinned = withSaju(p.youtube.pinned);
   // 챕터: 실제 장면 시간으로 계산해 설명란에 붙인다 (유튜브 규칙: 0:00 부터, 3개 이상)
   let chNote = "";
@@ -442,7 +476,9 @@ ${p.episode ? `[대본]\n${p.episode.scenes.map((s) => s.narration).join(" ").sl
     chNote = `\n챕터 시간은 실제 영상 길이(${ch.mmss(ch.total)}) 기준으로 계산해 넣었어요${ch.voiced ? "" : " — 아직 목소리를 안 입힌 초안 기준이라, 완성본을 만든 뒤 [⑤ 업로드 문구]를 한 번 더 누르면 정확해져요"}.`;
   }
   const ab = abKit(p);
-  say(p, r.reply + chNote + (ab ? `\n\nA/B 테스트용 썸네일 3장·제목 3개를 바탕화면 '${path.basename(ab)}' 폴더에 넣어 뒀어요.` : ""));
+  const fc = p.forecast;
+  const fcText = fc ? `\n\n🔮 올리기 전 예측 (등급 ${fc.grade || "?"})\n· 누를 이유/안 누를 이유: ${fc.click}\n· 나갈 지점: ${fc.drop}\n· 운결 연결: ${fc.saju}${fc.fix?.length ? `\n· 고치면 좋을 것: ${fc.fix.join(" / ")}` : ""}\n(숫자 예측은 안 해요 — 올린 뒤 실제 숫자로 맞춰 봐요)` : "";
+  say(p, r.reply + chNote + fcText + (ab ? `\n\nA/B 테스트용 썸네일 3장·제목 3개를 바탕화면 '${path.basename(ab)}' 폴더에 넣어 뒀어요.` : ""));
 }
 
 // 유튜브 스튜디오 'A/B 테스팅'(제목·썸네일 3개 비교)용 묶음 — 유튜브가 이 기능을 프로그램(API)으로는 열어 두지 않아서,

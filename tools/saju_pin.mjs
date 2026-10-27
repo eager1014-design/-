@@ -12,3 +12,15 @@ export function withSaju(text = "") {
   if (!/채널.{0,12}(프로필|링크)/.test(t)) t = `${t}\n${CHANNEL_LINE}`;
   return t;
 }
+
+// 영상 마지막 말 (2026-10-27 사장님: "기질을 파악해보고 싶으시면 한번 보셔요 — 이런 말을 모든 영상 마지막에 꼭"):
+// 마지막 장면 내레이션에 '고정 댓글' 안내가 없으면 이 문장을 붙인다. 녹음 전 대본 단계에서 붙으므로 목소리에도 들어간다.
+export const SAJU_OUTRO_LINE = "내 기질이 궁금하시면, 사주로 성향 보는 링크를 고정 댓글에 달아 뒀어요. 한번 보세요.";
+export const OUTRO_ASK = `[영상 마지막 말 — 모든 영상에 꼭] 마지막 장면 내레이션 끝에 "기질이 궁금하면 고정 댓글에 사주로 성향 보는 링크를 달아 뒀다, 한번 보시라"는 말을 영상 흐름에 맞게 한 문장으로 (예: "${SAJU_OUTRO_LINE}"). 빠지면 프로그램이 위 예시 문장을 그대로 붙인다.`;
+export function ensureSajuOutro(ep) {
+  const last = ep?.scenes?.at(-1);
+  if (!last) return ep;
+  if (!/고정\s*댓글/.test(last.narration || "")) last.narration = `${String(last.narration || "").trim()} ${SAJU_OUTRO_LINE}`.trim();
+  if (last.type === "outro") last.channel = "내 기질 무료로 보기 → 고정 댓글";
+  return ep;
+}
