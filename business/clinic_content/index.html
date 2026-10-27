@@ -1,0 +1,189 @@
+<title>병원 콘텐츠 기획실</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  /* Layout: 위 = 키워드 하나에서 나온 세 가지 글감(실제 생성물), 아래 = 누구나 붙여 넣는 광고 표현 검사기. 상담 데스크 시연과 같은 병원 톤 */
+  :root {
+    --bg: #F3F5F4;
+    --paper: #FFFFFF;
+    --ink: #17302E;
+    --muted: #5A6B69;
+    --line: #D5DEDC;
+    --accent: #0F6E68;
+    --accent-soft: #E1F0EE;
+    --warn: #A15C07;
+    --warn-soft: #FBEFD9;
+    --alert: #B42323;
+    --alert-soft: #FBE3E1;
+    --display: "Noto Serif KR", "Apple SD Gothic Neo", serif;
+    --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1716; --paper: #152221; --ink: #E3ECEA; --muted: #9AABA8; --line: #263735;
+      --accent: #5FC2B9; --accent-soft: #173A37; --warn: #E8A84E; --warn-soft: #3A2A12; --alert: #F08A80; --alert-soft: #3D1A18; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1716; --paper: #152221; --ink: #E3ECEA; --muted: #9AABA8; --line: #263735;
+    --accent: #5FC2B9; --accent-soft: #173A37; --warn: #E8A84E; --warn-soft: #3A2A12; --alert: #F08A80; --alert-soft: #3D1A18; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.65; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding-block: 36px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 34px; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+  .label { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  header { display: grid; gap: 10px; }
+  h1 { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4.4vw, 38px); line-height: 1.25; }
+  header p, .sec p.lead { margin: 0; color: var(--muted); max-width: 64ch; }
+  .demo-tag { justify-self: start; font-size: 13px; color: var(--warn); background: var(--warn-soft); border-radius: 6px; padding: 4px 10px; }
+  .sec { display: grid; gap: 14px; }
+  h2 { font-family: var(--display); font-size: clamp(21px, 3vw, 26px); }
+
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button { font: inherit; font-size: 14px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); font-weight: 700; }
+  button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .sheet { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; display: grid; min-width: 0; }
+  .sheet-head { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; }
+  .tabs { display: flex; gap: 2px; }
+  .tabs button { font: inherit; font-size: 14px; color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; padding: 6px 10px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-color: var(--accent); font-weight: 700; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12.5px; padding: 3px 9px; border-radius: 999px; background: var(--bg); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chip.ok { color: var(--accent); background: var(--accent-soft); }
+  .chip.warn { color: var(--warn); background: var(--warn-soft); }
+  .body { padding: 18px 20px 22px; min-width: 0; }
+  .blog h3 { font-family: var(--display); font-size: 21px; margin-bottom: 10px; }
+  .blog .txt { white-space: pre-wrap; max-width: 68ch; overflow-wrap: anywhere; }
+  .shorts ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: s; }
+  .shorts li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(0, 150px); gap: 10px; align-items: start; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .shorts li::before { content: counter(s); font-family: var(--mono); color: var(--accent); }
+  .shorts .scr { font-weight: 700; font-size: 13.5px; background: var(--bg); border-radius: 6px; padding: 3px 8px; justify-self: start; }
+  @media (max-width: 560px) { .shorts li { grid-template-columns: 26px minmax(0, 1fr); } .shorts .scr { grid-column: 2; } }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .card { aspect-ratio: 1; max-width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; align-content: space-between; background: var(--bg); min-width: 0; overflow: hidden; }
+  .card .n { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .card b { font-family: var(--display); font-size: 17px; line-height: 1.35; }
+  .card p { margin: 0; font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+
+  .checker { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+  @media (max-width: 800px) { .checker { grid-template-columns: 1fr; } }
+  textarea { width: 100%; min-height: 260px; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px; resize: vertical; box-sizing: border-box; }
+  .marked { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 120px; }
+  mark { border-radius: 3px; padding: 0 2px; color: inherit; }
+  mark.high { background: var(--alert-soft); box-shadow: inset 0 -2px 0 var(--alert); }
+  mark.mid { background: var(--warn-soft); box-shadow: inset 0 -2px 0 var(--warn); }
+  .found { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .found li { display: grid; gap: 2px; border-left: 3px solid var(--line); padding-left: 10px; }
+  .found li.high { border-color: var(--alert); }
+  .found li.mid { border-color: var(--warn); }
+  .found b { font-size: 14.5px; }
+  .found span { color: var(--muted); font-size: 13.5px; }
+  .summary { font-weight: 700; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .actions button { font: inherit; font-size: 13.5px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="label">시연 · 병원 콘텐츠 기획</span>
+    <h1>시술 키워드 하나로<br>블로그·쇼츠·카드뉴스까지.</h1>
+    <p>키워드를 넣으면 블로그 초안, 쇼츠 대본, 카드뉴스 5장이 한 번에 나옵니다. 다 쓰고 나면 의료광고에서 자주 걸리는 표현을 검사하고, 걸리면 그 부분만 다시 써서 넘깁니다. 아래는 실제로 이 도구가 만든 결과입니다.</p>
+    <span class="demo-tag">가상 병원 ‘데모성형외과’ 기준 생성물 · 실제 의료 정보가 아니며, 올리기 전 병원과 심의 확인이 필요합니다</span>
+  </header>
+
+  <section class="sec" aria-labelledby="h-made">
+    <h2 id="h-made">키워드 하나에서 나온 세 가지 글감</h2>
+    <div class="seg" id="kw" role="group" aria-label="키워드"></div>
+    <div class="sheet">
+      <div class="sheet-head">
+        <div class="tabs" role="tablist" id="tabs">
+          <button role="tab" data-t="blog" aria-selected="true">블로그</button>
+          <button role="tab" data-t="shorts" aria-selected="false">쇼츠 대본</button>
+          <button role="tab" data-t="cards" aria-selected="false">카드뉴스</button>
+        </div>
+        <div class="meta" id="meta"></div>
+      </div>
+      <div class="body" id="out"></div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-check">
+    <h2 id="h-check">광고 표현 검사기</h2>
+    <p class="lead">올리려는 문구를 붙여 넣어 보세요. 의료법 제56조에서 자주 문제가 되는 표현을 빨강(위험)·주황(주의)으로 표시하고 대신 쓸 말을 알려 드립니다. 법률 판단은 아니고 ‘다시 보세요’ 표시입니다.</p>
+    <div class="actions"><button type="button" id="exBad">위험한 예시 넣기</button><button type="button" id="exMade">위 블로그 글 넣기</button></div>
+    <div class="checker">
+      <label class="label" for="src" hidden>검사할 문구</label>
+      <textarea id="src" aria-label="검사할 문구"></textarea>
+      <div class="marked" id="marked" aria-live="polite"></div>
+    </div>
+    <p class="summary" id="sum"></p>
+    <ul class="found" id="found"></ul>
+  </section>
+
+  <footer>만든 사람: 천성준 · 워크플로우 디자이너 · 개발자. 실제 병원에 맞출 때는 그 병원의 시술 목록·말투·금지어를 넣고, 결과는 담당자가 확인한 뒤 올립니다. 최종 광고 판단은 의료광고 심의위원회 몫입니다.</footer>
+</div>
+
+<script>
+  const RULES = [{"id":"superlative","level":"high","type":"최상급·유일 표현","re":"최고|최초|유일|국내\\s?최다|넘버\\s?원|No\\.?\\s?1|1위|독보적|최상의|최강","why":"객관적 근거 없이 다른 병원보다 낫다고 오인하게 하는 표현은 금지 대상이에요.","fix":"구체적인 사실로 바꾸세요 (예: '○○ 전문의 진료')."},{"id":"guarantee","level":"high","type":"효과 보장","re":"100\\s?%|완벽(한|하게)?|확실(한|하게|히)|보장|무조건|반드시\\s?(효과|좋아)|영구(적|히)?|평생\\s?유지|실패\\s?없","why":"치료 효과를 보장하거나 단정하는 표현은 소비자를 오인하게 할 수 있어요.","fix":"'개인에 따라 결과가 다를 수 있습니다'처럼 단정하지 마세요."},{"id":"no_side_effect","level":"high","type":"부작용·통증 없음","re":"부작용\\s?(이|은)?\\s?(없|제로|0)|무통|통증\\s?(이|은)?\\s?(없|제로)|안\\s?아(파|픈)|흉터\\s?(가|는)?\\s?(없|안\\s?남)|회복\\s?기간\\s?(이|은)?\\s?없|붓기\\s?(가|는)?\\s?없","why":"부작용 같은 중요한 정보를 빼거나 없다고 하는 표현은 금지 대상이에요.","fix":"가능한 부작용과 개인차를 함께 적으세요."},{"id":"review","level":"high","type":"환자 후기·체험담","re":"후기|체험(담|기)|실제\\s?환자|고객\\s?님?\\s?(이|들)?\\s?(말|만족)|만족도\\s?\\d|리얼\\s?스토리|생생한","why":"치료 경험담처럼 치료 효과를 오인하게 하는 광고는 금지 대상이에요.","fix":"후기 대신 시술 과정·주의사항 같은 정보로 채우세요."},{"id":"before_after","level":"high","type":"전후 비교","re":"전\\s?후\\s?(사진|비교)|비포\\s?애프터|before\\s?&?\\s?after|달라진\\s?모습","why":"치료 전후 비교 사진·표현은 효과를 오인하게 할 수 있어 심의에서 엄격하게 봐요.","fix":"전후 비교는 빼고 과정 설명으로 바꾸세요."},{"id":"discount","level":"high","type":"할인·이벤트 유인","re":"할인|이벤트|특가|파격|선착순|무료\\s?(시술|수술|체험)|공짜|1\\+1|페이백|가격\\s?파괴|최저가","why":"비급여 진료비를 할인·면제해 환자를 끌어들이는 광고는 문제가 될 수 있어요.","fix":"가격 할인 대신 '비급여 진료비 안내' 페이지로 연결하세요."},{"id":"compare","level":"mid","type":"다른 병원과 비교·비방","re":"다른\\s?(병원|곳)(보다|과\\s?달리|은)|타\\s?병원|어디보다|싸구려|공장형","why":"다른 의료기관과 비교하거나 깎아내리는 표현은 금지 대상이에요.","fix":"우리 병원의 방식만 설명하세요."},{"id":"celebrity","level":"mid","type":"유명인·추천","re":"연예인|셀럽|인플루언서|유튜버\\s?(가|도)\\s?(받|선택|추천)|추천\\s?(받은|하는)\\s?병원","why":"유명인을 내세워 추천하는 듯한 표현은 오인을 부를 수 있어요.","fix":"추천·인기 표현을 빼세요."},{"id":"instant","level":"mid","type":"즉시·단기 효과 과장","re":"즉시\\s?효과|바로\\s?(효과|변화)|하루\\s?만에|단\\s?\\d+\\s?분\\s?만에|당일\\s?완성|자연\\s?그대로","why":"효과가 나타나는 시점을 과장하면 객관적 근거 없는 내용이 될 수 있어요.","fix":"'회복과 효과에는 개인차가 있습니다'로 바꾸세요."},{"id":"safety","level":"mid","type":"안전 단정","re":"100\\s?%\\s?안전|절대\\s?안전|위험\\s?(이|은)?\\s?없|안전(한|하게)\\s?(시술|수술)\\s?입니다","why":"모든 시술에는 위험이 있어 '안전하다'고 단정하면 중요 정보 누락이 될 수 있어요.","fix":"주의사항과 위험을 함께 안내하세요."}];
+  const SAMPLES = [{"keyword":"보톡스 처음 맞기 전 궁금한 것","seconds":70,"revised":true,"hits":[],"blog":{"title":"보톡스 처음 맞기 전 궁금한 것: 시술 과정, 부작용, 주의사항 정리","body":"보톡스를 처음 알아보면 궁금한 게 많아요. 아픈지, 언제부터 달라지는지, 어떤 부작용이 생길 수 있는지. 데모성형외과 상담실에서 자주 받는 질문을 정리했어요.\n\n## 보톡스는 어떤 시술인가요\n보톡스는 보툴리눔 톡신을 근육에 소량 주사해 근육의 움직임을 줄이는 시술이에요. 주로 표정 주름이나 턱 근육 등에 쓰이지만, 어떤 방법이 맞는지는 사람마다 달라요. 얼굴 상태와 원하는 방향을 의료진과 충분히 상담한 뒤 결정하는 것이 좋아요.\n\n## 시술 과정은 이렇게 진행돼요\n먼저 상담에서 건강 상태, 복용 중인 약, 이전 시술 경험을 확인해요. 그다음 시술 부위를 표시하고, 필요하면 마취 크림이나 냉찜질을 해요. 가는 바늘로 여러 지점에 주사하며, 시술 시간은 보통 10~20분 안팎이에요. 따끔한 느낌이 있을 수 있고, 느끼는 정도는 사람마다 달라요.\n\n## 가능한 부작용과 주의사항\n주사 부위에 멍, 붓기, 붉은 기가 생길 수 있어요. 보통 며칠 안에 가라앉지만 개인차가 있어요. 두통이나 뻐근함이 생기기도 하고, 드물게 눈꺼풀 처짐, 표정 비대칭, 씹을 때 힘이 빠지는 느낌 같은 증상이 나타날 수 있어요. 임신·수유 중이거나 신경근육 질환이 있는 경우, 복용 중인 약이 있는 경우에는 시술 전에 꼭 알려 주세요. 시술 당일에는 주사 부위를 세게 문지르거나 마사지하지 말고, 사우나·과음·격한 운동은 피하는 것이 권장돼요. 평소와 다른 증상이 있으면 바로 병원에 연락하세요.\n\n## 효과는 언제, 얼마나 가나요\n변화는 보통 며칠에서 2주 안팎에 걸쳐 서서히 나타나요. 유지 기간도 보통 몇 개월 안팎이지만 부위, 용량, 근육 상태, 생활 습관에 따라 달라요. 기대와 다르게 느껴지면 혼자 판단해 추가 시술을 받기보다 시술한 의료진과 먼저 상의하세요.\n\n처음이라 걱정되는 점이 있다면 상담에서 편하게 물어보세요. 비용은 병원 홈페이지의 비급여 진료비 안내에서 확인할 수 있어요. 개인에 따라 결과와 회복 기간이 다를 수 있으니 진료 상담에서 확인하세요."},"shorts":{"title":"보톡스 처음이라면 꼭 알아 둘 것","scenes":[{"say":"보톡스 처음이라 걱정되시나요? 맞기 전에 알아 둘 것만 정리했어요.","screen":"보톡스 처음이라면"},{"say":"보톡스는 근육에 약을 소량 주사해 움직임을 줄이는 시술이에요.","screen":"어떤 시술일까?"},{"say":"시술 시간은 보통 10~20분 안팎이에요. 따끔한 느낌은 사람마다 달라요.","screen":"보통 10~20분 안팎"},{"say":"멍이나 붓기가 생길 수 있고, 드물게 눈꺼풀 처짐이나 비대칭이 나타날 수 있어요.","screen":"부작용도 있어요"},{"say":"변화는 보통 며칠에서 2주 안팎에 서서히 나타나고, 개인차가 있어요.","screen":"효과는 서서히"},{"say":"시술 당일에는 문지르기, 사우나, 과음, 격한 운동을 피하세요.","screen":"당일 주의사항"},{"say":"임신·수유 중이거나 복용 중인 약이 있다면 꼭 미리 알려 주세요.","screen":"미리 알려 주세요"},{"say":"궁금한 점은 데모성형외과 상담에서 확인하세요. 결과와 회복에는 개인차가 있어요.","screen":"상담 예약하기"}]},"cards":[{"title":"보톡스, 처음이라면?","text":"어떻게 진행되는지, 어떤 부작용이 있을 수 있는지\n처음 맞기 전 궁금한 점을 정리했어요."},{"title":"시술은 이렇게 진행돼요","text":"상담 → 부위 표시 → 주사 순서예요.\n시간은 보통 10~20분 안팎이고\n느끼는 통증은 사람마다 달라요."},{"title":"가능한 부작용","text":"멍·붓기·두통이 생길 수 있어요.\n드물게 눈꺼풀 처짐, 비대칭이 나타날 수 있어요.\n이상하면 바로 병원에 연락하세요."},{"title":"시술 당일 주의사항","text":"부위를 문지르거나 마사지하지 마세요.\n사우나·과음·격한 운동은 피하는 게 좋아요.\n효과가 나타나는 시점은 개인차가 있어요."},{"title":"궁금하면 상담부터","text":"건강 상태와 복용 약을 의료진과 확인해요.\n비용은 비급여 진료비 안내에서 볼 수 있어요.\n결과와 회복 기간은 개인에 따라 달라요."}]},{"keyword":"쌍꺼풀 수술 후 붓기 관리","seconds":50,"revised":false,"hits":[],"blog":{"title":"쌍꺼풀 수술 후 붓기 관리, 회복 기간에 알아두면 좋은 것들","body":"쌍꺼풀 수술을 앞두고 많이 묻는 질문 중 하나가 '붓기는 언제, 어떻게 빠지나요?'예요. 붓기는 수술 후 몸이 회복하면서 생기는 자연스러운 반응이에요. 다만 정도와 기간은 수술 방법, 눈꺼풀 상태, 체질에 따라 사람마다 달라요. 회복 기간에 참고할 수 있는 일반적인 관리법을 정리했어요.\n\n## 수술 직후 며칠: 냉찜질과 머리 높이기\n보통 수술 후 처음 2~3일 안팎에 붓기가 가장 두드러지는 경우가 많아요. 이 시기에는 의료진이 안내한 방법대로 냉찜질을 해요. 얼음을 피부에 직접 대지 말고, 깨끗한 천으로 감싸 짧게 나눠 대 주세요. 잘 때는 베개를 조금 높여 머리를 심장보다 높게 두면 도움이 될 수 있어요.\n\n## 생활 습관: 피하면 좋은 것들\n짠 음식, 음주, 흡연은 붓기와 회복에 좋지 않은 영향을 줄 수 있어요. 회복 초기에는 사우나·찜질방, 땀이 많이 나는 운동, 엎드려 자는 자세도 피하는 게 좋아요. 눈을 비비거나 세게 누르지 마세요. 렌즈와 눈 화장을 다시 시작하는 시기는 진료 때 확인하세요.\n\n## 이런 증상은 바로 병원에 알려 주세요\n붓기는 시간이 지나며 서서히 가라앉는 게 일반적이에요. 그런데 한쪽만 갑자기 심하게 붓거나, 통증이 점점 심해지거나, 열이 나고 고름 같은 분비물이 보이면 출혈이나 염증의 신호일 수 있어요. 회복 과정에서 멍, 일시적인 좌우 차이, 당기는 느낌, 눈이 덜 감기는 느낌 등이 나타날 수 있어요. 드물게 재수술이 필요한 경우도 있어요. 이상하다고 느끼면 기다리지 말고 병원에 연락하세요.\n\n## 자연스러워지기까지는 시간이 필요해요\n눈에 띄는 큰 붓기가 가라앉은 뒤에도 남은 붓기가 빠지며 라인이 자리 잡기까지는 보통 몇 달 안팎이 걸리기도 해요. 회복 속도는 사람마다 다르니 다른 사람과 비교하기보다는 예정된 경과 진료를 꼭 받는 것이 좋아요.\n\n데모성형외과에서는 수술 전 상담에서 회복 일정과 주의사항을 미리 안내해 드려요. 개인에 따라 결과와 회복 기간이 다를 수 있으니 진료 상담에서 확인하세요."},"shorts":{"title":"쌍꺼풀 수술 후 붓기, 이렇게 관리해요","scenes":[{"say":"쌍꺼풀 수술 후 붓기, 언제까지 갈까요?","screen":"수술 후 붓기 관리"},{"say":"붓기는 회복 과정의 자연스러운 반응이에요. 기간은 사람마다 달라요.","screen":"붓기는 개인차"},{"say":"보통 처음 2~3일 안팎이 가장 많이 붓는 편이에요. 안내받은 대로 냉찜질을 해 주세요.","screen":"초기엔 냉찜질"},{"say":"잘 때는 베개를 높여 머리를 조금 높게 두세요.","screen":"머리는 높게"},{"say":"짠 음식, 술, 담배, 사우나는 회복 초기에 피하는 게 좋아요.","screen":"짠 음식·술 피하기"},{"say":"눈은 비비거나 누르지 마세요. 렌즈와 화장은 언제 시작할지 진료 때 확인하세요.","screen":"눈 비비지 않기"},{"say":"한쪽만 갑자기 심하게 붓거나 통증과 열이 심해지면 바로 병원에 알려 주세요.","screen":"이상하면 바로 연락"},{"say":"회복과 결과에는 개인차가 있어요. 내 회복 일정은 데모성형외과 상담에서 확인하세요.","screen":"상담에서 확인하세요"}]},"cards":[{"title":"쌍꺼풀 붓기 언제 빠질까?","text":"수술 후 붓기는 회복 과정의 자연스러운 반응이에요.\n기간과 정도는 사람마다 달라요."},{"title":"처음 며칠 관리법","text":"보통 처음 2~3일 안팎이 가장 많이 붓는 편이에요.\n안내받은 대로 냉찜질하고, 잘 때는 머리를 높게 두세요."},{"title":"피하면 좋은 습관","text":"짠 음식, 술, 담배, 사우나, 격한 운동은 잠시 쉬어요.\n눈은 비비거나 누르지 마세요."},{"title":"바로 연락할 증상","text":"한쪽만 갑자기 심하게 붓거나, 통증·열·분비물이 생기면\n출혈이나 염증 신호일 수 있어요. 바로 병원에 알려 주세요."},{"title":"내 회복 일정 상담하기","text":"회복 기간과 결과는 개인에 따라 다를 수 있어요.\n데모성형외과 진료 상담에서 내 일정과 주의사항을 확인하세요."}]},{"keyword":"코 성형 상담 전 알아둘 것","seconds":38,"revised":false,"hits":[],"blog":{"title":"코 성형 상담 전 알아둘 것: 질문 목록, 부작용, 회복 과정 정리","body":"## 코 성형 상담, 왜 미리 준비해야 할까요\n코는 얼굴 한가운데에 있어서 작은 변화도 전체 인상에 영향을 줄 수 있어요. 상담 시간에 무엇을 묻고 무엇을 확인할지 미리 정리해 두면, 원하는 것을 의료진에게 더 정확하게 전할 수 있어요. 원하는 모습을 말로 설명하기 어렵다면, 지금 코에서 불편하거나 바꾸고 싶은 점을 메모해 가는 것도 도움이 돼요.\n\n## 상담에서 확인하면 좋은 것들\n- 내 코 모양, 피부 두께, 코 안쪽 구조에 대한 의료진의 설명\n- 어떤 수술 방법을 고려하는지, 그 이유는 무엇인지\n- 보형물이나 자가 조직(연골 등)을 쓴다면 각각의 특징과 주의점\n- 누가 수술하는지, 마취는 어떻게 진행되는지\n- 수술 후 내원 일정과 회복 중 관리 방법\n비염이나 코막힘이 있거나, 예전에 코 수술을 받았거나 다친 적이 있거나, 먹고 있는 약이 있다면 꼭 미리 알려 주세요. 수술 계획을 세우는 데 중요한 정보예요.\n\n## 생길 수 있는 부작용과 회복 과정\n모든 수술에는 위험이 따릅니다. 코 성형 뒤에는 붓기, 멍, 코막힘이 흔히 나타나고, 사람에 따라 출혈, 염증, 감각 저하, 비대칭, 보형물 관련 문제 등이 생길 수 있어요. 경우에 따라 재수술이 필요할 수도 있어요. 붓기는 보통 몇 주에 걸쳐 빠지지만, 모양이 자리 잡기까지는 몇 달 안팎이 걸리기도 하고 개인차가 커요. 일상 복귀, 운동, 음주를 언제 다시 할 수 있는지도 상담 때 구체적으로 물어보세요.\n\n## 비용과 일정 확인하는 법\n코 성형은 대부분 비급여 진료라서 수술 방법과 재료에 따라 비용이 달라져요. 정확한 비용은 진료 후 안내받을 수 있고, 데모성형외과 홈페이지의 비급여 진료비 안내 페이지에서도 항목을 확인할 수 있어요. 일정은 회복 기간을 생각해서 여유 있게 잡는 게 좋아요.\n\n개인에 따라 결과와 회복 기간이 다를 수 있으니, 궁금한 점은 진료 상담에서 의료진과 충분히 확인하세요."},"shorts":{"title":"코 성형 상담 전, 이것만은 꼭 물어보세요","scenes":[{"say":"코 성형 상담, 그냥 가면 아까워요. 미리 알아둘 것 정리해 드릴게요.","screen":"코 성형 상담 전"},{"say":"먼저 바꾸고 싶은 점을 메모해 가세요. 말로 설명하기가 훨씬 쉬워져요.","screen":"원하는 점 메모"},{"say":"비염, 코막힘, 예전 코 수술이나 다친 적이 있다면 꼭 알려 주세요.","screen":"병력 미리 알리기"},{"say":"어떤 수술 방법을 쓰는지, 그 이유는 뭔지 물어보세요.","screen":"수술 방법과 이유"},{"say":"보형물인지 자가 연골인지, 각각의 주의점도 확인하세요.","screen":"재료별 주의점"},{"say":"붓기, 멍, 염증, 비대칭 같은 부작용이 생길 수 있어요. 개인차도 커요.","screen":"부작용도 확인"},{"say":"회복 기간과 일상 복귀 시점은 사람마다 달라요. 일정을 여유 있게 잡으세요.","screen":"회복은 개인차"},{"say":"궁금한 점은 데모성형외과 진료 상담에서 의료진과 확인하세요.","screen":"상담 예약 안내"}]},"cards":[{"title":"코 성형 상담 전, 뭘 준비할까?","text":"상담 시간을 알차게 쓰려면\n미리 알아두면 좋은 것들이 있어요."},{"title":"내 상태 먼저 알리기","text":"비염·코막힘, 예전 코 수술이나 다친 적,\n먹고 있는 약은 미리 말해 주세요."},{"title":"수술 방법 물어보기","text":"어떤 방법을, 왜 고려하는지 물어보세요.\n보형물·자가 연골의 주의점도 확인하세요."},{"title":"부작용과 회복 기간","text":"붓기·멍·염증·비대칭 등이 생길 수 있어요.\n회복 기간은 보통 개인차가 커요."},{"title":"진료 상담 안내","text":"결과와 회복은 개인에 따라 달라요.\n데모성형외과 진료 상담에서 확인하세요.\n비용은 비급여 진료비 안내 페이지에서."}]}];
+  const BAD = "국내 최초 무통 리프팅! 부작용 없는 시술로 100% 만족을 보장합니다.\n실제 환자 후기와 전후 사진을 확인하세요.\n이번 달만 50% 할인 이벤트, 선착순 20명.\n다른 병원보다 회복이 빨라 하루 만에 일상 복귀!";
+
+  function check(text) {
+    const hits = [];
+    for (const r of RULES) for (const m of String(text).matchAll(new RegExp(r.re, "gi"))) hits.push({ ...r, match: m[0], index: m.index });
+    hits.sort((a, b) => a.index - b.index || b.match.length - a.match.length);
+    const out = []; let end = -1;
+    for (const h of hits) if (h.index >= end) { out.push(h); end = h.index + h.match.length; }
+    return out;
+  }
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  // 위: 생성물 보기
+  let k = 0, tab = "blog";
+  const kw = document.getElementById("kw"), out = document.getElementById("out"), meta = document.getElementById("meta");
+  function renderMade() {
+    const s = SAMPLES[k];
+    out.replaceChildren();
+    meta.replaceChildren();
+    if (!s) { out.append(el("p", "", "예시 생성물이 아직 없습니다.")); return; }
+    meta.append(el("span", "chip", `생성 ${s.seconds ?? "?"}초`), el("span", s.revised ? "chip warn" : "chip ok", s.revised ? "위험 표현 고쳐 쓰기 1번" : "처음부터 통과"), el("span", s.hits.length ? "chip warn" : "chip ok", s.hits.length ? `남은 표시 ${s.hits.length}개` : "남은 표시 0개"));
+    if (tab === "blog") {
+      const d = el("div", "blog"); d.append(el("h3", "", s.blog.title), el("div", "txt", s.blog.body.replace(/^##\s*/gm, ""))); out.append(d);
+    } else if (tab === "shorts") {
+      const d = el("div", "shorts"); d.append(el("h3", "", s.shorts.title)); d.firstChild.style.marginBottom = "10px";
+      const ol = el("ol"); for (const sc of s.shorts.scenes) { const li = el("li"); li.append(el("span", "", sc.say), el("span", "scr", sc.screen)); ol.append(li); } d.append(ol); out.append(d);
+    } else {
+      const d = el("div", "cards"); s.cards.forEach((c, i) => { const cd = el("div", "card"); cd.append(el("span", "n", `${i + 1} / ${s.cards.length}`), el("b", "", c.title), el("p", "", c.text)); d.append(cd); }); out.append(d);
+    }
+  }
+  SAMPLES.forEach((s, i) => { const b = el("button", "", s.keyword); b.type = "button"; b.setAttribute("aria-pressed", String(i === 0)); b.onclick = () => { k = i; kw.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String(j === i))); renderMade(); }; kw.append(b); });
+  document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => { tab = b.dataset.t; document.querySelectorAll("#tabs button").forEach((x) => x.setAttribute("aria-selected", String(x === b))); renderMade(); });
+  renderMade();
+
+  // 아래: 검사기
+  const src = document.getElementById("src"), marked = document.getElementById("marked"), found = document.getElementById("found"), sum = document.getElementById("sum");
+  function renderCheck() {
+    const t = src.value, hits = check(t);
+    marked.replaceChildren();
+    let at = 0;
+    for (const h of hits) { marked.append(document.createTextNode(t.slice(at, h.index))); const m = el("mark", h.level, h.match); m.title = h.type; marked.append(m); at = h.index + h.match.length; }
+    marked.append(document.createTextNode(t.slice(at)));
+    const high = hits.filter((h) => h.level === "high").length, mid = hits.length - high;
+    sum.textContent = !t.trim() ? "" : hits.length ? `위험 ${high}곳 · 주의 ${mid}곳 — 고쳐서 다시 넣어 보세요.` : "걸린 표현이 없어요. 그래도 올리기 전 병원 확인은 필요합니다.";
+    found.replaceChildren();
+    const seen = new Set();
+    for (const h of hits) { const key = h.type + h.match; if (seen.has(key)) continue; seen.add(key); const li = el("li", h.level); li.append(el("b", "", `“${h.match}” · ${h.type}`), el("span", "", h.why), el("span", "", `대신: ${h.fix}`)); found.append(li); }
+  }
+  src.addEventListener("input", renderCheck);
+  document.getElementById("exBad").onclick = () => { src.value = BAD; renderCheck(); };
+  document.getElementById("exMade").onclick = () => { const s = SAMPLES[k]; if (s) { src.value = `${s.blog.title}\n\n${s.blog.body}`; renderCheck(); } };
+  src.value = BAD;
+  renderCheck();
+</script>

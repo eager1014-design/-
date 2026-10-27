@@ -1,0 +1,189 @@
+<title>병원 콘텐츠 기획실</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  /* Layout: 위 = 키워드 하나에서 나온 세 가지 글감(실제 생성물), 아래 = 누구나 붙여 넣는 광고 표현 검사기. 상담 데스크 시연과 같은 병원 톤 */
+  :root {
+    --bg: #F3F5F4;
+    --paper: #FFFFFF;
+    --ink: #17302E;
+    --muted: #5A6B69;
+    --line: #D5DEDC;
+    --accent: #0F6E68;
+    --accent-soft: #E1F0EE;
+    --warn: #A15C07;
+    --warn-soft: #FBEFD9;
+    --alert: #B42323;
+    --alert-soft: #FBE3E1;
+    --display: "Noto Serif KR", "Apple SD Gothic Neo", serif;
+    --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1716; --paper: #152221; --ink: #E3ECEA; --muted: #9AABA8; --line: #263735;
+      --accent: #5FC2B9; --accent-soft: #173A37; --warn: #E8A84E; --warn-soft: #3A2A12; --alert: #F08A80; --alert-soft: #3D1A18; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1716; --paper: #152221; --ink: #E3ECEA; --muted: #9AABA8; --line: #263735;
+    --accent: #5FC2B9; --accent-soft: #173A37; --warn: #E8A84E; --warn-soft: #3A2A12; --alert: #F08A80; --alert-soft: #3D1A18; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.65; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding-block: 36px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 34px; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+  .label { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  header { display: grid; gap: 10px; }
+  h1 { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4.4vw, 38px); line-height: 1.25; }
+  header p, .sec p.lead { margin: 0; color: var(--muted); max-width: 64ch; }
+  .demo-tag { justify-self: start; font-size: 13px; color: var(--warn); background: var(--warn-soft); border-radius: 6px; padding: 4px 10px; }
+  .sec { display: grid; gap: 14px; }
+  h2 { font-family: var(--display); font-size: clamp(21px, 3vw, 26px); }
+
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button { font: inherit; font-size: 14px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); font-weight: 700; }
+  button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .sheet { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; display: grid; min-width: 0; }
+  .sheet-head { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; }
+  .tabs { display: flex; gap: 2px; }
+  .tabs button { font: inherit; font-size: 14px; color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; padding: 6px 10px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-color: var(--accent); font-weight: 700; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12.5px; padding: 3px 9px; border-radius: 999px; background: var(--bg); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chip.ok { color: var(--accent); background: var(--accent-soft); }
+  .chip.warn { color: var(--warn); background: var(--warn-soft); }
+  .body { padding: 18px 20px 22px; min-width: 0; }
+  .blog h3 { font-family: var(--display); font-size: 21px; margin-bottom: 10px; }
+  .blog .txt { white-space: pre-wrap; max-width: 68ch; overflow-wrap: anywhere; }
+  .shorts ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: s; }
+  .shorts li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(0, 150px); gap: 10px; align-items: start; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .shorts li::before { content: counter(s); font-family: var(--mono); color: var(--accent); }
+  .shorts .scr { font-weight: 700; font-size: 13.5px; background: var(--bg); border-radius: 6px; padding: 3px 8px; justify-self: start; }
+  @media (max-width: 560px) { .shorts li { grid-template-columns: 26px minmax(0, 1fr); } .shorts .scr { grid-column: 2; } }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .card { aspect-ratio: 1; max-width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; align-content: space-between; background: var(--bg); min-width: 0; overflow: hidden; }
+  .card .n { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .card b { font-family: var(--display); font-size: 17px; line-height: 1.35; }
+  .card p { margin: 0; font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+
+  .checker { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+  @media (max-width: 800px) { .checker { grid-template-columns: 1fr; } }
+  textarea { width: 100%; min-height: 260px; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px; resize: vertical; box-sizing: border-box; }
+  .marked { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 120px; }
+  mark { border-radius: 3px; padding: 0 2px; color: inherit; }
+  mark.high { background: var(--alert-soft); box-shadow: inset 0 -2px 0 var(--alert); }
+  mark.mid { background: var(--warn-soft); box-shadow: inset 0 -2px 0 var(--warn); }
+  .found { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .found li { display: grid; gap: 2px; border-left: 3px solid var(--line); padding-left: 10px; }
+  .found li.high { border-color: var(--alert); }
+  .found li.mid { border-color: var(--warn); }
+  .found b { font-size: 14.5px; }
+  .found span { color: var(--muted); font-size: 13.5px; }
+  .summary { font-weight: 700; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .actions button { font: inherit; font-size: 13.5px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="label">시연 · 병원 콘텐츠 기획</span>
+    <h1>시술 키워드 하나로<br>블로그·쇼츠·카드뉴스까지.</h1>
+    <p>키워드를 넣으면 블로그 초안, 쇼츠 대본, 카드뉴스 5장이 한 번에 나옵니다. 다 쓰고 나면 의료광고에서 자주 걸리는 표현을 검사하고, 걸리면 그 부분만 다시 써서 넘깁니다. 아래는 실제로 이 도구가 만든 결과입니다.</p>
+    <span class="demo-tag">가상 병원 ‘데모성형외과’ 기준 생성물 · 실제 의료 정보가 아니며, 올리기 전 병원과 심의 확인이 필요합니다</span>
+  </header>
+
+  <section class="sec" aria-labelledby="h-made">
+    <h2 id="h-made">키워드 하나에서 나온 세 가지 글감</h2>
+    <div class="seg" id="kw" role="group" aria-label="키워드"></div>
+    <div class="sheet">
+      <div class="sheet-head">
+        <div class="tabs" role="tablist" id="tabs">
+          <button role="tab" data-t="blog" aria-selected="true">블로그</button>
+          <button role="tab" data-t="shorts" aria-selected="false">쇼츠 대본</button>
+          <button role="tab" data-t="cards" aria-selected="false">카드뉴스</button>
+        </div>
+        <div class="meta" id="meta"></div>
+      </div>
+      <div class="body" id="out"></div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="h-check">
+    <h2 id="h-check">광고 표현 검사기</h2>
+    <p class="lead">올리려는 문구를 붙여 넣어 보세요. 의료법 제56조에서 자주 문제가 되는 표현을 빨강(위험)·주황(주의)으로 표시하고 대신 쓸 말을 알려 드립니다. 법률 판단은 아니고 ‘다시 보세요’ 표시입니다.</p>
+    <div class="actions"><button type="button" id="exBad">위험한 예시 넣기</button><button type="button" id="exMade">위 블로그 글 넣기</button></div>
+    <div class="checker">
+      <label class="label" for="src" hidden>검사할 문구</label>
+      <textarea id="src" aria-label="검사할 문구"></textarea>
+      <div class="marked" id="marked" aria-live="polite"></div>
+    </div>
+    <p class="summary" id="sum"></p>
+    <ul class="found" id="found"></ul>
+  </section>
+
+  <footer>만든 사람: 천성준 · 워크플로우 디자이너 · 개발자. 실제 병원에 맞출 때는 그 병원의 시술 목록·말투·금지어를 넣고, 결과는 담당자가 확인한 뒤 올립니다. 최종 광고 판단은 의료광고 심의위원회 몫입니다.</footer>
+</div>
+
+<script>
+  const RULES = /*RULES*/[];
+  const SAMPLES = /*SAMPLES*/[];
+  const BAD = "국내 최초 무통 리프팅! 부작용 없는 시술로 100% 만족을 보장합니다.\n실제 환자 후기와 전후 사진을 확인하세요.\n이번 달만 50% 할인 이벤트, 선착순 20명.\n다른 병원보다 회복이 빨라 하루 만에 일상 복귀!";
+
+  function check(text) {
+    const hits = [];
+    for (const r of RULES) for (const m of String(text).matchAll(new RegExp(r.re, "gi"))) hits.push({ ...r, match: m[0], index: m.index });
+    hits.sort((a, b) => a.index - b.index || b.match.length - a.match.length);
+    const out = []; let end = -1;
+    for (const h of hits) if (h.index >= end) { out.push(h); end = h.index + h.match.length; }
+    return out;
+  }
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  // 위: 생성물 보기
+  let k = 0, tab = "blog";
+  const kw = document.getElementById("kw"), out = document.getElementById("out"), meta = document.getElementById("meta");
+  function renderMade() {
+    const s = SAMPLES[k];
+    out.replaceChildren();
+    meta.replaceChildren();
+    if (!s) { out.append(el("p", "", "예시 생성물이 아직 없습니다.")); return; }
+    meta.append(el("span", "chip", `생성 ${s.seconds ?? "?"}초`), el("span", s.revised ? "chip warn" : "chip ok", s.revised ? "위험 표현 고쳐 쓰기 1번" : "처음부터 통과"), el("span", s.hits.length ? "chip warn" : "chip ok", s.hits.length ? `남은 표시 ${s.hits.length}개` : "남은 표시 0개"));
+    if (tab === "blog") {
+      const d = el("div", "blog"); d.append(el("h3", "", s.blog.title), el("div", "txt", s.blog.body.replace(/^##\s*/gm, ""))); out.append(d);
+    } else if (tab === "shorts") {
+      const d = el("div", "shorts"); d.append(el("h3", "", s.shorts.title)); d.firstChild.style.marginBottom = "10px";
+      const ol = el("ol"); for (const sc of s.shorts.scenes) { const li = el("li"); li.append(el("span", "", sc.say), el("span", "scr", sc.screen)); ol.append(li); } d.append(ol); out.append(d);
+    } else {
+      const d = el("div", "cards"); s.cards.forEach((c, i) => { const cd = el("div", "card"); cd.append(el("span", "n", `${i + 1} / ${s.cards.length}`), el("b", "", c.title), el("p", "", c.text)); d.append(cd); }); out.append(d);
+    }
+  }
+  SAMPLES.forEach((s, i) => { const b = el("button", "", s.keyword); b.type = "button"; b.setAttribute("aria-pressed", String(i === 0)); b.onclick = () => { k = i; kw.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String(j === i))); renderMade(); }; kw.append(b); });
+  document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => { tab = b.dataset.t; document.querySelectorAll("#tabs button").forEach((x) => x.setAttribute("aria-selected", String(x === b))); renderMade(); });
+  renderMade();
+
+  // 아래: 검사기
+  const src = document.getElementById("src"), marked = document.getElementById("marked"), found = document.getElementById("found"), sum = document.getElementById("sum");
+  function renderCheck() {
+    const t = src.value, hits = check(t);
+    marked.replaceChildren();
+    let at = 0;
+    for (const h of hits) { marked.append(document.createTextNode(t.slice(at, h.index))); const m = el("mark", h.level, h.match); m.title = h.type; marked.append(m); at = h.index + h.match.length; }
+    marked.append(document.createTextNode(t.slice(at)));
+    const high = hits.filter((h) => h.level === "high").length, mid = hits.length - high;
+    sum.textContent = !t.trim() ? "" : hits.length ? `위험 ${high}곳 · 주의 ${mid}곳 — 고쳐서 다시 넣어 보세요.` : "걸린 표현이 없어요. 그래도 올리기 전 병원 확인은 필요합니다.";
+    found.replaceChildren();
+    const seen = new Set();
+    for (const h of hits) { const key = h.type + h.match; if (seen.has(key)) continue; seen.add(key); const li = el("li", h.level); li.append(el("b", "", `“${h.match}” · ${h.type}`), el("span", "", h.why), el("span", "", `대신: ${h.fix}`)); found.append(li); }
+  }
+  src.addEventListener("input", renderCheck);
+  document.getElementById("exBad").onclick = () => { src.value = BAD; renderCheck(); };
+  document.getElementById("exMade").onclick = () => { const s = SAMPLES[k]; if (s) { src.value = `${s.blog.title}\n\n${s.blog.body}`; renderCheck(); } };
+  src.value = BAD;
+  renderCheck();
+</script>
