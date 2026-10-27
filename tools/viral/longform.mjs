@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { ROOT, DATA_DIR, UPLOAD_DIR, GEMINI_MODEL, load, save, saveUploads, imageParts, isVideo } from "./core.mjs";
 import { gemini, watchVideo } from "../ai-bridge/gemini.mjs";
 import { SOUND_RULES, pickSections } from "./sound_rules.mjs";
+import { fillPhotos, creditLines } from "../commons.mjs";
 import { ensureSajuOutro, OUTRO_ASK, PINNED_ASK, withSaju } from "../saju_pin.mjs";
 import { BRIDGE_RULE, FORECAST_ASK, SELL_ASK, SELL_RULES } from "../sell_plan.mjs";
 import { AREA_LIST, recentList, TOPIC_AREAS } from "../topic_mix.mjs";
@@ -177,7 +178,7 @@ function context(p) {
   const kind = p.format === "short" ? "세로 쇼츠 1080×1920 (40~60초)" : "가로 롱폼 1920×1080 (보통 6~10분)";
   return `[${p.format === "short" ? "숏폼" : "롱폼"} 프로젝트] 가제: ${p.title} / 채널: ${p.channel} / ${kind}
 [사장님이 처음 말한 느낌] ${p.brief || "(없음)"}
-${p.parent ? `[원본 롱폼 「${p.parent.title}」에서 뽑은 쇼츠 — 이 구간의 내용·표현을 살려서, 롱폼을 안 본 사람도 이해되게 40~55초로]\n${p.parent.segment}\n${p.parent.url ? `롱폼 링크: ${p.parent.url} (끝에서 '전체 영상은 롱폼에서'로 이어 주기)\n` : ""}` : ""}${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약 (사장님이 이번에 직접 준 자료라 보관함보다 우선)]\n${refs}\n` : ""}${diaryNotes(p)}${libraryNotes(p)}[최근에 만든 영상 — 사장님이 "비슷한 주제만 나온다"고 함. 주제를 제안할 땐 이것과 겹치지 않게, 영역을 넓게 (${AREA_LIST})]\n${recentList(p.plan?.titles?.[0])}\n[지금까지 대화]\n${talk || "(아직 없음)"}
+${p.parent ? `[원본 롱폼 「${p.parent.title}」에서 뽑은 쇼츠 — 이 구간의 내용·표현을 살려서, 롱폼을 안 본 사람도 이해되게 40~55초로]\n${p.parent.segment}\n` : ""}${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약 (사장님이 이번에 직접 준 자료라 보관함보다 우선)]\n${refs}\n` : ""}${diaryNotes(p)}${libraryNotes(p)}[최근에 만든 영상 — 사장님이 "비슷한 주제만 나온다"고 함. 주제를 제안할 땐 이것과 겹치지 않게, 영역을 넓게 (${AREA_LIST})]\n${recentList(p.plan?.titles?.[0])}\n[지금까지 대화]\n${talk || "(아직 없음)"}
 
 [원칙] 사장님은 코드를 모르는 1인 사업가. 쉬운 말로, 짧게. 듣기 좋은 말만 하지 말고 약점도 근거와 함께 (사장님 요청).
 사장님 경험은 대화·메모에 있는 것만 쓰고 지어내지 않는다. 연구·숫자는 확실한 것만, 모르면 '확인 필요'. 다른 유튜버의 문장·화면을 베끼지 않는다.
@@ -251,14 +252,14 @@ async function shorts(p) {
   if (p.format === "short" || !p.episode) throw new Error("숏폼은 롱폼 대본이 생긴 뒤에 뽑을 수 있어요.");
   if (!p.final || !p.episode.scenes.some((x) => x.audio)) throw new Error("롱폼 완성본(목소리 입힌 영상)이 있어야 잘라낼 수 있어요. 녹음 파일을 올리거나 일레븐랩스로 먼저 완성해 주세요.");
   const secs = await sceneSeconds(p.episode.scenes, p.episode.pace);
-  const lines = p.episode.scenes.map((x, i) => `${x.id} (${secs[i].toFixed(1)}초) ${x.narration}`).join("\n").slice(0, 14000);
+  const lines = p.episode.scenes.map((x, i) => `${x.id} (${secs[i].toFixed(1)}초)${x.image || x.drawFace ? " [그림]" : ""} ${x.narration}`).join("\n").slice(0, 14000);
   const r = askClaude(p, `${context(p)}
 
 [롱폼 완성본 — 장면 id (들리는 길이) 읽는 문장]
 ${lines}
 
 이 롱폼에서 그대로 잘라 쓸 쇼츠 구간 3개를 골라. 문장은 바꿀 수 없다(이미 녹음됨) — 그래서 구간의 첫 장면 첫 문장이 스스로 훅이 되는 곳에서 시작할 것.
-조건: 이어진 장면들, 합계 35~55초, 앞뒤 맥락 없이도 이해되는 하나의 이야기, 셋은 서로 다른 감정·각도(찔림 / 웃음 / 써먹을 팁 등), 서로 겹치지 않게.
+조건: 이어진 장면들, 합계 35~55초, [그림] 장면이 2개 이상 들어간 구간을 우선, 앞뒤 맥락 없이도 이해되는 하나의 이야기, 셋은 서로 다른 감정·각도(찔림 / 웃음 / 써먹을 팁 등), 서로 겹치지 않게.
 JSON 하나만: {"reply": "사장님께 두세 줄: 어떤 기준으로 골랐는지", "shorts": [{"title": "화면 위 고정 제목 '첫 줄 / 둘째 줄' (줄마다 14자 이내)", "from": "시작 장면 id", "to": "끝 장면 id", "angle": "감정·각도 한 줄"}]}`);
   const ids = new Map(p.episode.scenes.map((x, i) => [x.id, i]));
   const skin = p.episode.skin || load().settings?.skin || undefined;
@@ -272,12 +273,13 @@ JSON 하나만: {"reply": "사장님께 두세 줄: 어떤 기준으로 골랐�
     const picked = JSON.parse(JSON.stringify(p.episode.scenes.slice(a, b + 1))).map((x) => {
       delete x.musicDrop; delete x.musicMute; delete x.pauseBefore; // 롱폼 음악 연출은 빼고
       delete x.punch; // 가운데 큰 강조 자막은 일반 자막과 같은 높이라 겹침 → 쇼츠에선 자막만 (2026-10-27)
-      if (x.cast === "corner" || x.cast === "off") x.cast = "right";
+      if (x.cast === "corner" || (x.cast === "off" && !x.image && !x.drawFace)) x.cast = "right"; // 그림·표정 장면은 캐릭터를 겹치지 않음
       return x;
     });
     const [l1, l2] = String(sh.title || "").split("/").map((t) => t.trim().slice(0, 14));
     const n = createProject({ title: [l1, l2].filter(Boolean).join(" ") || "롱폼에서 뽑은 쇼츠", brief: `롱폼 「${p.title}」에서 잘라 만든 쇼츠 — ${sh.angle || ""}`, channel: p.channel, format: "short" });
     const segment = picked.map((x) => x.narration).join(" ");
+    n.photoCredits = (p.photoCredits || []).filter((c) => picked.some((x) => x.image === path.relative(path.join(VIDEO, "public"), c.file)));
     n.parent = { id: p.id, title: p.title, url: p.youtubeUrl || null, from: sh.from, to: picked.at(-1).id, segment };
     n.plan = { titles: [`${l1 || ""} / ${l2 || ""}`], hook: picked[0].narration, length: "", chapters: [{ title: "롱폼 구간", points: [`${sh.from}~${picked.at(-1).id}`, sh.angle || ""] }] };
     const end = { id: "end", type: "statement", text: "내 기질 궁금하면\n**고정 댓글** 링크", narration: "내 기질이 궁금하면 고정 댓글 링크를 한번 보세요.", holdSeconds: 3.5, cast: "right", face: "smile", gesture: "point" };
@@ -392,10 +394,12 @@ async function thumbs(p) {
 }
 
 // ④ 대본 + 무료 초안 (목소리 없이 글자 수로 길이 어림)
-const SCENE_GUIDE = `[장면 종류 — 이것만] ${SCENES_LIST.filter((t) => !["dialogue", "photo", "screen"].includes(t)).join(" · ")}
+const SCENE_GUIDE = `[장면 종류 — 이것만] ${SCENES_LIST.filter((t) => !["dialogue", "screen"].includes(t)).join(" · ")}
 hook(lines[{text,cue}], kicker) · statement(text, kicker, sub, cue) · roadmap(title, items[]) · chapter(number, title, sub) · bigNumber(value, prefix, suffix, label, source, cue — 실제 숫자만)
 citation(authors, year, title, journal, finding, cue, findingCue — 확인된 논문만) · compare(title, left{title,emoji,cue,items[]}, right{…}) · checklist(title, items[])
-bars(title, bars[{label,value}], unit, source — 실제 데이터만) · story(emoji, lines[] — 그림 대신 이모지, 핵심 장면 3~4곳에 "art": "삽화 설명") · outro(question, cue, channel, channelCue)
+bars(title, bars[{label,value}], unit, source — 실제 데이터만) · story(emoji, lines[] — 그림 대신 이모지. 롱폼은 대략 5장면마다 1곳(10~12곳), 쇼츠는 2~3곳에 "art": "삽화 설명 한 문장 — 채널 캐릭터(나)가 무엇을 하는지·어디인지·표정, 비교라면 왼쪽/오른쪽 대비로" — 그림이 연필로 그려지듯 나타남)
+story 표정 그리기: 감정이 확 바뀌는 순간 2~3곳(쇼츠 1곳)에 "drawFace": "smile|surprised|serious|laugh|worried|kind", "cast": "off" — 내 캐릭터 얼굴이 크게 그려지고 옆에 lines 글씨 (art 와 같이 쓰지 말 것)
+photo(실존 철학자·심리학자·위인을 말할 때만, 롱폼 2~4개 / 쇼츠 1~2개): {"person": "영문 전체 이름(위키백과 표기, 예: Arthur Schopenhauer)", "name": "한글 이름", "years": "1788–1860", "lines": [{text, cue}], "circle": {"at": "그 사람을 가리키는 순간의 단어"}} — 무료 사진이 자동으로 들어감. image·x·y 쓰지 말 것. 실존 인물은 art 로 그리지 말 것 · outro(question, cue, channel, channelCue)
 pillars·elements = 사주 설명 장면 (사주 편일 때만)
 공통: id("s01"…), narration(필수, 사장님이 그대로 읽을 문장), keywords[], face(smile·surprised·serious·laugh·worried·kind), gesture(idea·point·think·explain·none), cast(right·left·center·corner·off)
 소품: "props": [{"icon": "이름", "at": "그 장면 내레이션 속 단어", "x": 0.2, "y": 0.4, "size": 220, "move": "bob|wiggle|pulse|spin"}] — 장면 뜻에 맞는 손그림 소품이 선으로 그려지며 나타나 계속 살짝 움직임. 쓸 수 있는 아이콘: brain·bulb·phone·battery·heart·clock·lightning·question·exclaim·check·chart·coffee·speech·thought·bed·money·calendar·lock·search·star·people·house·tear·fire. 장면 절반 정도에 1~2개, 글씨·캐릭터와 안 겹치게 빈 쪽(x 0.12~0.22 또는 0.78~0.88).
@@ -430,10 +434,12 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
     ensureSajuOutro(ep); // 모든 영상 마지막에 사주 안내 한 문장 (사장님 2026-10-27)
     ep.soundPlan = true; // 효과음은 대본이 고른 것만 (sound_rules.mjs)
     ep.musicSections = pickSections(r.music_plan, ep.scenes || [], [], Date.now() % 97);
+    const credits = await fillPhotos(ep, dir, (m) => log(p, m)); // 위인 사진 (위키미디어 무료, 못 받으면 이모지 장면으로)
     fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
     const check = run(p, `대본 검사 (${attempt}번째)`, NODE, ["scripts/check_episode.mjs", path.relative(VIDEO, epFile)], { cwd: VIDEO, allowFail: true });
     if (check.ok) {
       p.episode = ep;
+      p.photoCredits = credits;
       say(p, r.reply);
       break;
     }
@@ -450,18 +456,22 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
   say(p, "목소리 없는 초안이에요. 장면 순서·화면 글씨를 보시고 고칠 점을 말씀해 주세요. 괜찮으면 아래 '녹음용 대본'을 읽어 녹음한 파일을 올려주세요.", { video: p.draft });
 }
 
-// 대본의 "art" 장면을 챗GPT 삽화로 (최대 4장, 실패하면 이모지 그대로)
+// 대본의 "art" 장면을 챗GPT 삽화로 (최대 12장 — 2026-10-27 사장님: 그림 더 자주, 연필로 그려지듯. 실패하면 이모지 그대로)
 async function sceneArt(p, dir, epFile) {
   const ep = JSON.parse(fs.readFileSync(epFile, "utf8"));
   const charRef = path.join(VIDEO, "public/characters/round/ref_sheet.png"); // 새 캐릭터 (2026-10-24)
   let n = 0;
   for (const s of ep.scenes) {
-    if (!s.art || s.image || n >= 4) continue;
+    if (s.drawFace) { // 표정 그리기 장면: 있는 표정만, 화면 진행자와 겹치지 않게
+      if (["smile", "surprised", "serious", "laugh", "worried", "kind"].includes(s.drawFace)) s.cast = "off";
+      else delete s.drawFace;
+    }
+    if (!s.art || s.image || n >= 12) continue;
     n++;
     const img = path.join(dir, "img", `${s.id}.png`);
     fs.mkdirSync(path.dirname(img), { recursive: true });
     const g = run(p, `🎨 챗GPT 삽화 ${n} (${s.id})`, NODE, [path.join(ROOT, "tools/gpt_image.mjs"), `${s.art}. 배경은 완전한 검정 단색, 굵고 둥근 흰색 손그림 두들, 노랑 포인트 하나, 사람은 기준 그림의 동그란 안경 막대 캐릭터, 16:9, 그림자·글씨 없이, 왼쪽 40% 비움`, `--out=${img}`, "--size=1536x1024", ...(fs.existsSync(charRef) ? [`--ref=${charRef}`] : [])], { allowFail: true, timeout: 600_000 });
-    if (g.ok && fs.existsSync(img)) Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), img), textSide: "left", cast: "off" });
+    if (g.ok && fs.existsSync(img)) Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), img), textSide: "left", cast: "off", draw: true, drawBg: "#000000" });
   }
   fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
   p.episode = ep;
@@ -538,7 +548,10 @@ ${p.episode ? `[대본]\n${p.episode.scenes.map((s) => s.narration).join(" ").sl
 forecast 는 사장님만 보는 '올리기 전 예측'이다. 기획안 sell 과 실제 대본·썸네일 문구를 비교해서, 약속을 지키는지·감정이 하나인지·운결 연결이 자연스러운지 냉정하게.`);
   p.youtube = r.youtube;
   p.forecast = r.forecast || null;
-  p.youtube.pinned = withSaju(p.youtube.pinned);
+  // 쇼츠: 설명란·고정 댓글의 링크는 눌리지 않아 롱폼 링크는 빼고, 고정 댓글은 사주 안내만 (사장님 2026-10-27)
+  if (p.format === "short") p.youtube.description = p.youtube.description.split("\n").filter((l) => !(p.parent?.url && l.includes(p.parent.url))).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  p.youtube.pinned = withSaju(p.format === "short" ? "" : p.youtube.pinned);
+  if (p.photoCredits?.length) p.youtube.description += `\n\n📷 사진 출처 (Wikimedia Commons)\n${creditLines(p.photoCredits)}`; // CC BY 사진은 출처 표기가 조건
   // 챕터: 실제 장면 시간으로 계산해 설명란에 붙인다 (유튜브 규칙: 0:00 부터, 3개 이상)
   let chNote = "";
   if (ch?.lines?.length >= 3) {
@@ -547,7 +560,7 @@ forecast 는 사장님만 보는 '올리기 전 예측'이다. 기획안 sell �
   }
   const ab = abKit(p);
   const fc = p.forecast;
-  const fcText = fc ? `\n\n🔮 올리기 전 예측 (등급 ${fc.grade || "?"})\n· 누를 이유/안 누를 이유: ${fc.click}\n· 나갈 지점: ${fc.drop}\n· 운결 연결: ${fc.saju}${fc.fix?.length ? `\n· 고치면 좋을 것: ${fc.fix.join(" / ")}` : ""}\n(숫자 예측은 안 해요 — 올린 뒤 실제 숫자로 맞춰 봐요)` : "";
+  const fcText = fc ? `\n\n🔮 올리기 전 예측 (등급 ${fc.grade || "?"})\n· 누를 이유/안 누를 이유: ${fc.click}\n· 나갈 지점: ${fc.drop}\n· 운결 연결: ${fc.saju}${fc.fix?.length ? `\n· 고치면 좋을 것: ${[].concat(fc.fix).join(" / ")}` : ""}\n(숫자 예측은 안 해요 — 올린 뒤 실제 숫자로 맞춰 봐요)` : "";
   say(p, r.reply + chNote + fcText + (ab ? `\n\nA/B 테스트용 썸네일 3장·제목 3개를 바탕화면 '${path.basename(ab)}' 폴더에 넣어 뒀어요.` : ""));
 }
 

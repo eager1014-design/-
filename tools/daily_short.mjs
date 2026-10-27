@@ -15,7 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { ROOT, DATA_DIR, load, save, upsert, searchYoutube, analyze, saveSettings } from "./viral/core.mjs";
-import { fetchPortraits, locateFace, creditLines } from "./commons.mjs";
+import { fillPhotos as fillPhotosIn, creditLines } from "./commons.mjs";
 import { SOUND_RULES, pickSections } from "./viral/sound_rules.mjs";
 import { ensureSajuOutro, OUTRO_ASK, PINNED_ASK, withSaju } from "./saju_pin.mjs";
 import { AREA_LIST, pickArea, recentList, TOPIC_AREAS } from "./topic_mix.mjs";
@@ -176,7 +176,7 @@ ${feedback ? `\n[사장님 수정 요청 — 반드시 반영]\n${feedback}\n\n[
 [절대 규칙]
 1. 일기에 없는 사장님 경험·숫자·사건을 지어내지 마. 일기 내용은 사장님 말을 다듬어 1인칭으로.
 2. 연구·통계 인용 금지. 예외: Assary 외 2020(Molecular Psychiatry) 쌍둥이 연구 — 예민함 차이의 47%가 유전. 그 외 숫자가 꼭 필요하면 쓰지 말고 비유로.
-3. image·video·pose 칸은 쓰지 말 것. story 장면은 "emoji"(이모지 1개)를 넣고, 그중 이야기의 핵심 장면 2~3개에는 "art": "삽화 설명" 을 추가 — 채널 캐릭터(나)가 무엇을 하는지, 어디인지, 표정을 구체적으로 한 문장(예: "시끄러운 카페에서 두 손으로 귀를 막고 눈을 질끈 감은 나, 주변 사람들은 흐린 회색 실루엣"). 그림은 자동으로 그려지고, 그 장면 글씨는 화면 왼쪽에 나온다. 실존 인물(위인)은 art 로 그리지 말고 photo 장면으로.
+3. image·video·pose 칸은 쓰지 말 것. story 장면은 "emoji"(이모지 1개)를 넣고, 그중 이야기의 핵심 장면 2~3개에는 "art": "삽화 설명" 을 추가 — 채널 캐릭터(나)가 무엇을 하는지, 어디인지, 표정을 구체적으로 한 문장(예: "시끄러운 카페에서 두 손으로 귀를 막고 눈을 질끈 감은 나, 주변 사람들은 흐린 회색 실루엣"). 그림은 자동으로 그려지고, 그 장면 글씨는 화면 왼쪽에 나온다. 실존 인물(위인)은 art 로 그리지 말고 photo 장면으로. 감정이 확 바뀌는 story 장면 1곳에는 art 대신 "drawFace": "smile|surprised|serious|laugh|worried|kind", "cast": "off" — 내 캐릭터 얼굴이 크게 그려지고 그 아래 lines 글씨.
 4. 장면 10~14개 — 장면 하나에 1~2문장(3초 안팎마다 화면이 바뀌게, 레퍼런스 평균 2.6초), 짧은 단문·해요체, 내레이션 합계 250~400자 (약 40~55초). 숫자는 내레이션에서 한글("일곱 번"), 화면 글씨에서 숫자.
 5. 모든 cue·at 값은 그 장면 narration 안에 띄어쓰기까지 똑같이 있는 말이어야 함.
 6. ${(load().settings?.look || "title") === "full" ? "frame 칸은 쓰지 말 것 — 화면은 늘 세로 한 화면(위 고정 제목·분할 없음). 제목 역할은 첫 장면 hook 이 함" : "frame.title 은 2줄, 줄마다 14자 이내"}. 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅 (떡상 공식 활용).
@@ -255,7 +255,7 @@ async function script(st, feedback) {
     ensureSajuOutro(ep); // 모든 영상 마지막에 사주 안내 한 문장 (사장님 2026-10-27)
     if (look === "full") delete ep.frame;
     else ep.frame = { ...(ep.frame || {}), brand: "예민한자립가" };
-    const credits = await fillPhotos(st, ep, dir);
+    const credits = await fillPhotosIn(ep, dir, (m) => log(st, m));
     const epFile = path.join(dir, "episode.json");
     fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
     const pre = run(st, `대본 검사 (${attempt}번째, 그림 전)`, NODE, ["scripts/check_episode.mjs", path.relative(VIDEO, epFile)], { cwd: VIDEO, allowFail: true });
@@ -267,7 +267,7 @@ async function script(st, feedback) {
       fs.writeFileSync(path.join(dir, "youtube.json"), JSON.stringify({ ...res.youtube, description, altered_content: true, privacy: "private" }, null, 2));
       st.idea = { ...res.idea, narration: ep.scenes.map((s) => s.narration).join("\n"), chars: ep.scenes.reduce((a, s) => a + s.narration.length, 0) };
       if (TOPIC_AREAS.some((a) => a.key === res.idea.area)) st.area = res.idea.area;
-      st.youtube = { ...res.youtube, pinned: withSaju(res.youtube.pinned) };
+      st.youtube = { ...res.youtube, pinned: withSaju("") }; // 쇼츠 고정 댓글은 사주 안내만 (사장님 2026-10-27)
       st.episode = path.relative(ROOT, epFile);
       log(st, `✍️ 기획: ${res.idea.title} (${st.idea.chars}자)`);
       return;
@@ -281,36 +281,6 @@ async function script(st, feedback) {
 
 // 위인 사진 장면: 위키미디어에서 저작권 풀린 사진을 받아 넣고, 제미나이로 얼굴 위치를 찾아 빨간 원 자리로.
 // 사진을 못 찾으면 그 장면은 이모지 이야기 장면으로 바꾼다. 돌려주는 값: 설명란에 적을 출처 목록
-const withTimeout = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);
-async function fillPhotos(st, ep, dir) {
-  // photoPending: 예전에 사진을 못 받아 이모지로 바꿔 둔 장면 → 다시 사진 장면으로
-  for (const s of ep.scenes) if (s.photoPending && s.person) { Object.assign(s, { type: "photo" }); delete s.emoji; delete s.photoPending; }
-  const scenes = ep.scenes.filter((s) => s.type === "photo" && !s.image);
-  if (!scenes.length) return [];
-  const imgDir = path.join(dir, "img");
-  const credits = [];
-  for (const person of [...new Set(scenes.map((s) => s.person).filter(Boolean))]) {
-    const mine = scenes.filter((s) => s.person === person);
-    let got = [];
-    try { got = await fetchPortraits(person, imgDir, mine.length); } catch (e) { log(st, `⚠️ ${person} 사진 받기 실패: ${e.message}`); }
-    log(st, `📷 ${person} 사진 ${got.length}장 (${got.map((g) => g.license).join(", ") || "없음"})`);
-    for (const [i, s] of mine.entries()) {
-      const g = got[i % Math.max(1, got.length)];
-      if (!g) continue;
-      s.image = path.relative(path.join(VIDEO, "public"), g.file);
-      s.aspect = g.aspect;
-      if (s.circle) {
-        const face = await withTimeout(locateFace(g.file, person).catch(() => null), 45_000);
-        Object.assign(s.circle, face || { x: 0.5, y: 0.28, r: 0.16 });
-      }
-      if (!credits.some((c) => c.file === g.file)) credits.push(g);
-    }
-  }
-  for (const s of ep.scenes) {
-    if (s.type === "photo" && !s.image) Object.assign(s, { type: "story", emoji: "📜", photoPending: true });
-  }
-  return credits;
-}
 
 // 이야기 장면 삽화: 장면의 "art"(그림 설명)를 챗GPT 구독(코덱스, tools/gpt_image.mjs)으로 그린다. 한 장 약 1분, 추가 비용 0.
 // 캐릭터는 채널 기준 그림을 참고로 넣어 같은 얼굴로. 실패하면 이모지 그대로 둔다.
@@ -320,6 +290,7 @@ const ART_STYLE_OLD = "16:9 가로 삽화. 기준 그림의 캐릭터(둥근 안
 const ART_STYLE_CHALK = "16:9 가로 삽화. 배경은 완전한 검정(#000000) 단색. 모든 선은 굵고 둥근 흰색 손그림 두들, 아주 단순하게, 포인트 색은 노랑 하나만. 사람은 기준 그림의 캐릭터(동그란 머리, 정수리 머리카락 두세 가닥, 큰 동그란 안경, 막대 팔다리)로, 다른 사람도 같은 막대 사람 그림체로. 그림자·질감·그라데이션·글씨·말풍선 없이. 캐릭터와 주요 사물은 화면 오른쪽 절반에, 왼쪽 40%는 글씨가 들어갈 빈 검정으로 비워둘 것. 장면: ";
 const artStyle = () => (load().settings?.skin === "chalk" ? ART_STYLE_CHALK : ART_STYLE_OLD);
 async function fillArt(st, ep, dir) {
+  for (const s of ep.scenes) if (s.drawFace) ["smile", "surprised", "serious", "laugh", "worried", "kind"].includes(s.drawFace) ? (s.cast = "off") : delete s.drawFace; // 있는 표정만
   const scenes = ep.scenes.filter((s) => s.art && !s.image).slice(0, 4);
   const tall = !ep.layout; // 한 무대 쇼츠(title·full): 세로 그림을 무대 가득 (가로 그림은 가운데만 잘려 보임)
   for (const [i, s] of scenes.entries()) {
@@ -330,7 +301,7 @@ async function fillArt(st, ep, dir) {
         { allowFail: true, timeout: 300_000 });
       if (!r.ok || !fs.existsSync(out)) { log(st, `⚠️ 삽화 실패 → 이모지 그대로 (${r.out.trim().split("\n").pop()})`); continue; }
     }
-    Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), out), textSide: tall ? "center" : "left", motion: s.motion || "zoomIn", focusX: tall ? 0.5 : 0.7, cast: "off" });
+    Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), out), textSide: tall ? "center" : "left", motion: s.motion || "zoomIn", focusX: tall ? 0.5 : 0.7, cast: "off", draw: true }); // 연필로 그려지듯 나타남 (2026-10-27)
     delete s.emoji;
   }
 }
@@ -394,7 +365,7 @@ async function main() {
       const epFile = path.join(dir, "episode.json");
       const ep = JSON.parse(fs.readFileSync(epFile, "utf8"));
       for (const s of ep.scenes) if (s.person && s.emoji === "📜" && s.type === "story") s.photoPending = true; // 표시 없이 바뀐 예전 장면
-      const credits = await fillPhotos(st, ep, dir);
+      const credits = await fillPhotosIn(ep, dir, (m) => log(st, m));
       await fillArt(st, ep, dir);
       fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
       const yt = JSON.parse(fs.readFileSync(path.join(dir, "youtube.json"), "utf8"));

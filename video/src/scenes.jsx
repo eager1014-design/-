@@ -326,7 +326,79 @@ function shortCrop(scene) {
   return `${x * 100}% 50%`;
 }
 
+// 그림이 그려지는 연출 (scene.draw, scene.drawFace — 2026-10-27 사장님): 바탕색 덮개를 연필이 지그재그로 지워 나가며 그림이 드러난다.
+// 덮개는 그림 바탕색(scene.drawBg, 없으면 장면 바탕색)이라 검정 바탕 삽화·캐릭터 선화에서 '손으로 그리는' 느낌. 장면 앞쪽 55%(최대 2.4초) 동안 그린다.
+function zigzag(rows) {
+  const pts = [];
+  for (let i = 0; i < rows; i++) {
+    const y = ((i + 0.5) * 100) / rows;
+    const [a, b] = i % 2 ? [105, -5] : [-5, 105];
+    pts.push([a, y - 4], [b, y + 4]);
+  }
+  const seg = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]));
+  return { pts, seg, total: seg.reduce((x, y) => x + y, 0) };
+}
+function tipAt({ pts, seg, total }, p) {
+  let left = p * total;
+  for (let i = 0; i < seg.length; i++) {
+    if (left <= seg[i]) {
+      const k = left / seg[i];
+      return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * k, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * k];
+    }
+    left -= seg[i];
+  }
+  return pts.at(-1);
+}
+function DrawCover({ frames, rows = 6, color = COLORS.bg }) {
+  const u = useUnit();
+  const frame = useCurrentFrame();
+  const id = React.useId().replace(/:/g, "");
+  const dur = Math.max(18, Math.min(72, frames * 0.55));
+  const p = ease(Math.min(1, frame / dur));
+  if (p >= 1) return null;
+  const z = zigzag(rows);
+  const [tx, ty] = tipAt(z, p);
+  return (
+    <AbsoluteFill>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", width: "100%", height: "100%" }}>
+        <mask id={id}>
+          <rect x="-10" y="-10" width="120" height="120" fill="white" />
+          <path d={"M" + z.pts.map((q) => q.join(" ")).join(" L")} pathLength="1" stroke="black" strokeWidth={(100 / rows) * 1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" strokeDasharray="1 1" strokeDashoffset={1 - p} />
+        </mask>
+        <rect x="-10" y="-10" width="120" height="120" fill={color} mask={`url(#${id})`} />
+      </svg>
+      <div style={{ position: "absolute", left: `${Math.min(96, Math.max(2, tx))}%`, top: `${ty}%`, fontSize: 96 * u, transform: "translate(-12%, -88%)", opacity: interpolate(p, [0.9, 1], [1, 0], { extrapolateLeft: "clamp" }) }}>✏️</div>
+    </AbsoluteFill>
+  );
+}
+
+// 캐릭터 표정 크게 그리기 (scene.drawFace: smile·surprised·serious·laugh·worried·kind): 내 캐릭터 얼굴이 연필로 그려지고 옆에 글씨
+function DrawFace({ scene, frames }) {
+  const u = useUnit();
+  const short = useIsShort();
+  const lines = lineItems(scene, "lines");
+  const at = revealFrames(scene, lines);
+  return (
+    <AbsoluteFill style={{ background: COLORS.bg }}>
+      <Sfx at={at} />
+      {/* 얼굴 클로즈업: 그림(900×1100, 머리가 위쪽 절반)을 크게 키워 머리만 보이게 */}
+      <div style={{ position: "absolute", overflow: "hidden", ...(short ? { left: 0, width: "100%", top: "12%", height: "46%" } : { left: "50%", width: "42%", top: "8%", height: "84%" }) }}>
+        <Img src={staticFile(`characters/round/faces/${scene.drawFace}.png`)} style={{ position: "absolute", height: "165%", left: "50%", top: "-6%", transform: "translateX(-50%)", filter: COLORS.dark ? "invert(1)" : undefined }} />
+        <DrawCover frames={frames} rows={short ? 7 : 6} />
+      </div>
+      <AbsoluteFill style={short ? { top: "60%", justifyContent: "flex-start", alignItems: "center" } : { justifyContent: "center", alignItems: "flex-start", padding: `0 50% 0 ${120 * u}px` }}>
+        {lines.map((l, i) => (
+          <Rise key={i} at={at[i]} style={{ marginTop: 14 * u, textAlign: short ? "center" : "left", maxWidth: short ? "86%" : "100%" }}>
+            <Rich text={l.text} at={at[i]} style={text(u, 80, 800, COLORS.ink)} />
+          </Rise>
+        ))}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+}
+
 function Story({ scene, frames }) {
+  if (scene.drawFace && !scene.image) return <DrawFace scene={scene} frames={frames} />;
   const u = useUnit();
   const frame = useCurrentFrame();
   const short = useIsShort();
@@ -369,6 +441,7 @@ function Story({ scene, frames }) {
             ) : (
               <OffthreadVideo src={staticFile(scene.video)} muted style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: crop }} />
             )}
+            {scene.draw && scene.image && <DrawCover frames={frames} rows={short ? 7 : 6} color={scene.drawBg} />}
           </AbsoluteFill>
           {/* 글씨가 잘 보이도록 글씨 쪽만 살짝 어둡게 */}
           <AbsoluteFill

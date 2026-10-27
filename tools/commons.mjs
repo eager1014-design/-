@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 const API = "https://commons.wikimedia.org/w/api.php";
 const UA = { "User-Agent": "yeminhan-video-factory/1.0 (personal YouTube channel tool; eager1014@gmail.com)" };
 const OK = /^(public domain|pd\b|pd-|cc0|cc by(-sa)? ?[1-4]\.0|cc-by(-sa)?-[1-4]\.0)/i;
+const VIDEO_PUBLIC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../video/public");
 const strip = (s = "") => s.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 
 // 인터넷이 잠깐 끊기면(fetch failed) 2초·5초 쉬고 다시 — 2026-10-23 첫 편에서 한 번 끊겨 사진이 빠졌음
@@ -108,6 +109,39 @@ export async function locateFace(file, name) {
 // 설명란에 붙일 사진 출처 (퍼블릭 도메인도 예의상 적는다)
 export function creditLines(credits) {
   return credits.map((c) => `- ${c.name}: "${c.title}" — ${c.author}, ${c.license}, Wikimedia Commons ${c.url}`).join("\n");
+}
+
+const withTimeout = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);
+// 대본의 photo 장면(person)에 사진을 채운다. 못 받은 장면은 이모지 이야기 장면으로 바꿔 두고(photoPending) 다음에 다시 시도.
+// 돌려주는 credits 는 설명란 출처(creditLines)용. 오늘의 영상·롱폼 공통.
+export async function fillPhotos(ep, dir, log = console.log) {
+  // photoPending: 예전에 사진을 못 받아 이모지로 바꿔 둔 장면 → 다시 사진 장면으로
+  for (const s of ep.scenes) if (s.photoPending && s.person) { Object.assign(s, { type: "photo" }); delete s.emoji; delete s.photoPending; }
+  const scenes = ep.scenes.filter((s) => s.type === "photo" && !s.image);
+  if (!scenes.length) return [];
+  const imgDir = path.join(dir, "img");
+  const credits = [];
+  for (const person of [...new Set(scenes.map((s) => s.person).filter(Boolean))]) {
+    const mine = scenes.filter((s) => s.person === person);
+    let got = [];
+    try { got = await fetchPortraits(person, imgDir, mine.length); } catch (e) { log(`⚠️ ${person} 사진 받기 실패: ${e.message}`); }
+    log(`📷 ${person} 사진 ${got.length}장 (${got.map((g) => g.license).join(", ") || "없음"})`);
+    for (const [i, s] of mine.entries()) {
+      const g = got[i % Math.max(1, got.length)];
+      if (!g) continue;
+      s.image = path.relative(VIDEO_PUBLIC, g.file);
+      s.aspect = g.aspect;
+      if (s.circle) {
+        const face = await withTimeout(locateFace(g.file, person).catch(() => null), 45_000);
+        Object.assign(s.circle, face || { x: 0.5, y: 0.28, r: 0.16 });
+      }
+      if (!credits.some((c) => c.file === g.file)) credits.push(g);
+    }
+  }
+  for (const s of ep.scenes) {
+    if (s.type === "photo" && !s.image) Object.assign(s, { type: "story", emoji: "📜", photoPending: true });
+  }
+  return credits;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
