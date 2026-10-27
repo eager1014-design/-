@@ -77,7 +77,13 @@ def build_context(order, chart, luck, partner_chart=None):
     return "\n\n".join(parts)
 
 
-def _chapter(context, toc, i, title, instruction, chars, name):
+def _tidy(text):
+    """AI가 인용을 겹따옴표로 감싸는 버릇 정리 (“‘예민한 편’” → “예민한 편”)."""
+    import re
+    return re.sub(r"[“\"]\s*[‘']([^’'”\"]{1,80})[’']\s*[”\"]", r"“\1”", text)
+
+
+def _chapter(context, toc, i, title, instruction, chars, name, style=""):
     prompt = f"""{context}
 
 [이 리포트의 전체 목차 — 각 장이 맡은 범위]
@@ -86,13 +92,16 @@ def _chapter(context, toc, i, title, instruction, chars, name):
 이번에 쓸 장: {i + 1}장 「{title}」
 지시: {instruction}
 분량: 약 {chars:,}자 (공백 포함). {name}님에게 직접 말하듯 존댓말로."""
-    text, engine = llm.generate(interpret.SYSTEM_PROMPT + CHAPTER_RULES, [{"role": "user", "content": prompt}],
-                                max(1500, int(chars * 1.8)))
+    text, engine = llm.generate(interpret.SYSTEM_PROMPT + CHAPTER_RULES + ("\n" + style if style else ""),
+                                [{"role": "user", "content": prompt}], max(1500, int(chars * 1.8)))
+    if not text:  # 한 장만 비는 일이 있어 한 번 더 (2026-10-27 미리보기에서 7장 중 1장이 빔)
+        text, engine = llm.generate(interpret.SYSTEM_PROMPT + CHAPTER_RULES + ("\n" + style if style else ""),
+                                    [{"role": "user", "content": prompt}], max(1500, int(chars * 1.8)))
     if text:
         lines = text.strip().split("\n")
         if lines and lines[0].lstrip().startswith("#") and title.split(" ")[0] in lines[0]:
             lines = lines[1:]  # AI가 장 제목을 또 쓴 경우 제거
-        text = "\n".join(lines).strip()
+        text = _tidy("\n".join(lines).strip())
     return text, engine
 
 
@@ -126,7 +135,7 @@ def generate(order, chart, partner_chart=None, progress=None):
     def work(i):
         t, ins, chars = chapters[i]
         reader = f"선물하는 {order['name']}" if p.get("gift") else order["name"]
-        results[i] = _chapter(context, toc, i, t, ins, chars, reader)
+        results[i] = _chapter(context, toc, i, t, ins, chars, reader, p.get("style", ""))
         done[0] += 1
         if progress:
             progress(done[0], len(chapters))
