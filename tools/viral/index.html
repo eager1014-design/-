@@ -91,10 +91,8 @@
     <button class="more-toggle" onclick="document.body.classList.toggle('show-more');this.textContent=document.body.classList.contains('show-more')?'접기 ▴':'더보기 ▾'">더보기 ▾</button>
     <button data-tab="needs" class="more">고객 고충 <span id="needCount"></span></button>
     <button data-tab="diary" class="more">일기장</button>
-    <button data-tab="search" class="more">찾기</button>
-    <button data-tab="lib" class="more">보관함 <span id="libCount"></span></button>
     <button data-tab="tech" class="more">연출 기법</button>
-    <button data-tab="ideas" class="more">아이디어 검증</button>
+    <!-- 찾기·보관함·아이디어 검증 탭은 메뉴에서 뺌 (2026-10-28 사장님: 안 씀). 화면 코드·자료는 남아 있고, 새벽 5시 숏폼이 떡상 쇼츠를 찾아 분석·보관하는 일은 그대로 -->
   </div>
 </header>
 <main>
@@ -252,7 +250,7 @@ async function saveHit(id, btn, andAnalyze) {
   });
 }
 
-async function loadLib() { library = await api("/api/library"); $("#libCount").textContent = library.length ? `(${library.length})` : ""; }
+async function loadLib() { library = await api("/api/library"); const n = $("#libCount"); if (n) n.textContent = library.length ? `(${library.length})` : ""; /* 보관함 탭은 메뉴에서 뺐음 */ }
 function renderLib() {
   $("#lib").innerHTML = library.length ? `<div class="grid">${library.map((i) => card(i, true)).join("")}</div>` : `<div class="panel">아직 비어 있어요. '찾기'로 넣거나, '연출 기법'에서 참고 링크를 보내보세요.</div>`;
 }

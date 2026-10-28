@@ -111,14 +111,14 @@ function run(p, label, bin, argv, opts = {}) {
 async function readRefs(p) {
   const ask = "한국어로 15줄 이내: 이 자료의 구성(훅·순서·길이), 화면 연출(글꼴·색·그림체·배치·움직임), 말투, 우리가 따라 할 만한 점과 피할 점. 내용·대사를 베끼지 말고 뼈대만.";
   for (const r of p.refs) {
-    if (r.summary || r.failed) continue;
+    if (r.summary || (r.tries || 0) >= 3) continue; // 실패한 링크는 다음 말 보낼 때 다시 (최대 3번)
     try {
       if (r.url && /youtu\.?be/.test(r.url)) {
         log(p, `👀 제미나이가 영상 보는 중: ${r.url}`);
-        r.summary = (await watchVideo(r.url, ask, { clip: { start: 0, end: 240 } })).text;
+        r.summary = (await watchVideo(r.url, ask, { clip: { start: 0, end: 240 }, log: (m) => log(p, m) })).text;
       } else if (r.file && isVideo(r.file)) {
         log(p, `👀 제미나이가 올린 영상 보는 중`);
-        r.summary = (await watchVideo(path.join(ROOT, r.file), ask)).text;
+        r.summary = (await watchVideo(path.join(ROOT, r.file), ask, { log: (m) => log(p, m) })).text;
       } else if (r.file && imageParts([r.file]).length) {
         log(p, `👀 제미나이가 사진 보는 중`);
         const res = await gemini().models.generateContent({ model: GEMINI_MODEL, contents: [{ role: "user", parts: [...imageParts([r.file]), { text: ask }] }] });
@@ -126,6 +126,7 @@ async function readRefs(p) {
       } else if (r.url) r.summary = "(유튜브가 아닌 링크라 내용은 못 봤음 — 사장님 메모로 판단)";
     } catch (e) {
       r.failed = String(e.message).slice(0, 200);
+      r.tries = (r.tries || 0) + 1;
       log(p, `⚠ 참고 자료를 못 봤어요 (${r.failed.slice(0, 80)}) — 나머지로 진행`);
     }
     saveProject(p);
@@ -174,11 +175,13 @@ function markDiary(p, ids = []) {
 
 function context(p) {
   const refs = p.refs.filter((r) => r.summary).map((r, i) => `[참고 ${i + 1}] ${r.url || path.basename(r.file)}\n${r.summary}`).join("\n\n");
+  // 제미나이가 못 본 자료는 클로드에게도 알려서 "영상은 못 본다"고 잘못 말하지 않게 (2026-10-28)
+  const missed = p.refs.filter((r) => !r.summary && r.failed).map((r) => r.url || path.basename(r.file));
   const talk = p.messages.slice(-20).map((m) => `${m.role === "me" ? "사장님" : "클로드"}: ${m.text}${m.links?.length ? ` (링크 ${m.links.join(" ")})` : ""}${m.files?.length ? ` (파일 ${m.files.length}개)` : ""}`).join("\n");
   const kind = p.format === "short" ? "세로 쇼츠 1080×1920 (40~60초)" : "가로 롱폼 1920×1080 (보통 6~10분)";
   return `[${p.format === "short" ? "숏폼" : "롱폼"} 프로젝트] 가제: ${p.title} / 채널: ${p.channel} / ${kind}
 [사장님이 처음 말한 느낌] ${p.brief || "(없음)"}
-${p.parent ? `[원본 롱폼 「${p.parent.title}」에서 뽑은 쇼츠 — 이 구간의 내용·표현을 살려서, 롱폼을 안 본 사람도 이해되게 40~55초로]\n${p.parent.segment}\n` : ""}${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약 (사장님이 이번에 직접 준 자료라 보관함보다 우선)]\n${refs}\n` : ""}${diaryNotes(p)}${libraryNotes(p)}[최근에 만든 영상 — 사장님이 "비슷한 주제만 나온다"고 함. 주제를 제안할 땐 이것과 겹치지 않게, 영역을 넓게 (${AREA_LIST})]\n${recentList(p.plan?.titles?.[0])}\n[지금까지 대화]\n${talk || "(아직 없음)"}
+${p.parent ? `[원본 롱폼 「${p.parent.title}」에서 뽑은 쇼츠 — 이 구간의 내용·표현을 살려서, 롱폼을 안 본 사람도 이해되게 40~55초로]\n${p.parent.segment}\n` : ""}${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${missed.length ? `[참고 자료 중 못 본 것 — 제미나이(영상 보는 AI)가 잠깐 붐벼서 실패. 우리는 링크 영상을 볼 수 있다. "볼 수 없다"고 하지 말고, "제미나이가 붐벼서 이번엔 못 봤고, 다음에 말을 보내면 다시 본다"고 짧게 알릴 것] ${missed.join(" ")}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약 (사장님이 이번에 직접 준 자료라 보관함보다 우선)]\n${refs}\n` : ""}${diaryNotes(p)}${libraryNotes(p)}[최근에 만든 영상 — 사장님이 "비슷한 주제만 나온다"고 함. 주제를 제안할 땐 이것과 겹치지 않게, 영역을 넓게 (${AREA_LIST})]\n${recentList(p.plan?.titles?.[0])}\n[지금까지 대화]\n${talk || "(아직 없음)"}
 
 [채널 정체성 — 사장님 2026-10-28] '예민한 사람이 알려주는 쉬운 심리학'. 주제는 심리학·철학자·위인·연애·관계·돈·습관·뇌·사주 등 폭넓게 (HSP·예민함은 가끔만, 매번 끼워 넣지 말 것). 시선·말투는 예민한 사람의 섬세한 관찰. 사주는 과학처럼 말하지 않는다.
 [원칙] 사장님은 코드를 모르는 1인 사업가. 쉬운 말로, 짧게. 듣기 좋은 말만 하지 말고 약점도 근거와 함께 (사장님 요청).

@@ -11,6 +11,7 @@ if (fs.existsSync(ENV_PATH)) process.loadEnvFile(ENV_PATH);
 
 // 모델 이름은 .env 에서 바꿀 수 있다. 비워두면 아래 기본값을 쓴다.
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const FALLBACK_MODELS = ["gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-flash-lite-latest"]; // 기본 모델이 붐빌 때 (2026-10-28 모델 목록에서 확인)
 
 // 제미나이는 영상 1초를 약 300토큰으로 센다(화면 1장 + 소리). 비용 미리보기에 쓰는 어림값.
 export const TOKENS_PER_SECOND = 300;
@@ -63,12 +64,18 @@ export async function watchVideo(source, prompt, { schema, log = () => {}, clip,
   const part = await videoPart(ai, source, log);
   if (clip) part.videoMetadata = { startOffset: `${clip.start}s`, endOffset: `${clip.end}s` };
   const config = schema ? { responseMimeType: "application/json", responseSchema: schema } : undefined;
-  const res = await ai.models.generateContent({
-    model,
-    contents: [{ role: "user", parts: [part, { text: prompt }] }],
-    config,
-  });
-  return { text: res.text ?? "", tokens: res.usageMetadata?.totalTokenCount ?? null };
+  // 503 "사용자가 너무 많음": 20초 쉬고 같은 모델로 한 번 더 → 그래도 붐비면 바로 아래 버전 모델로 (2026-10-28 롱폼 참고 링크가 실패로 버려졌음)
+  const tries = [model, model, ...FALLBACK_MODELS.filter((m) => m !== model)];
+  for (let i = 0; ; i++) {
+    try {
+      const res = await ai.models.generateContent({ model: tries[i], contents: [{ role: "user", parts: [part, { text: prompt }] }], config });
+      return { text: res.text ?? "", tokens: res.usageMetadata?.totalTokenCount ?? null, model: tries[i] };
+    } catch (e) {
+      if (i + 1 >= tries.length || !/503|UNAVAILABLE|high demand|overloaded|fetch failed|ECONNRESET|ETIMEDOUT/i.test(String(e?.message))) throw e;
+      log(tries[i + 1] === tries[i] ? "제미나이가 붐벼서 20초 뒤 다시 봅니다" : `제미나이 ${tries[i]} 가 붐벼서 ${tries[i + 1]} 로 봅니다`);
+      if (tries[i + 1] === tries[i]) await new Promise((r) => setTimeout(r, 20_000));
+    }
+  }
 }
 
 // 제미나이 오류를 사장님이 이해할 수 있는 말로 바꾼다.
