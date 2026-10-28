@@ -86,8 +86,8 @@
 <header>
   <h1>🔥 떡상 <span>소싱</span></h1>
   <div class="tabs">
-    <button data-tab="long" class="on">💬 영상 만들기</button>
-    <button data-tab="daily">오늘의 영상</button>
+    <button data-tab="long" class="on">🖥 롱폼</button>
+    <button data-tab="daily">📱 숏폼</button>
     <button class="more-toggle" onclick="document.body.classList.toggle('show-more');this.textContent=document.body.classList.contains('show-more')?'접기 ▴':'더보기 ▾'">더보기 ▾</button>
     <button data-tab="needs" class="more">고객 고충 <span id="needCount"></span></button>
     <button data-tab="diary" class="more">일기장</button>
@@ -342,7 +342,7 @@ async function loadDaily() {
     ${Object.entries(looks).map(([k, v]) => `<option value="${k}" ${k === look ? "selected" : ""}>${v}</option>`).join("")}</select>
     <label style="margin:0 0 0 12px">글씨·색</label>
     <select style="width:auto" onchange="api('/api/settings',{skin:this.value}).then(()=>say('다음 영상부터 바뀝니다. 지금 영상은 [다시 쓰기]로 바꿀 수 있어요.'))">
-    ${[["chalk", "칠판 (진한 파랑·네온·움직이는 소품)"], ["", "기본 (프리텐다드)"], ["cute", "귀여운 (주아체·파스텔·스티커)"]].map(([k, v]) => `<option value="${k}" ${k === (settings.skin || "") ? "selected" : ""}>${v}</option>`).join("")}</select></div>` + (days[0]?.date !== t ? `<div class="panel"><b>${t}</b> 오늘 영상은 아직 없어요. 매일 새벽 5시에 자동으로 만들어집니다.<div class="acts" style="margin-top:10px"><button class="btn" onclick="daily('run','${t}',this)">지금 만들기</button></div><p class="note">일기를 먼저 써두시면 그 이야기로 만들어요. 10~20분 걸립니다.</p></div>` : "") +
+    ${[["paper", "흰 바탕·검은 선 (기본)"], ["chalk", "칠판 (검은 바탕·흰 선)"], ["cute", "귀여운 (크림색·주아체)"], ["", "예전 기본 (프리텐다드)"]].map(([k, v]) => `<option value="${k}" ${k === (settings.skin || "") ? "selected" : ""}>${v}</option>`).join("")}</select></div>` + (days[0]?.date !== t ? `<div class="panel"><b>${t}</b> 오늘 영상은 아직 없어요. 매일 새벽 5시에 자동으로 만들어집니다.<div class="acts" style="margin-top:10px"><button class="btn" onclick="daily('run','${t}',this)">지금 만들기</button></div><p class="note">일기를 먼저 써두시면 그 이야기로 만들어요. 10~20분 걸립니다.</p></div>` : "") +
     (days.map(dayCard).join("") || "");
   clearTimeout(dailyTimer);
   if (busyNow && !$("#tab-daily").classList.contains("hide")) dailyTimer = setTimeout(loadDaily, 5000);
@@ -361,10 +361,12 @@ function dayCard(d) {
     ${yt.title ? `<p style="margin:10px 0 0"><b>유튜브 제목</b> ${esc(yt.title)}</p>` : ""}
     ${d.idea?.narration ? `<details><summary>대본 보기 (${d.idea.chars}자)</summary><div class="narr">${esc(d.idea.narration)}</div>${yt.description ? `<p class="note"><b>설명란</b><br>${esc(yt.description).replace(/\n/g, "<br>")}</p>` : ""}</details>` : ""}
     ${d.youtubeUrl ? `<p><a href="${esc(d.youtubeUrl)}" target="_blank">유튜브에서 보기 ↗</a> — 스튜디오에서 공개로 바꿔주세요</p>` : ""}
+    ${d.oldUploads?.length ? `<p class="note">예전에 올린 것 (스튜디오에서 지워 주세요): ${d.oldUploads.map((u) => `<a href="${esc(u)}" target="_blank">${esc(u)}</a>`).join(" · ")}</p>` : ""}
     ${yt.pinned ? `<details ${d.youtubeUrl && !d.commentUrl ? "open" : ""}><summary>📌 고정 댓글 (사주 추천)</summary><div class="narr" id="pin-${d.date}">${esc(yt.pinned)}</div><div class="acts"><button class="btn sm ghost" onclick="navigator.clipboard.writeText($('#pin-${d.date}').textContent).then(()=>say('고정 댓글을 복사했어요.'))">복사</button>${d.youtubeUrl ? `<button class="btn sm ${d.commentUrl ? "ghost" : ""}" onclick="daily('comment','${d.date}',this,'이 고정 댓글을 사장님 채널 이름으로 영상에 달까요? (영상이 공개 또는 일부 공개여야 달려요)')">📌 ${d.commentUrl ? "다시 달기" : "영상에 댓글로 달기"}</button>` : ""}${d.commentUrl ? `<a href="${esc(d.commentUrl)}" target="_blank">달린 댓글 보기</a>` : ""}</div><p class="note">단 뒤 스튜디오 → 댓글 → ⋮ → '고정'만 눌러주세요.</p></details>` : ""}
     ${!busy ? `<div class="acts">
       ${d.status === "draft_ready" ? `<button class="btn" onclick="daily('voice','${d.date}',this,'일레븐랩스 천성준 목소리로 녹음합니다 (${d.idea?.chars ?? "?"}자 ≈ 크레딧 ${d.idea?.chars ?? "?"}). 진행할까요?')">🎙 목소리 입히고 완성</button>` : ""}
       ${d.status === "final_ready" ? `<button class="btn" onclick="daily('upload','${d.date}',this,'유튜브에 비공개로 올립니다. 진행할까요?')">⬆️ 유튜브에 비공개로 올리기</button>` : ""}
+      ${d.status === "uploaded" && d.final ? `<button class="btn ghost" onclick="daily('upload','${d.date}',this,'새 영상으로 다시 올려요 (유튜브는 올린 영상의 파일만 바꿔 끼울 수 없어요). 예전 영상은 비공개로 남으니 스튜디오에서 지워 주세요. 진행할까요?')">🔁 다시 올리기 (새 영상으로)</button>` : ""}
       ${d.status === "failed" ? `<button class="btn" onclick="daily('run','${d.date}',this)">이어서 다시 시도</button>` : ""}
     </div>
     ${["draft_ready", "final_ready", "failed"].includes(d.status) && d.idea ? `<details><summary>✏️ 고칠 점 적고 대본 다시 쓰기</summary><textarea id="fb-${d.date}" placeholder="예: 첫 문장을 더 세게, 연애 이야기로 바꿔줘, 너무 길어"></textarea><button class="btn ghost" style="margin-top:8px" onclick="daily('redo','${d.date}',this)">다시 쓰기</button><p class="note">목소리를 이미 입혔다면 다시 녹음해야 해요 (크레딧).</p></details>` : ""}` : ""}
@@ -596,7 +598,8 @@ function renderLong(p) {
     ${!short && p.thumbs?.length ? `<p class="note" style="margin-bottom:4px">올릴 썸네일</p><div style="display:flex;gap:8px;flex-wrap:wrap">${p.thumbs.map((t, i) => `<label style="width:150px"><input type="radio" name="lfThumb" value="${i}" ${i === (p.pick?.thumb || 0) ? "checked" : ""} style="width:auto"> ${i + 1}번<img src="/upload?p=${encodeURIComponent(t)}" style="width:100%;border-radius:8px"></label>`).join("")}</div>` : ""}
     ${p.abDir ? `<p class="note">A/B 테스트용 파일: 바탕화면 '${esc(p.abDir.split("/").pop())}' 폴더 (썸네일1~3.jpg · 제목3개.txt) — 제목 옆 [복사]로도 바로 붙여넣을 수 있어요</p>` : ""}
     ${p.youtubeUrl ? `<p>✅ 올림: <a href="${esc(p.youtubeUrl)}" target="_blank">${esc(p.youtubeUrl)}</a></p>` : ""}
-    <button class="btn ghost" style="margin-top:10px" ${busy || !p.final ? "disabled" : ""} onclick="lfPublish(this)">유튜브에 비공개로 올리기</button>
+    <button class="btn ghost" style="margin-top:10px" ${busy || !p.final ? "disabled" : ""} onclick="lfPublish(this)">${p.youtubeUrl ? "🔁 다시 올리기 (새 영상으로)" : "유튜브에 비공개로 올리기"}</button>
+    ${p.oldUploads?.length ? `<p class="note">예전에 올린 것 (스튜디오에서 지워 주세요): ${p.oldUploads.map((u) => `<a href="${esc(u)}" target="_blank">${esc(u)}</a>`).join(" · ")}</p>` : ""}
     <span class="note">${p.final ? "공개 전환은 스튜디오에서 사장님이" : "완성본이 있어야 올릴 수 있어요"}</span>${p.forecast ? `<div class="readout" style="margin:10px 0;font-size:14px"><b>🔮 올리기 전 예측 — 등급 ${esc(p.forecast.grade || "?")}</b>\n<b>누를/안 누를 이유</b> ${esc(p.forecast.click)}\n<b>나갈 지점</b> ${esc(p.forecast.drop)}\n<b>예상 댓글</b> ${esc([].concat(p.forecast.comments || []).join(" / "))}\n<b>운결 연결</b> ${esc(p.forecast.saju)}${p.forecast.fix?.length ? `\n<b>고치면 좋을 것</b> ${esc([].concat(p.forecast.fix).join(" / "))}` : ""}</div>` : ""}<div class="readout">${esc(p.youtube.description)}</div>
     ${p.youtube.pinned ? `<p style="margin:14px 0 4px"><b>📌 고정 댓글</b> <button type="button" class="btn sm ghost" onclick="navigator.clipboard.writeText($('#lfPinned').textContent).then(()=>say('고정 댓글을 복사했어요. 공개 후 댓글로 달고 ⋮ → 고정을 누르세요.'))">복사</button></p><div class="readout" id="lfPinned">${esc(p.youtube.pinned)}</div>${p.youtubeUrl ? `<button class="btn ${p.commentUrl ? "ghost" : ""} sm" ${busy ? "disabled" : ""} onclick="lfComment(this)">📌 ${p.commentUrl ? "다시 달기" : "영상에 댓글로 달기"}</button>` : ""}${p.commentUrl ? ` <a href="${esc(p.commentUrl)}" target="_blank">달린 댓글 보기</a>` : ""}<p class="note">영상이 공개(또는 일부 공개)여야 달려요. 단 뒤 스튜디오 → 댓글 → ⋮ → '고정'만 눌러주세요 (고정은 유튜브가 프로그램으로 못 하게 막아 둠).</p>` : ""}<p class="note">태그: ${p.youtube.tags.map(esc).join(", ")}</p></div>` : "";
   const msg = (m) => `<div class="bubble ${m.role}">${esc(m.text)}${(m.images || []).map((f) => `<img src="/upload?p=${encodeURIComponent(f)}">`).join("")}${m.video ? `<video controls preload="metadata" style="${short ? "max-width:320px" : ""}" src="/video?p=${encodeURIComponent(m.video)}"></video>` : ""}${m.links?.length ? `<div class="note" style="color:inherit">🔗 ${m.links.map(esc).join(" ")}</div>` : ""}${m.files?.length ? `<div class="note" style="color:inherit">📎 파일 ${m.files.length}개</div>` : ""}${m.open ? `<div style="margin-top:8px"><button class="btn sm" onclick="lfId='${esc(m.open)}';loadLong()">다음 편으로 가기 →</button></div>` : ""}${m.opens?.length ? `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${m.opens.map((id, i) => `<button class="btn sm" onclick="lfId='${esc(id)}';loadLong()">숏폼 ${i + 1} 열기 →</button>`).join("")}</div>` : ""}</div>`;
@@ -635,7 +638,8 @@ async function lfVoiceSend(b) {
 }
 async function lfPublish(b) {
   const ti = document.querySelector("input[name=lfTitle]:checked")?.value || 0, th = document.querySelector("input[name=lfThumb]:checked")?.value || 0;
-  if (!confirm("고른 제목·썸네일로 유튜브에 비공개로 올릴까요?")) return;
+  const again = b.textContent.includes("다시");
+  if (!confirm(again ? "새 영상으로 다시 올려요 (유튜브는 올린 영상의 파일만 바꿔 끼울 수 없어요). 예전 영상은 비공개로 남으니 스튜디오에서 지워 주세요. 진행할까요?" : "고른 제목·썸네일로 유튜브에 비공개로 올릴까요?")) return;
   await busy(b, "보내는 중…", async () => { await api("/api/longform/send", { id: lfId, step: "publish", text: "유튜브에 올려줘", titleIdx: ti, thumbIdx: th }); loadLong(); });
 }
 async function lfEleven(chars, b) {

@@ -1,7 +1,7 @@
 // 장면 틀 모음. 대본(episode.json)의 각 장면 "type" 이 아래 이름 중 하나다.
 // 모든 장면은 { scene } 을 받고, 화면 요소의 등장 시점은 timing.revealFrames 로 내레이션에 맞춘다.
 import React, { useContext } from "react";
-import { AbsoluteFill, Img, OffthreadVideo, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Img, OffthreadVideo, continueRender, delayRender, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { COLORS, ELEMENTS } from "./theme.js";
 import { cueFrame, revealFrames } from "./timing.js";
 import { Dialogue } from "./presenter.jsx";
@@ -380,6 +380,77 @@ function DrawCover({ frames, rows = 6, color = COLORS.bg }) {
   );
 }
 
+// 손으로 한 줄씩 그리기 (2026-10-28 사장님: "손가락 따서 선 하나하나 그리는 것처럼"): scripts/strokes.py 가 뽑은 획(<그림>.strokes.json)을
+// 순서대로 따라가며, 사장님 손(characters/hand) 펜 끝이 지나간 자리만 그림이 드러난다. 선을 다 그리면 덮개가 걷히며 색이 들어옴.
+// 획 사이는 손을 들어 다음 획 시작점으로 옮긴다. fit: "slice"(= object-fit cover, 가운데 기준) | "none"(그림과 같은 비율의 상자)
+const HAND = { src: "characters/hand/hand.png", tip: [0.18, 0.3], aspect: 878 / 700 };
+function useStrokes(src) {
+  const [data, setData] = React.useState(null);
+  const [handle] = React.useState(() => (src ? delayRender(`획 ${src}`) : null));
+  React.useEffect(() => {
+    if (!src) return;
+    fetch(staticFile(src)).then((r) => r.json()).then((d) => {
+      let t = 0, prev = null;
+      const paths = d.paths.map((p) => {
+        const seg = p.pts.slice(1).map((q, i) => Math.hypot(q[0] - p.pts[i][0], q[1] - p.pts[i][1]));
+        const len = seg.reduce((a, b) => a + b, 0) || 1;
+        if (prev) t += 0.35 * Math.hypot(p.pts[0][0] - prev[0], p.pts[0][1] - prev[1]); // 손 옮기는 시간
+        const item = { ...p, seg, len, t0: t, d: "M" + p.pts.map((q) => q.join(" ")).join(" L") };
+        t += len; prev = p.pts.at(-1);
+        return item;
+      });
+      setData({ ...d, paths, total: t });
+    }).catch(() => setData(null)).finally(() => continueRender(handle));
+  }, [src]);
+  return data;
+}
+function pointOn(p, local) {
+  let left = local * p.len;
+  for (let i = 0; i < p.seg.length; i++) {
+    if (left <= p.seg[i]) { const k = left / (p.seg[i] || 1); return [p.pts[i][0] + (p.pts[i + 1][0] - p.pts[i][0]) * k, p.pts[i][1] + (p.pts[i + 1][1] - p.pts[i][1]) * k]; }
+    left -= p.seg[i];
+  }
+  return p.pts.at(-1);
+}
+// view: 그림의 일부만 보여줄 때 "x y w h" (그 밖은 잘리지만 손은 밖으로 나올 수 있음), under: 덮개 아래 깔 그림(SVG 요소)
+function DrawStrokes({ src, frames, color, fit = "slice", hand = true, view, under }) {
+  const frame = useCurrentFrame();
+  const data = useStrokes(src);
+  const id = React.useId().replace(/:/g, "");
+  if (!data) return null;
+  const dur = Math.max(30, Math.min(150, frames * 0.62)); // 선 그리는 시간 (최대 5초)
+  const cover = interpolate(frame, [dur, dur + 10], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  if (cover <= 0 && !under) return null;
+  const T = Math.min(1, frame / dur) * data.total;
+  let tip = null;
+  const done = [], cur = [];
+  for (const p of data.paths) {
+    if (T >= p.t0 + p.len) done.push(p);
+    else if (T > p.t0) { const k = (T - p.t0) / p.len; cur.push([p, k]); tip = pointOn(p, k); }
+    else { if (!tip) { const prev = done.at(-1); const k = prev ? Math.min(1, (T - (prev.t0 + prev.len)) / Math.max(1, p.t0 - prev.t0 - prev.len)) : 1; tip = prev ? [prev.pts.at(-1)[0] + (p.pts[0][0] - prev.pts.at(-1)[0]) * k, prev.pts.at(-1)[1] + (p.pts[0][1] - prev.pts.at(-1)[1]) * k] : p.pts[0]; } break; }
+  }
+  if (!tip) tip = data.paths.at(-1)?.pts.at(-1) || [data.w / 2, data.h / 2];
+  const out = interpolate(frame, [dur, dur + 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }); // 다 그리면 손이 오른쪽 아래로 빠짐
+  const hw = 0.26 * Math.max(data.w, data.h), hh = hw * HAND.aspect;
+  const hx = tip[0] - HAND.tip[0] * hw + out * data.w * 0.5, hy = tip[1] - HAND.tip[1] * hh + out * data.h * 0.6;
+  const width = (p) => p.w + 6;
+  return (
+    <svg viewBox={view || `0 0 ${data.w} ${data.h}`} preserveAspectRatio={fit === "slice" ? "xMidYMid slice" : fit === "meet" ? "xMidYMin meet" : "none"} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}>
+      {view && <clipPath id={`${id}c`}><rect x={view.split(" ")[0]} y={view.split(" ")[1]} width={view.split(" ")[2]} height={view.split(" ")[3]} /></clipPath>}
+      <g clipPath={view ? `url(#${id}c)` : undefined}>
+      {under}
+      <mask id={id} maskUnits="userSpaceOnUse" x={-data.w} y={-data.h} width={data.w * 3} height={data.h * 3}>
+        <rect x={-data.w} y={-data.h} width={data.w * 3} height={data.h * 3} fill="white" />
+        {done.map((p, i) => <path key={i} d={p.d} stroke="black" strokeWidth={width(p)} strokeLinecap="round" strokeLinejoin="round" fill="none" />)}
+        {cur.map(([p, k], i) => <path key={`c${i}`} d={p.d} pathLength="1" strokeDasharray="1 1" strokeDashoffset={1 - k} stroke="black" strokeWidth={width(p)} strokeLinecap="round" strokeLinejoin="round" fill="none" />)}
+      </mask>
+      {cover > 0 && <rect x={-data.w} y={-data.h} width={data.w * 3} height={data.h * 3} fill={color || data.bg || COLORS.bg} mask={`url(#${id})`} opacity={cover} />}
+      </g>
+      {hand && out < 1 && <image href={staticFile(HAND.src)} x={hx} y={hy} width={hw} height={hh} opacity={1 - out} />}
+    </svg>
+  );
+}
+
 // 캐릭터 표정 크게 그리기 (scene.drawFace: smile·surprised·serious·laugh·worried·kind): 내 캐릭터 얼굴이 연필로 그려지고 옆에 글씨
 function DrawFace({ scene, frames }) {
   const u = useUnit();
@@ -390,9 +461,10 @@ function DrawFace({ scene, frames }) {
     <AbsoluteFill style={{ background: COLORS.bg }}>
       <Sfx at={at} />
       {/* 얼굴 클로즈업: 그림(900×1100, 머리가 위쪽 절반)을 크게 키워 머리만 보이게 */}
-      <div style={{ position: "absolute", overflow: "hidden", ...(short ? { left: 0, width: "100%", top: "12%", height: "46%" } : { left: "50%", width: "42%", top: "8%", height: "84%" }) }}>
-        <Img src={staticFile(`characters/round/faces/${scene.drawFace}.png`)} style={{ position: "absolute", height: "165%", left: "50%", top: "-6%", transform: "translateX(-50%)", filter: COLORS.dark ? "invert(1)" : undefined }} />
-        <DrawCover frames={frames} rows={short ? 7 : 6} />
+      <div style={{ position: "absolute", ...(short ? { left: 0, width: "100%", top: "12%", height: "46%" } : { left: "50%", width: "42%", top: "8%", height: "84%" }) }}>
+        {/* 머리 부분(그림 y 40~707)만 보이고, 펜 든 손은 상자 밖으로 나와도 됨 */}
+        <DrawStrokes src={`characters/round/faces/${scene.drawFace}.strokes.json`} frames={frames} color={COLORS.bg} fit="meet" view="110 30 680 620"
+          under={<image href={staticFile(`characters/round/faces/${scene.drawFace}.png`)} x={0} y={0} width={900} height={1100} style={{ filter: COLORS.dark ? "invert(1)" : undefined }} />} />
       </div>
       <AbsoluteFill style={short ? { top: "60%", justifyContent: "flex-start", alignItems: "center" } : { justifyContent: "center", alignItems: "flex-start", padding: `0 50% 0 ${120 * u}px` }}>
         {lines.map((l, i) => (
@@ -467,7 +539,9 @@ function Story({ scene, frames }) {
           ) : (
             <OffthreadVideo src={staticFile(scene.video)} muted style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: crop }} />
           )}
-          {scene.draw && scene.image && <DrawCover frames={frames} rows={short ? 7 : 6} color={scene.drawBg} />}
+          {scene.draw && scene.image && (scene.strokes && scene.fit !== "contain" && !(short && scene.focusX != null && scene.focusX !== 0.5)
+            ? <DrawStrokes src={scene.strokes} frames={frames} color={scene.drawBg} />
+            : <DrawCover frames={frames} rows={short ? 7 : 6} color={scene.drawBg} />)}
         </AbsoluteFill>
         {/* 글씨가 잘 보이도록 글씨 쪽만 살짝 어둡게 */}
         <AbsoluteFill

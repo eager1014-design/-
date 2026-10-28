@@ -22,6 +22,7 @@ import { AREA_LIST, pickArea, recentList, TOPIC_AREAS } from "./topic_mix.mjs";
 
 const DAILY_DIR = path.join(DATA_DIR, "daily");
 const VIDEO = path.join(ROOT, "video");
+const PY = path.join(ROOT, ".venv/bin/python"); // 그림 선 따기용 (numpy·opencv·scikit-image — video/scripts/strokes.py 머리말)
 const CLAUDE = process.env.CLAUDE_BIN || path.join(process.env.HOME, ".local/bin/claude");
 const NODE = process.execPath;
 const VOICE = { provider: "elevenlabs", id: "vithIMnhyN3GwRbVmrZt", name: "천성준" };
@@ -302,7 +303,9 @@ async function fillArt(st, ep, dir) {
         { allowFail: true, timeout: 300_000 });
       if (!r.ok || !fs.existsSync(out)) { log(st, `⚠️ 삽화 실패 → 이모지 그대로 (${r.out.trim().split("\n").pop()})`); continue; }
     }
-    Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), out), textSide: tall ? "center" : "left", motion: s.motion || "zoomIn", focusX: tall ? 0.5 : 0.7, cast: "off", draw: true }); // 연필로 그려지듯 나타남 (2026-10-27)
+    Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), out), textSide: tall ? "center" : "left", motion: s.motion || "zoomIn", focusX: tall ? 0.5 : 0.7, cast: "off", draw: true });
+    // 손이 펜으로 한 줄씩 그리는 연출용 획 (video/scripts/strokes.py, 무료·몇 초). 실패하면 예전 지그재그 연출 (2026-10-28)
+    if (fs.existsSync(PY) && run(st, `✏️ 삽화 ${i + 1} 선 따기`, PY, ["video/scripts/strokes.py", out], { allowFail: true }).ok) s.strokes = path.relative(path.join(VIDEO, "public"), out.replace(/\.png$/, ".strokes.json")); // 연필로 그려지듯 나타남 (2026-10-27)
     delete s.emoji;
   }
 }
@@ -394,6 +397,7 @@ async function main() {
     const st = begin(args[0] || today(), "uploading");
     try {
       if (!st.final) throw new Error("완성 영상이 없습니다. 먼저 목소리를 입혀주세요.");
+      if (st.youtubeUrl) { (st.oldUploads ||= []).push(st.youtubeUrl); st.commentUrl = null; } // 다시 올리기 = 새 영상 (2026-10-28 사장님)
       const r = run(st, "유튜브에 비공개로 올리는 중", NODE, ["tools/youtube_upload.mjs", "upload", st.final, path.join(path.dirname(st.episode), "youtube.json"), "--yes"]);
       st.youtubeUrl = r.out.match(/https:\/\/(?:youtu\.be|www\.youtube\.com|studio\.youtube\.com)\/\S+/)?.[0] || null;
       st.status = "uploaded";

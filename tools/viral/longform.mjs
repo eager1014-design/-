@@ -180,6 +180,7 @@ function context(p) {
 [사장님이 처음 말한 느낌] ${p.brief || "(없음)"}
 ${p.parent ? `[원본 롱폼 「${p.parent.title}」에서 뽑은 쇼츠 — 이 구간의 내용·표현을 살려서, 롱폼을 안 본 사람도 이해되게 40~55초로]\n${p.parent.segment}\n` : ""}${p.plan ? `[지금 기획안]\n${JSON.stringify(p.plan, null, 1)}\n` : ""}${refs ? `[참고 자료 — 제미나이가 본 요약 (사장님이 이번에 직접 준 자료라 보관함보다 우선)]\n${refs}\n` : ""}${diaryNotes(p)}${libraryNotes(p)}[최근에 만든 영상 — 사장님이 "비슷한 주제만 나온다"고 함. 주제를 제안할 땐 이것과 겹치지 않게, 영역을 넓게 (${AREA_LIST})]\n${recentList(p.plan?.titles?.[0])}\n[지금까지 대화]\n${talk || "(아직 없음)"}
 
+[채널 정체성 — 사장님 2026-10-28] '예민한 사람이 알려주는 쉬운 심리학'. 주제는 심리학·철학자·위인·연애·관계·돈·습관·뇌·사주 등 폭넓게 (HSP·예민함은 가끔만, 매번 끼워 넣지 말 것). 시선·말투는 예민한 사람의 섬세한 관찰. 사주는 과학처럼 말하지 않는다.
 [원칙] 사장님은 코드를 모르는 1인 사업가. 쉬운 말로, 짧게. 듣기 좋은 말만 하지 말고 약점도 근거와 함께 (사장님 요청).
 사장님 경험은 대화·메모에 있는 것만 쓰고 지어내지 않는다. 연구·숫자는 확실한 것만, 모르면 '확인 필요'. 다른 유튜버의 문장·화면을 베끼지 않는다.
 목소리는 사장님이 직접 녹음하거나 사장님 복제 목소리(일레븐랩스)로 넣는다.`;
@@ -460,6 +461,10 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
 async function sceneArt(p, dir, epFile) {
   const ep = JSON.parse(fs.readFileSync(epFile, "utf8"));
   const charRef = path.join(VIDEO, "public/characters/round/ref_sheet.png"); // 새 캐릭터 (2026-10-24)
+  // 삽화 바탕은 영상 스킨 바탕색과 같게 (2026-10-28: 크림색 스킨인데 검정 그림이 들어가던 문제). 선이 깔끔해야 손그림 연출(획 따기)이 잘 됨
+  const look = { chalk: { bg: "#000000", style: "배경은 완전한 검정(#000000) 단색, 굵고 둥근 흰색 손그림 두들, 노랑 포인트 하나" },
+    paper: { bg: "#FFFFFF", style: "배경은 완전한 흰색(#FFFFFF) 단색, 굵고 둥근 검정 손그림 두들, 파랑 포인트 하나" },
+    cute: { bg: "#FFF7EA", style: "배경은 따뜻한 크림색(#FFF7EA) 단색, 굵고 둥근 진한 남색 손그림 두들, 파스텔 포인트 색 하나" } }[ep.skin || load().settings?.skin || "chalk"] || { bg: "#000000", style: "배경은 완전한 검정(#000000) 단색, 굵고 둥근 흰색 손그림 두들, 노랑 포인트 하나" };
   let n = 0;
   for (const s of ep.scenes) {
     if (s.drawFace) { // 표정 그리기 장면: 있는 표정만, 화면 진행자와 겹치지 않게
@@ -470,8 +475,13 @@ async function sceneArt(p, dir, epFile) {
     n++;
     const img = path.join(dir, "img", `${s.id}.png`);
     fs.mkdirSync(path.dirname(img), { recursive: true });
-    const g = run(p, `🎨 챗GPT 삽화 ${n} (${s.id})`, NODE, [path.join(ROOT, "tools/gpt_image.mjs"), `${s.art}. 배경은 완전한 검정 단색, 굵고 둥근 흰색 손그림 두들, 노랑 포인트 하나, 사람은 기준 그림의 동그란 안경 막대 캐릭터, 16:9, 그림자·글씨 없이, 왼쪽 40% 비움`, `--out=${img}`, "--size=1536x1024", ...(fs.existsSync(charRef) ? [`--ref=${charRef}`] : [])], { allowFail: true, timeout: 600_000 });
-    if (g.ok && fs.existsSync(img)) Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), img), textSide: "left", cast: "off", draw: true, drawBg: "#000000" });
+    const g = run(p, `🎨 챗GPT 삽화 ${n} (${s.id})`, NODE, [path.join(ROOT, "tools/gpt_image.mjs"), `${s.art}. ${look.style}, 사람은 기준 그림의 동그란 안경 막대 캐릭터, 16:9, 그림자·글씨 없이, 왼쪽 40% 비움`, `--out=${img}`, "--size=1536x1024", ...(fs.existsSync(charRef) ? [`--ref=${charRef}`] : [])], { allowFail: true, timeout: 600_000 });
+    if (g.ok && fs.existsSync(img)) {
+      Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), img), textSide: "left", cast: "off", draw: true, drawBg: look.bg });
+      // 손이 펜으로 한 줄씩 그리는 연출용 획 (video/scripts/strokes.py). 실패하면 지그재그 연출 (2026-10-28)
+      const py = path.join(ROOT, ".venv/bin/python");
+      if (fs.existsSync(py) && run(p, `✏️ 삽화 ${n} 선 따기`, py, ["video/scripts/strokes.py", img], { allowFail: true }).ok) s.strokes = path.relative(path.join(VIDEO, "public"), img.replace(/\.png$/, ".strokes.json"));
+    }
   }
   fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
   p.episode = ep;
@@ -601,6 +611,7 @@ async function publish(p) {
   if (!p.abDir) abKit(p);
   const mf = path.join(dir, "youtube.json");
   fs.writeFileSync(mf, JSON.stringify(meta, null, 2));
+  if (p.youtubeUrl) { (p.oldUploads ||= []).push(p.youtubeUrl); p.commentUrl = null; } // 다시 올리기 = 새 영상, 예전 주소는 기록 (2026-10-28)
   const r = run(p, "📤 유튜브에 비공개로 올리는 중 (몇 분)", NODE, ["tools/youtube_upload.mjs", "upload", path.join(ROOT, p.final), mf, "--yes"], { timeout: 3600_000 });
   p.youtubeUrl = r.out.match(/https:\/\/(?:youtu\.be|www\.youtube\.com|studio\.youtube\.com)\/\S+/)?.[0] || null;
   p.stage = "올림(비공개)";
