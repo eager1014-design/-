@@ -30,7 +30,7 @@ const VOICE = { provider: "elevenlabs", id: "vithIMnhyN3GwRbVmrZt", name: "천�
 // 2026-10-26 사장님 "폭넓게" → 돈·뇌·습관·가족·심리 실험·위인까지 넓힘
 const DEFAULT_KEYWORDS = ["손절해야 하는 사람", "가스라이팅", "사주 궁합", "직장 인간관계", "회피형 연애", "돈 심리학", "소비 습관 심리", "뇌과학 상식", "심리 실험", "습관 심리학", "맏이 특징", "자존감 낮은 사람", "철학자 명언", "예민한 사람", "나르시시스트"];
 const PEOPLE_GUIDE = `[철학자·심리학자·위인 편 — 사장님 시리즈 (쇼펜하우어·칼 융·니체·에픽테토스·반 고흐 등, 하루 한 명 천천히)]
-- 틀: 위인의 실제 삶의 장면(사진) → 그가 남긴 관계·고독·예민함에 대한 생각 → 예민한 사람인 나(채널 주인)에게 주는 의미 → 오늘 할 한 가지.
+- 틀: 위인의 실제 삶의 장면(사진) → 그가 남긴 생각(관계·돈·일·고독·삶의 태도 등 무엇이든) → 지금 우리의 고민에 주는 의미 → 오늘 할 한 가지. (2026-10-28 에픽테토스 편으로 구독자 증가 — 사진+삽화 조합이 잘 먹힘)
 - 사진 장면 "type": "photo" 를 2~3개: {"person": "영문 전체 이름(위키백과 표기, 예: Arthur Schopenhauer)", "name": "한글 이름", "years": "1788–1860", "lines": [{text, cue}], "circle": {"at": "그 사람을 가리키는 순간의 단어"}}. 사진·얼굴 위치는 자동으로 채워지니 image·x·y 쓰지 말 것.
 - 사실만: 생몰년·잘 알려진 일화·명언은 확실한 것만. 명언은 원문이 확실치 않으면 직접 인용("~라고 했다") 대신 "~라는 생각을 남겼어요" 처럼 뜻만. 지어낸 일화·가짜 명언 절대 금지. 설명란에 출처 책 이름(예: 쇼펜하우어 『소품과 부록』)을 적을 것.
 - 위인을 HSP 라고 단정하지 말 것 ("~였다는 기록이 있어요" 처럼 알려진 성향만).`;
@@ -40,7 +40,7 @@ const topicGuide = (area) => `[주제 고르는 법 — 반드시 따를 것]
 - ★ 오늘의 주제 영역: **${area.name}** (예: ${area.ex}). 일기가 있으면 일기 이야기를 이 영역과 엮거나, 일기에 더 맞는 다른 영역을 써도 됨. 단 아래 '최근에 만든 영상'과 같은 영역·비슷한 주제(예: 연락 빈도·거리 두기·손절을 또)는 금지.
 - 영역 목록(idea.area 에 key 로 적기): ${AREA_LIST}
 - 뜨는 '말하는 방식'은 어느 영역에나 씌울 수 있음: ① "~한 사람만 하는 행동"(시청자를 콕 집는 정체성 호출) ② 위험 신호·피해야 할 것 ③ 통념을 깨는 반전("돈이 많아서가 아닙니다") ④ 숫자 리스트(3가지) ⑤ "이 말을 기억하세요"
-- 안 뜨는 방식: '내 마음 돌보기'만 하는 위로 → 위로는 끝에 한 줄만. 예민한 사람(HSP) 시선은 유지하되 첫 문장은 구체적인 상황·행동으로.`;
+- 안 뜨는 방식: '내 마음 돌보기'만 하는 위로 → 위로는 끝에 한 줄만. 첫 문장은 구체적인 상황·행동으로. HSP(예민함)에 묶이지 말 것 — 예민함은 여러 주제 중 하나일 뿐.`;
 const MIN = { views: 90000, likes: 5000, comments: 50 };
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -154,8 +154,9 @@ function writingPrompt(st, feedback) {
   return `너는 유튜브 채널 "예민한자립가"의 쇼츠 기획자 겸 대본 작가야. 오늘 올릴 세로 쇼츠 1편을 기획하고, 우리 영상 공장이 바로 렌더링할 수 있는 episode.json 을 써.
 
 [채널]
-- 시청자: 예민한 사람(HSP), 관계·일에 지친 2030. 채널 주인(사장님)은 퇴사 7번, 이혼, 빚을 겪고 다시 일어서는 중인 사람. 말투는 차분하고 담백한 존댓말 내레이션 (목소리 = 사장님 복제 목소리).
-- 시리즈 방향: 예민함 × 사주 × 심리학 × 연애·관계. 사주는 과학처럼 말하지 않는다 ("~래요", "사주에서는 ~라고 봐요").
+- 시청자: 관계·일·돈·연애에 지친 2030 누구나 (예민한 사람도 그중 일부). 채널 주인(사장님)은 퇴사 7번, 이혼, 빚을 겪고 다시 일어서는 중인 사람. 말투는 차분하고 담백한 존댓말 내레이션 (목소리 = 사장님 복제 목소리).
+- 채널 정체성 (사장님 2026-10-28): **예민한 사람이 알려주는 (쉬운) 심리학.** 주제는 누구에게나 해당되는 심리학, 시선·말투는 예민한 사람의 섬세한 관찰.
+- 시리즈 방향 (2026-10-28 사장님: "HSP에 국한하지 말고 다양하게"): 심리학·철학자·위인·연애·관계·돈·습관·뇌·사주 등 폭넓게. HSP·예민함은 가끔만, 매번 끼워 넣지 말 것. 사주는 과학처럼 말하지 않는다 ("~래요", "사주에서는 ~라고 봐요").
 - 사장님이 "맨날 같은 얘기(퇴사 7번)"를 지겨워함 → 일기의 새 이야기를 중심으로.
 
 ${st.topic ? `[★ 사장님이 정한 오늘 주제 — 반드시 이 주제로. 아래 '주제 고르는 법'보다 우선]\n${st.topic}\n\n` : ""}${topicGuide(area)}
@@ -176,17 +177,17 @@ ${feedback ? `\n[사장님 수정 요청 — 반드시 반영]\n${feedback}\n\n[
 [절대 규칙]
 1. 일기에 없는 사장님 경험·숫자·사건을 지어내지 마. 일기 내용은 사장님 말을 다듬어 1인칭으로.
 2. 연구·통계 인용 금지. 예외: Assary 외 2020(Molecular Psychiatry) 쌍둥이 연구 — 예민함 차이의 47%가 유전. 그 외 숫자가 꼭 필요하면 쓰지 말고 비유로.
-3. image·video·pose 칸은 쓰지 말 것. story 장면은 "emoji"(이모지 1개)를 넣고, 그중 이야기의 핵심 장면 2~3개에는 "art": "삽화 설명" 을 추가 — 채널 캐릭터(나)가 무엇을 하는지, 어디인지, 표정을 구체적으로 한 문장(예: "시끄러운 카페에서 두 손으로 귀를 막고 눈을 질끈 감은 나, 주변 사람들은 흐린 회색 실루엣"). 그림은 자동으로 그려지고, 그 장면 글씨는 화면 왼쪽에 나온다. 실존 인물(위인)은 art 로 그리지 말고 photo 장면으로. 감정이 확 바뀌는 story 장면 1곳에는 art 대신 "drawFace": "smile|surprised|serious|laugh|worried|kind", "cast": "off" — 내 캐릭터 얼굴이 크게 그려지고 그 아래 lines 글씨.
+3. image·video·pose 칸은 쓰지 말 것. 이모지는 쓰지 말 것(화면에 안 나옴 — 사장님 2026-10-28 "짜쳐 보인다"). 그림 없는 story 에는 "icon": 손그림 아이콘 1개(battery·bed·brain·bulb·calendar·chart·check·clock·coffee·exclaim·fire·heart·house·lightning·lock·money·people·phone·question·search·speech·star·tear·thought 중 뜻이 맞는 것, 없으면 생략). 이야기의 핵심 장면 4~6개에는 "art": "삽화 설명" 을 추가 — 채널 캐릭터(나)가 무엇을 하는지, 어디인지, 표정을 구체적으로 한 문장(예: "시끄러운 카페에서 두 손으로 귀를 막고 눈을 질끈 감은 나, 주변 사람들은 흐린 회색 실루엣"). 그림은 자동으로 그려지고, 그 장면 글씨는 화면 왼쪽에 나온다. 실존 인물(위인)은 art 로 그리지 말고 photo 장면으로. 감정이 확 바뀌는 story 장면 1곳에는 art 대신 "drawFace": "smile|surprised|serious|laugh|worried|kind", "cast": "off" — 내 캐릭터 얼굴이 크게 그려지고 그 아래 lines 글씨.
 4. 장면 10~14개 — 장면 하나에 1~2문장(3초 안팎마다 화면이 바뀌게, 레퍼런스 평균 2.6초), 짧은 단문·해요체, 내레이션 합계 250~400자 (약 40~55초). 숫자는 내레이션에서 한글("일곱 번"), 화면 글씨에서 숫자.
 5. 모든 cue·at 값은 그 장면 narration 안에 띄어쓰기까지 똑같이 있는 말이어야 함.
 6. ${(load().settings?.look || "title") === "full" ? "frame 칸은 쓰지 말 것 — 화면은 늘 세로 한 화면(위 고정 제목·분할 없음). 제목 역할은 첫 장면 hook 이 함" : "frame.title 은 2줄, 줄마다 14자 이내"}. 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅 (떡상 공식 활용).
 7. 마지막은 outro: 댓글로 답하고 싶은 질문. ${OUTRO_ASK}
 8. 화면 글씨에서 **강조**는 형광펜, 줄바꿈은 \\n. 한 화면 글씨는 짧게 (그래픽 칸이 가로 16:9 라서 한 줄 12자 이내, 최대 3줄).
-9. 댓글 말풍선: 가운데 장면 2~3곳에 "comments": [{"text": "시청자가 달 법한 공감·질문 한마디(16자 이내)", "at": "그 장면 내레이션 속 단어", "emoji": "😳"}] — 한 장면에 1~2개, 영상 전체 3~5개. 화면에 '예시'라고 자동 표시되니 실제 후기처럼 꾸미지 말 것 (이름·숫자·효과 주장 금지).
+9. 댓글 말풍선: 가운데 장면 2~3곳에 "comments": [{"text": "시청자가 달 법한 공감·질문 한마디(16자 이내)", "at": "그 장면 내레이션 속 단어"}] — 한 장면에 1~2개, 영상 전체 3~5개. 화면에 '예시'라고 자동 표시되니 실제 후기처럼 꾸미지 말 것 (이름·숫자·효과 주장 금지).
 10. compare 의 항목(items)은 2개씩, 각 10자 이내. checklist 는 3개, 각 14자 이내.
 11~12. ${SOUND_RULES("쇼츠는 2구간: 훅 tense 또는 sad → 마무리 hopeful 등, 내용에 맞게")}
 
-${load().settings?.skin === "chalk" ? `13. 칠판 스타일 소품: "props": [{"icon": "이름", "at": "그 장면 내레이션 속 단어", "x": 0.2, "y": 0.4, "size": 220, "move": "bob|wiggle|pulse|spin"}] — 장면 뜻에 맞는 손그림 소품이 선으로 그려지며 나타나 계속 살짝 움직임. 쓸 수 있는 아이콘: brain·bulb·phone·battery·heart·clock·lightning·question·exclaim·check·chart·coffee·speech·thought·bed·money·calendar·lock·search·star·people·house·tear·fire. 장면 절반 정도에 1~2개, 글씨·캐릭터와 안 겹치게 빈 쪽(x 0.12~0.22 또는 0.78~0.88).\n` : ""}${load().settings?.skin === "cute" ? `13. 귀여운 스타일: 장면 4~5곳에 "stickers": [{"emoji": "✨", "at": "그 장면 내레이션 속 단어", "x": 0.85, "y": 0.2}] 로 1개씩. 이모지는 ✨ 💡 💭 ❓ ❗ 💦 💕 ⭐ 🎵 중 장면 뜻에 맞게. x·y 는 화면 비율(0~1) — 제목(위 0.15 까지)·자막(아래 0.75 아래)·캐릭터를 피해 귀퉁이 쪽(x 0.12 또는 0.88, y 0.25~0.6).\n` : ""}[쓸 수 있는 장면 종류] photo(위인 사진, 위 위인 편 참고) · hook(lines[{text,cue}], kicker) · statement(text, kicker, sub, cue) · bigNumber(value, prefix, suffix, label, source, cue, kicker) · compare(title, left/right{title, emoji, cue, items[]}) · checklist(title, items[]) · story(emoji, lines[{text,cue}]) · outro(question, cue, channelCue, channel) · pillars · elements(사주 설명, 예시 참고) · roadmap(title, items[])
+13. 손그림 소품 (모든 스킨): "props": [{"icon": "이름", "at": "그 장면 내레이션 속 단어", "x": 0.2, "y": 0.4, "size": 220, "move": "bob|wiggle|pulse|spin"}] — 장면 뜻에 맞는 손그림 소품이 선으로 그려지며 나타나 계속 살짝 움직임. 쓸 수 있는 아이콘: brain·bulb·phone·battery·heart·clock·lightning·question·exclaim·check·chart·coffee·speech·thought·bed·money·calendar·lock·search·star·people·house·tear·fire. 장면 절반 정도에 1~2개, 글씨·캐릭터와 안 겹치게 빈 쪽(x 0.12~0.22 또는 0.78~0.88).\n[쓸 수 있는 장면 종류] photo(위인 사진, 위 위인 편 참고) · hook(lines[{text,cue}], kicker) · statement(text, kicker, sub, cue) · bigNumber(value, prefix, suffix, label, source, cue, kicker) · compare(title, left/right{title, icon, cue, items[]}) · checklist(title, items[]) · story(emoji, lines[{text,cue}]) · outro(question, cue, channelCue, channel) · pillars · elements(사주 설명, 예시 참고) · roadmap(title, items[])
 장면 공통: id("s01"…), narration, comments(규칙 9), keywords[], face(smile·surprised·serious·laugh·worried·kind, 또는 [{at, is}]), gesture(idea·point·think·explain·none, 또는 [{at, is}]), cast(right·left·center·corner·off, 또는 [{at, pos}] — 섞어서 지루하지 않게), musicDrop({at, level:0}) 핵심 문장 1~2곳.
 
 [완성 예시 episode.json — 이 모양 그대로]
@@ -195,7 +196,7 @@ ${template}
 다른 말 없이 JSON 하나만 출력해:
 {"music_plan": [{"from": "s01", "mood": "tense"}, {"from": "마무리 쪽 장면 id", "mood": "hopeful"}], "idea": {"title": "오늘 영상 한 줄 기획", "area": "영역 key", "why": "왜 이게 뜰 것 같은지 (참고한 공식 포함) 2~3문장", "diary_ids": ["사용한 일기 id"], "techniques": ["적용한 연출 기법 이름"]},
  "episode": { ...예시와 같은 형식, "title" 은 "#shorts" 포함 ... },
- "youtube": {"title": "검색될 키워드를 앞에 둔 제목 (#HSP 등 해시태그 1~2개)", "description": "첫 2줄 요약 + 댓글 질문 + (사주 편이면) 무료 사주 링크 https://ai-production-1a94.up.railway.app/?src=youtube + '경험 정리' 고지 + 해시태그 3개", "tags": ["10~15개"], "pinned": "${PINNED_ASK}"}}`;
+ "youtube": {"title": "검색될 키워드를 앞에 둔 제목 (주제에 맞는 해시태그 1~2개, #HSP 는 예민함 편일 때만)", "description": "첫 2줄 요약 + 댓글 질문 + (사주 편이면) 무료 사주 링크 https://ai-production-1a94.up.railway.app/?src=youtube + '경험 정리' 고지 + 해시태그 3개", "tags": ["10~15개"], "pinned": "${PINNED_ASK}"}}`;
 }
 
 function askClaude(st, prompt) {
@@ -291,7 +292,7 @@ const ART_STYLE_CHALK = "16:9 가로 삽화. 배경은 완전한 검정(#000000)
 const artStyle = () => (load().settings?.skin === "chalk" ? ART_STYLE_CHALK : ART_STYLE_OLD);
 async function fillArt(st, ep, dir) {
   for (const s of ep.scenes) if (s.drawFace) ["smile", "surprised", "serious", "laugh", "worried", "kind"].includes(s.drawFace) ? (s.cast = "off") : delete s.drawFace; // 있는 표정만
-  const scenes = ep.scenes.filter((s) => s.art && !s.image).slice(0, 4);
+  const scenes = ep.scenes.filter((s) => s.art && !s.image).slice(0, 6); // 이모지 대신 그림을 더 (2026-10-28)
   const tall = !ep.layout; // 한 무대 쇼츠(title·full): 세로 그림을 무대 가득 (가로 그림은 가운데만 잘려 보임)
   for (const [i, s] of scenes.entries()) {
     const out = path.join(dir, "art", `${s.id}.png`);

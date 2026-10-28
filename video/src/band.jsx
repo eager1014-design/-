@@ -121,9 +121,11 @@ export function Comments({ scene, start }) {
             display: "flex", gap: 16, alignItems: "flex-start",
             background: "rgba(255,255,255,0.97)", borderRadius: 26, padding: "16px 22px", boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
           }}>
-            <div style={{ width: 52, height: 52, borderRadius: "50%", flex: "none", background: "#C9D6C3", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30 }}>
-              {c.emoji || "🙂"}
-            </div>
+            <svg width="52" height="52" viewBox="0 0 68 68" style={{ flex: "none" }}>{/* 이모지 대신 기본 프로필 (2026-10-28) */}
+              <circle cx="34" cy="34" r="34" fill="#E4E1DB" />
+              <circle cx="34" cy="27" r="11" fill="#B8B3AA" />
+              <path d="M14 56 C17 43, 51 43, 54 56 Z" fill="#B8B3AA" />
+            </svg>
             <div style={{ fontFamily: FONT, minWidth: 0 }}>
               <div style={{ fontSize: 26, fontWeight: 600, color: "#8A857C" }}>{c.real ? `@${c.name || "시청자"}` : "예시"}</div>
               <div style={{ fontSize: 40, fontWeight: 700, color: "#1E1D1B", lineHeight: 1.25 }}>{c.text}</div>

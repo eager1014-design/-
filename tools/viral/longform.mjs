@@ -396,8 +396,8 @@ async function thumbs(p) {
 // ④ 대본 + 무료 초안 (목소리 없이 글자 수로 길이 어림)
 const SCENE_GUIDE = `[장면 종류 — 이것만] ${SCENES_LIST.filter((t) => !["dialogue", "screen"].includes(t)).join(" · ")}
 hook(lines[{text,cue}], kicker) · statement(text, kicker, sub, cue) · roadmap(title, items[]) · chapter(number, title, sub) · bigNumber(value, prefix, suffix, label, source, cue — 실제 숫자만)
-citation(authors, year, title, journal, finding, cue, findingCue — 확인된 논문만) · compare(title, left{title,emoji,cue,items[]}, right{…}) · checklist(title, items[])
-bars(title, bars[{label,value}], unit, source — 실제 데이터만) · story(emoji, lines[] — 그림 대신 이모지. 롱폼은 대략 5장면마다 1곳(10~12곳), 쇼츠는 2~3곳에 "art": "삽화 설명 한 문장 — 채널 캐릭터(나)가 무엇을 하는지·어디인지·표정, 비교라면 왼쪽/오른쪽 대비로" — 그림이 연필로 그려지듯 나타남)
+citation(authors, year, title, journal, finding, cue, findingCue — 확인된 논문만) · compare(title, left{title,icon,cue,items[]}, right{…}) · checklist(title, items[])
+bars(title, bars[{label,value}], unit, source — 실제 데이터만) · story(icon, lines[] — 이모지 금지(화면에 안 나옴). 그림 없으면 "icon": 손그림 아이콘(battery·bed·brain·bulb·calendar·chart·check·clock·coffee·exclaim·fire·heart·house·lightning·lock·money·people·phone·question·search·speech·star·tear·thought 중, 없으면 생략). 롱폼은 대략 5장면마다 1곳(10~12곳), 쇼츠는 2~3곳에 "art": "삽화 설명 한 문장 — 채널 캐릭터(나)가 무엇을 하는지·어디인지·표정, 비교라면 왼쪽/오른쪽 대비로" — 그림이 연필로 그려지듯 나타남)
 story 표정 그리기: 감정이 확 바뀌는 순간 2~3곳(쇼츠 1곳)에 "drawFace": "smile|surprised|serious|laugh|worried|kind", "cast": "off" — 내 캐릭터 얼굴이 크게 그려지고 옆에 lines 글씨 (art 와 같이 쓰지 말 것)
 photo(실존 철학자·심리학자·위인을 말할 때만, 롱폼 2~4개 / 쇼츠 1~2개): {"person": "영문 전체 이름(위키백과 표기, 예: Arthur Schopenhauer)", "name": "한글 이름", "years": "1788–1860", "lines": [{text, cue}], "circle": {"at": "그 사람을 가리키는 순간의 단어"}} — 무료 사진이 자동으로 들어감. image·x·y 쓰지 말 것. 실존 인물은 art 로 그리지 말 것 · outro(question, cue, channel, channelCue)
 pillars·elements = 사주 설명 장면 (사주 편일 때만)
@@ -407,7 +407,7 @@ pillars·elements = 사주 설명 장면 (사주 편일 때만)
 
 const SHORT_RULES = `[쇼츠 규칙] 장면 10~14개(장면 하나에 1~2문장, 3초 안팎마다 화면이 바뀌게), 내레이션 합계 250~400자. "frame": {"title": ["첫 줄", "둘째 줄"]} (위에 고정되는 제목, 줄마다 14자 이내). 제목 아래는 나누지 않은 한 화면. 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅.
 화면 글씨는 짧게 (한 줄 12자 이내). compare 항목 2개씩 10자 이내, checklist 3개 14자 이내. 끝은 outro(댓글로 답하고 싶은 질문).
-가운데 장면 2~3곳에 "comments": [{"text": "시청자가 달 법한 한마디 16자 이내", "at": "그 장면 내레이션 속 단어", "emoji": "😳"}] (화면에 '예시' 표시됨, 실제 후기처럼 꾸미지 말 것).`;
+가운데 장면 2~3곳에 "comments": [{"text": "시청자가 달 법한 한마디 16자 이내", "at": "그 장면 내레이션 속 단어"}] (화면에 '예시' 표시됨, 실제 후기처럼 꾸미지 말 것).`;
 
 async function script(p) {
   if (!p.plan) throw new Error("기획안이 먼저 있어야 해요.");

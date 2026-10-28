@@ -5,7 +5,7 @@ import { AbsoluteFill, Img, OffthreadVideo, interpolate, staticFile, useCurrentF
 import { COLORS, ELEMENTS } from "./theme.js";
 import { cueFrame, revealFrames } from "./timing.js";
 import { Dialogue } from "./presenter.jsx";
-import { Card, FrameContext, Rich, Rise, Sfx, text, useAppear, useIsShort, useSceneSize, useUnit } from "./components.jsx";
+import { Card, FrameContext, Rich, Rise, Sfx, iconOf, text, useAppear, useIsShort, useSceneSize, useUnit } from "./components.jsx";
 
 const Center = ({ children, style }) => {
   const u = useUnit();
@@ -25,6 +25,14 @@ const Kicker = ({ children, at = 0, color = COLORS.sageDeep }) => {
     </Rise>
   );
 };
+
+// 이모지는 화면에 쓰지 않는다 (2026-10-28 사장님: "이모지는 짜쳐 보이고 글자와 겹친다"). 대신 손그림 아이콘(public/icons) — 대본의 "icon" 또는 예전 대본의 emoji 를 아이콘으로 바꿔서
+// 손그림 아이콘이 왼쪽부터 그려지며 나타난다 (Props 와 같은 방식)
+function DrawnIcon({ icon, size, at = 0 }) {
+  const frame = useCurrentFrame();
+  const ease = 1 - Math.pow(1 - Math.min(1, Math.max(0, (frame - at) / 22)), 3);
+  return <Img src={staticFile(`icons/${icon}.png`)} style={{ width: size, height: size, objectFit: "contain", clipPath: `inset(0 ${100 - ease * 100}% 0 0)`, filter: COLORS.dark ? "invert(1)" : undefined }} />;
+}
 
 const lineItems = (scene, key) => (scene[key] || []).map((x) => (typeof x === "string" ? { text: x } : x));
 
@@ -207,7 +215,7 @@ function Compare({ scene }) {
           <Rise key={si} at={heads[si]} style={{ flex: 1, maxWidth: short ? "none" : 720 * u }}>
             <Card style={{ borderTop: `${12 * u}px solid ${colors[si]}`, height: "100%" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 18 * u, marginBottom: 20 * u }}>
-                {s.emoji && <span style={{ fontSize: 64 * u }}>{s.emoji}</span>}
+                {iconOf(s) && <DrawnIcon icon={iconOf(s)} size={72 * u} at={heads[si]} />}
                 <span style={text(u, 50, 800)}>{s.title}</span>
               </div>
               {items.map((it, ii) =>
@@ -397,8 +405,29 @@ function DrawFace({ scene, frames }) {
   );
 }
 
+// 그림 없는 이야기 장면: 손그림 아이콘(있으면) 아래로 글씨를 차례로 — 겹치지 않게 한 줄로 세움
+function IconStory({ scene }) {
+  const u = useUnit();
+  const short = useIsShort();
+  const lines = lineItems(scene, "lines");
+  const at = revealFrames(scene, lines);
+  const icon = iconOf(scene);
+  return (
+    <Center>
+      <Sfx at={at} />
+      {icon && <div style={{ marginBottom: 30 * u }}><DrawnIcon icon={icon} size={(short ? 300 : 240) * u} /></div>}
+      {lines.map((l, i) => (
+        <Rise key={i} at={at[i]} style={{ marginTop: 14 * u, textAlign: "center", maxWidth: "90%" }}>
+          <Rich text={l.text} at={at[i]} style={text(u, short ? 66 : 62, 800, COLORS.ink)} />
+        </Rise>
+      ))}
+    </Center>
+  );
+}
+
 function Story({ scene, frames }) {
   if (scene.drawFace && !scene.image) return <DrawFace scene={scene} frames={frames} />;
+  if (!scene.image && !scene.video) return <IconStory scene={scene} />;
   const u = useUnit();
   const frame = useCurrentFrame();
   const short = useIsShort();
@@ -409,7 +438,6 @@ function Story({ scene, frames }) {
   const crop = short ? shortCrop(scene) : "50% 50%";
   const lines = lineItems(scene, "lines");
   const at = revealFrames(scene, lines);
-  const media = scene.image || scene.video;
   // fit: "contain" — 세로 쇼츠에서 가로 그림을 자르지 않고 폭에 맞춰 통째로 (위아래는 어두운 여백, 글씨는 그림 아래)
   //   말풍선이 그려진 웹툰 컷처럼 잘리면 안 되는 그림에 쓴다
   if (short && scene.image && scene.fit === "contain") {
@@ -427,50 +455,36 @@ function Story({ scene, frames }) {
       </AbsoluteFill>
     );
   }
-  const side = short ? (media ? "top" : "center") : scene.textSide || "center";
+  const side = short ? "top" : scene.textSide || "center";
   const align = side === "left" ? "flex-start" : side === "right" ? "flex-end" : "center";
-  const emojiRow = !media && !short;
   return (
     <AbsoluteFill>
       <Sfx at={at} />
-      {media ? (
-        <AbsoluteFill style={{ overflow: "hidden" }}>
-          <AbsoluteFill style={{ transform: `translate(${cam.x}%, ${cam.y}%) scale(${cam.scale})`, transformOrigin: cam.origin }}>
-            {scene.image ? (
-              <Img src={staticFile(scene.image)} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: crop }} />
-            ) : (
-              <OffthreadVideo src={staticFile(scene.video)} muted style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: crop }} />
-            )}
-            {scene.draw && scene.image && <DrawCover frames={frames} rows={short ? 7 : 6} color={scene.drawBg} />}
-          </AbsoluteFill>
-          {/* 글씨가 잘 보이도록 글씨 쪽만 살짝 어둡게 */}
-          <AbsoluteFill
-            style={{
-              background:
-                side === "left"
-                  ? "linear-gradient(90deg, rgba(43,42,40,0.55) 0%, rgba(43,42,40,0.25) 40%, rgba(43,42,40,0) 62%)"
-                  : side === "right"
-                    ? "linear-gradient(270deg, rgba(43,42,40,0.55) 0%, rgba(43,42,40,0.25) 40%, rgba(43,42,40,0) 62%)"
-                    : side === "top"
-                      ? "linear-gradient(180deg, rgba(43,42,40,0.6) 0%, rgba(43,42,40,0.3) 22%, rgba(43,42,40,0) 38%)"
-                      : "linear-gradient(180deg, rgba(43,42,40,0) 45%, rgba(43,42,40,0.55) 100%)",
-            }}
-          />
+      <AbsoluteFill style={{ overflow: "hidden" }}>
+        <AbsoluteFill style={{ transform: `translate(${cam.x}%, ${cam.y}%) scale(${cam.scale})`, transformOrigin: cam.origin }}>
+          {scene.image ? (
+            <Img src={staticFile(scene.image)} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: crop }} />
+          ) : (
+            <OffthreadVideo src={staticFile(scene.video)} muted style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: crop }} />
+          )}
+          {scene.draw && scene.image && <DrawCover frames={frames} rows={short ? 7 : 6} color={scene.drawBg} />}
         </AbsoluteFill>
-      ) : (
-        emojiRow ? (
-          // 가로 화면(띠 쇼츠 칸 포함)에서 그림 없는 이야기: 이모지는 왼쪽, 글씨는 오른쪽 (가운데에 겹치지 않게)
-          <AbsoluteFill style={{ justifyContent: "center", alignItems: "flex-start", paddingLeft: 110 * u }}>
-            <div style={{ fontSize: 190 * u, transform: `scale(${cam.scale})`, filter: "drop-shadow(0 12px 18px rgba(60,50,30,0.18))" }}>{scene.emoji || "🌿"}</div>
-          </AbsoluteFill>
-        ) : (
-        <Center style={{ paddingBottom: (short ? 600 : 360) * u }}>
-          <div style={{ fontSize: 260 * u, transform: `scale(${cam.scale})`, filter: "drop-shadow(0 12px 18px rgba(60,50,30,0.18))" }}>{scene.emoji || "🌿"}</div>
-        </Center>
-        )
-      )}
+        {/* 글씨가 잘 보이도록 글씨 쪽만 살짝 어둡게 */}
+        <AbsoluteFill
+          style={{
+            background:
+              side === "left"
+                ? "linear-gradient(90deg, rgba(43,42,40,0.55) 0%, rgba(43,42,40,0.25) 40%, rgba(43,42,40,0) 62%)"
+                : side === "right"
+                  ? "linear-gradient(270deg, rgba(43,42,40,0.55) 0%, rgba(43,42,40,0.25) 40%, rgba(43,42,40,0) 62%)"
+                  : side === "top"
+                    ? "linear-gradient(180deg, rgba(43,42,40,0.6) 0%, rgba(43,42,40,0.3) 22%, rgba(43,42,40,0) 38%)"
+                    : "linear-gradient(180deg, rgba(43,42,40,0) 45%, rgba(43,42,40,0.55) 100%)",
+          }}
+        />
+      </AbsoluteFill>
       <AbsoluteFill
-        style={emojiRow ? { justifyContent: "center", alignItems: "flex-start", paddingLeft: 420 * u, paddingRight: 60 * u } : {
+        style={{
           justifyContent: side === "center" ? "flex-end" : side === "top" ? "flex-start" : "center",
           alignItems: side === "top" ? "center" : align,
           padding: side === "center" ? `0 0 ${(short ? 560 : 200) * u}px` : side === "top" ? `${200 * u}px 0 0` : `0 ${120 * u}px`,
@@ -478,8 +492,8 @@ function Story({ scene, frames }) {
       >
         {lines.map((l, i) => (
           // 칠판 스킨은 card 가 어두워서 그림 위 글씨는 흰색
-          <Rise key={i} at={at[i]} style={{ marginTop: 14 * u, textAlign: emojiRow ? "left" : side === "center" || side === "top" ? "center" : side, maxWidth: emojiRow ? "100%" : side === "center" || side === "top" ? "86%" : "46%" }}>
-            <Rich text={l.text} at={at[i]} style={{ ...text(u, 62, 800, media ? (COLORS.dark ? "#FFFFFF" : COLORS.card) : COLORS.ink), textShadow: media ? `0 ${2 * u}px ${14 * u}px rgba(0,0,0,0.35)` : "none" }} />
+          <Rise key={i} at={at[i]} style={{ marginTop: 14 * u, textAlign: side === "center" || side === "top" ? "center" : side, maxWidth: side === "center" || side === "top" ? "86%" : "46%" }}>
+            <Rich text={l.text} at={at[i]} style={{ ...text(u, 62, 800, COLORS.dark ? "#FFFFFF" : COLORS.card), textShadow: `0 ${2 * u}px ${14 * u}px rgba(0,0,0,0.35)` }} />
           </Rise>
         ))}
       </AbsoluteFill>

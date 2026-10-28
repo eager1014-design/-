@@ -296,6 +296,11 @@ export function SideCharacter({ src, side = "right", at = 0 }) {
   );
 }
 
+// 이모지 대신 손그림 아이콘 (2026-10-28 사장님: 이모지는 짜쳐 보임). scenes.jsx 의 이야기·비교 장면과 스티커가 같이 씀
+export const ICONS = ["battery", "bed", "brain", "bulb", "calendar", "chart", "check", "clock", "coffee", "exclaim", "fire", "heart", "house", "lightning", "lock", "money", "people", "phone", "question", "search", "speech", "star", "tear", "thought"];
+export const EMOJI_ICON = { "💡": "bulb", "❤️": "heart", "💕": "heart", "💔": "heart", "📱": "phone", "⏰": "clock", "⏳": "clock", "🕐": "clock", "💰": "money", "💸": "money", "😢": "tear", "😭": "tear", "💧": "tear", "🔥": "fire", "❓": "question", "🤔": "question", "❗": "exclaim", "⚠️": "exclaim", "✅": "check", "☕": "coffee", "💬": "speech", "🗣️": "speech", "💭": "thought", "🛏️": "bed", "😴": "bed", "🧠": "brain", "📅": "calendar", "🔒": "lock", "🔍": "search", "⭐": "star", "✨": "star", "👥": "people", "👫": "people", "🏠": "house", "⚡": "lightning", "🔋": "battery", "🪫": "battery", "📈": "chart", "📉": "chart" };
+export const iconOf = (x) => (ICONS.includes(x?.icon) ? x.icon : EMOJI_ICON[x?.emoji] || null);
+
 // 스티커: 장면 칸 "stickers": [{"emoji": "✨", "at": "단어", "x": 0.82, "y": 0.18, "size": 90}] — 그 단어에서 통통 튀며 나타나 살짝 흔들림
 // x·y 는 화면 비율(0~1), size 는 1080 기준 px. 귀여운 스타일(skin cute)에서 반짝이·전구·말풍선 같은 포인트용
 export function Stickers({ scene }) {
@@ -307,9 +312,12 @@ export function Stickers({ scene }) {
     if (frame < at) return null;
     const pop = spring({ frame: frame - at, fps, config: { damping: 9, stiffness: 180, mass: 0.6 } });
     const wobble = Math.sin((frame - at) / 9 + i) * 6;
+    const icon = iconOf(st);
+    if (!icon) return null; // 맞는 손그림이 없는 이모지는 그리지 않음
+    const size = (st.size || 90) * 1.4 * u;
     return (
-      <div key={i} style={{ position: "absolute", left: `${(st.x ?? 0.85) * 100}%`, top: `${(st.y ?? 0.2) * 100}%`, transform: `translate(-50%, -50%) scale(${pop}) rotate(${wobble}deg)`, fontSize: (st.size || 90) * u, lineHeight: 1, filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.15))" }}>
-        {st.emoji}
+      <div key={i} style={{ position: "absolute", left: `${(st.x ?? 0.85) * 100}%`, top: `${(st.y ?? 0.2) * 100}%`, width: size, height: size, transform: `translate(-50%, -50%) scale(${pop}) rotate(${wobble}deg)` }}>
+        <Img src={staticFile(`icons/${icon}.png`)} style={{ width: "100%", height: "100%", objectFit: "contain", filter: COLORS.dark ? "invert(1)" : undefined }} />
       </div>
     );
   });
@@ -390,4 +398,61 @@ export function PunchSfx({ scene }) {
       </Sequence>
     );
   });
+}
+
+// 댓글 말풍선 (2026-10-28 업그레이드): 유튜브 댓글 모양 — 기본 프로필 동그라미, "@예시 · 방금", 좋아요·답글 줄,
+// 조금 뒤 채널 주인 하트(내 캐릭터 얼굴 + 빨간 하트)가 톡 붙는다. 이모지는 쓰지 않음.
+// 장면 칸 "comments": [{ "text": "이거 완전 저예요", "at": "단어", "real": true, "name": "닉네임" }]
+// 가짜 댓글 금지(표시광고법) → real 이 아니면 이름 자리에 "예시". 한 번에 하나, 글씨와 캐릭터 머리 사이(화면 y 약 1020~1240)에 뜬다 (세로 영상만).
+// framed: 위 제목 띠가 있는 쇼츠면 무대가 y 500 부터라 그만큼 뺀 자리
+export function CommentPop({ scene, framed }) {
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
+  if (!scene.comments?.length || width > height) return null;
+  const list = scene.comments.map((c, i) => ({ ...c, from: (c.at && cueFrame(scene, c.at)) ?? 10 + i * 40 }));
+  const c = list.filter((x) => frame >= x.from).at(-1);
+  if (!c) return null;
+  const t = frame - c.from;
+  const pop = Math.min(1, spring({ frame: t, fps, config: { damping: 12, mass: 0.5, stiffness: 170 } }));
+  const heart = t < 18 ? 0 : Math.min(1, spring({ frame: t - 18, fps, config: { damping: 8, mass: 0.4, stiffness: 220 } }));
+  const gray = "#8F8A82";
+  const Icon = ({ d }) => <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={gray} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
+  return (
+    <>
+      {list.map((x, i) => (
+        <Sequence key={i} from={x.from} durationInFrames={30}>
+          <Audio src={staticFile("sfx/bubble.mp3")} volume={0.3} />
+        </Sequence>
+      ))}
+      <div key={c.text} style={{
+        position: "absolute", left: "50%", top: framed ? 520 : 1020, width: 880, zIndex: 5,
+        opacity: pop, transform: `translateX(-50%) translateY(${(1 - pop) * 50}px) scale(${0.9 + 0.1 * pop})`,
+        display: "flex", gap: 20, alignItems: "flex-start",
+        background: "rgba(255,255,255,0.98)", borderRadius: 30, padding: "22px 28px", boxShadow: "0 12px 34px rgba(0,0,0,0.28)", fontFamily: FONT,
+      }}>
+        <svg width="68" height="68" viewBox="0 0 68 68" style={{ flex: "none" }}>
+          <circle cx="34" cy="34" r="34" fill="#E4E1DB" />
+          <circle cx="34" cy="27" r="11" fill="#B8B3AA" />
+          <path d="M14 56 C17 43, 51 43, 54 56 Z" fill="#B8B3AA" />
+        </svg>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 26, fontWeight: 600, color: gray }}>{c.real ? `@${c.name || "시청자"}` : "@예시"} · 방금</div>
+          <div style={{ fontSize: 42, fontWeight: 800, color: "#1E1D1B", lineHeight: 1.28, marginTop: 4 }}>{c.text}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 22, marginTop: 12, fontSize: 24, color: gray }}>
+            <Icon d="M7 10v11M7 10l4-8c1.5 0 3 1 3 3v4h5a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 17.6 21H7" />
+            <Icon d="M17 14V3M17 14l-4 8c-1.5 0-3-1-3-3v-4H5a2 2 0 0 1-2-2.3l1.4-7A2 2 0 0 1 6.4 3H17" />
+            <span style={{ fontWeight: 600 }}>답글</span>
+            <div style={{ position: "relative", width: 46, height: 46, marginLeft: 6, opacity: heart, transform: `scale(${0.4 + 0.6 * heart})` }}>
+              <div style={{ width: 46, height: 46, borderRadius: "50%", background: "#FFFFFF", border: "2px solid #E4E1DB", overflow: "hidden" }}>
+                <Img src={staticFile("characters/round/faces/smile.png")} style={{ width: 120, marginLeft: -37, marginTop: -6 }} />
+              </div>
+              <svg width="24" height="24" viewBox="0 0 24 24" style={{ position: "absolute", right: -8, bottom: -6 }}>
+                <path d="M12 21s-7.5-4.6-9.5-9.2C1 8.3 3.3 5 6.6 5c2 0 3.6 1.1 4.4 2.6h2C13.8 6.1 15.4 5 17.4 5 20.7 5 23 8.3 21.5 11.8 19.5 16.4 12 21 12 21z" fill="#FF3B3B" stroke="#FFFFFF" strokeWidth="1.5" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
 }

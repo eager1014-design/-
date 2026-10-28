@@ -9,7 +9,7 @@ import { wipe } from "@remotion/transitions/wipe";
 import { loadFont } from "@remotion/fonts";
 import { FONT, FRAME, SIZES, SKINS, TRANSITION_FRAMES } from "./theme.js";
 import { applyPace, cueFrame, sceneFrames, SFX_LEAD, voiceSafeVolume, voiceSeconds } from "./timing.js";
-import { Background, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, Props, Punch, PunchSfx, SOUND, Stickers, sfxFile, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
+import { Background, CommentPop, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, Props, Punch, PunchSfx, SOUND, Stickers, sfxFile, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
 import { SCENES } from "./scenes.jsx";
 import { Cast, castTimeline, setCharacter } from "./presenter.jsx";
 import { BAND, BandCast, Comments } from "./band.jsx";
@@ -150,8 +150,9 @@ function FrameShell({ frame, presenter, children }) {
       {presenter ? (
         <div style={{ position: "absolute", top: boxTop, left: 0, width: SIZES.short.width, height: STAGE_H, overflow: "hidden" }}>
           <SizeContext.Provider value={{ width: SIZES.short.width, height: STAGE_H }}>
-            {/* frame.captionLift: 자막 높이(무대 아래에서의 비율). 롱폼에서 잘라 온 쇼츠는 장면 그래픽이 커서 아래로(0.1) — 2026-10-27 자막이 비교 카드를 가림 */}
-            <CaptionBottomContext.Provider value={Math.round(STAGE_H * (frame.captionLift ?? 0.605))}>{children}</CaptionBottomContext.Provider>
+            {/* frame.captionLift: 자막 높이(무대 아래에서의 비율). 롱폼에서 잘라 온 쇼츠는 장면 그래픽이 커서 아래로(0.1) — 2026-10-27 자막이 비교 카드를 가림.
+                기본 0.48 = 캐릭터 머리 바로 위(댓글 말풍선 자리) — 2026-10-28 0.605 일 때 '3가지' 숫자 위에 자막이 겹침 */}
+            <CaptionBottomContext.Provider value={Math.round(STAGE_H * (frame.captionLift ?? 0.48))}>{children}</CaptionBottomContext.Provider>
           </SizeContext.Provider>
         </div>
       ) : (
@@ -247,6 +248,9 @@ function useSkinFont(skin) {
   if (font && !loadedSkins.has(skin)) { loadedSkins.add(skin); loadFont({ family: "SkinFont", url: staticFile(font), weight: "100 900" }); }
 }
 
+// 가운데에 큰 숫자·카드가 있는 장면은 큰 강조 자막을 띄우지 않는다 — 겹침 (2026-10-28 "3가지" 위 "세 가지예요")
+const BUSY_CENTER = new Set(["bigNumber", "compare", "checklist", "bars", "citation", "roadmap", "pillars", "elements"]);
+
 export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm", music, musicStart, musicVolume, captions = true, frame, presenter, layout: screen, castLook, palette, skin, character, musicSections, soundPlan }) {
   setCharacter(character);
   SOUND.auto = !soundPlan;
@@ -283,8 +287,9 @@ export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm
                 {it.scene.pose && <SideCharacter src={it.scene.pose} side={it.scene.poseSide} at={6} />}
                 {it.scene.stickers && <Stickers scene={it.scene} />}
                 {it.scene.props && <Props scene={it.scene} />}
-                {it.scene.punch && <Punch scene={it.scene} />}
-                {it.scene.punch && <PunchSfx scene={it.scene} />}
+                {it.scene.comments && <CommentPop scene={it.scene} framed={!!frame} />}
+                {it.scene.punch && !BUSY_CENTER.has(it.scene.type) && <Punch scene={it.scene} />}
+                {it.scene.punch && !BUSY_CENTER.has(it.scene.type) && <PunchSfx scene={it.scene} />}
                 {showProgress && <ChapterProgress chapters={bar} current={it.chapter} />}
                 {captionOn(captions, it.scene) && <Captions scene={it.scene} />}
                 <SceneSfx scene={it.scene} />
