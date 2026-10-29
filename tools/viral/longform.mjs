@@ -574,15 +574,15 @@ forecast 는 사장님만 보는 '올리기 전 예측'이다. 기획안 sell �
   const ab = abKit(p);
   const fc = p.forecast;
   const fcText = fc ? `\n\n🔮 올리기 전 예측 (등급 ${fc.grade || "?"})\n· 누를 이유/안 누를 이유: ${fc.click}\n· 나갈 지점: ${fc.drop}\n· 운결 연결: ${fc.saju}${fc.fix?.length ? `\n· 고치면 좋을 것: ${[].concat(fc.fix).join(" / ")}` : ""}\n(숫자 예측은 안 해요 — 올린 뒤 실제 숫자로 맞춰 봐요)` : "";
-  say(p, r.reply + chNote + fcText + (ab ? `\n\nA/B 테스트용 썸네일 3장·제목 3개를 바탕화면 '${path.basename(ab)}' 폴더에 넣어 뒀어요.` : ""));
+  say(p, r.reply + chNote + fcText + (ab ? `\n\nA/B 테스트용 썸네일 3장·제목 3개를 ai 폴더 → AB테스트 → '${path.basename(ab)}' 폴더에 넣어 뒀어요.` : ""));
 }
 
 // 유튜브 스튜디오 'A/B 테스팅'(제목·썸네일 3개 비교)용 묶음 — 유튜브가 이 기능을 프로그램(API)으로는 열어 두지 않아서,
-// 사장님이 스튜디오에서 끌어다 놓기만 하면 되게 바탕화면 폴더에 썸네일 3장(jpg 1280×720)과 제목 3개(txt)를 만들어 둔다 (2026-10-24)
+// 사장님이 스튜디오에서 끌어다 놓기만 하면 되게 ai/AB테스트 폴더에 썸네일 3장(jpg 1280×720)과 제목 3개(txt)를 만들어 둔다 (2026-10-24)
 function abKit(p) {
   if (!p.youtube?.titles?.length) return null;
   const safe = (p.title || p.id).replace(/[\\/:*?"<>|]/g, "").slice(0, 30).trim();
-  const dir = path.join(process.env.HOME, "Desktop", `AB테스트_${safe}`);
+  const dir = path.join(ROOT, "AB테스트", safe); // 바탕화면이 어지러워서 ai 폴더 안으로 (2026-10-29 사장님)
   fs.mkdirSync(dir, { recursive: true });
   const titles = p.youtube.titles.slice(0, 3);
   fs.writeFileSync(path.join(dir, "제목3개.txt"), titles.map((t, i) => `제목 ${i + 1}: ${t}`).join("\n\n") + "\n");
@@ -619,7 +619,7 @@ async function publish(p) {
   p.youtubeUrl = r.out.match(/https:\/\/(?:youtu\.be|www\.youtube\.com|studio\.youtube\.com)\/\S+/)?.[0] || null;
   p.stage = "올림(비공개)";
   p.youtube.pinned = withSaju(p.youtube.pinned);
-  say(p, `유튜브에 비공개로 올렸어요: "${meta.title}"${p.youtubeUrl ? `\n${p.youtubeUrl}` : ""}\n\n📌 고정 댓글: 공개로 바꾼 뒤 영상 댓글 칸에 위 '고정 댓글'을 [복사]해서 달고, 댓글 옆 ⋮ → '고정'을 누르세요 (유튜브가 고정은 프로그램으로 못 하게 막아 둬서 이것만 손으로).\n\nA/B 테스트 하는 법: 스튜디오 → 이 영상 '세부정보' → 썸네일 아래 [A/B 테스팅] → '제목과 썸네일' → 바탕화면 '${path.basename(p.abDir || "")}' 폴더의 썸네일1~3을 끌어다 놓고, 제목3개.txt 에서 제목을 복사해 붙여넣기 → 공개로 바꾸면 테스트 시작.`);
+  say(p, `유튜브에 비공개로 올렸어요: "${meta.title}"${p.youtubeUrl ? `\n${p.youtubeUrl}` : ""}\n\n📌 고정 댓글: 공개로 바꾼 뒤 영상 댓글 칸에 위 '고정 댓글'을 [복사]해서 달고, 댓글 옆 ⋮ → '고정'을 누르세요 (유튜브가 고정은 프로그램으로 못 하게 막아 둬서 이것만 손으로).\n\nA/B 테스트 하는 법: 스튜디오 → 이 영상 '세부정보' → 썸네일 아래 [A/B 테스팅] → '제목과 썸네일' → ai 폴더 → AB테스트 → '${path.basename(p.abDir || "")}' 폴더의 썸네일1~3을 끌어다 놓고, 제목3개.txt 에서 제목을 복사해 붙여넣기 → 공개로 바꾸면 테스트 시작.`);
 }
 
 // ⑧ 고정 댓글 달기 — 사장님이 버튼을 누를 때만 (공개된 영상에만 달림). 고정은 스튜디오에서 사장님이

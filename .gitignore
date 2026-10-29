@@ -44,3 +44,6 @@ tools/viral/data/
 # 명함 결과물(다시 뽑을 수 있음, 연락처 포함)·받은 글꼴(24MB)
 business/card/
 business/fonts/
+
+# A/B 테스트용 썸네일·제목 (다시 만들 수 있음)
+AB테스트/
