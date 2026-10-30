@@ -407,7 +407,9 @@ function showQuick(r, birth) {
   quickPanel(`<p class="kicker">올해 ${r.year.year}년 · ${esc(r.year.ko)}</p>${say(r.year.text)}
     <p class="kicker" style="margin-top:22px">오늘 ${esc(r.today.date)} · ${esc(r.today.ko)}일</p>${say(r.today.text)}`, "fortune");
   if (r.cal) {  // 운세 달력: 쓰던 구글·아이폰 달력에 날마다 한 줄 (2026-10-30, 지인 체험용 무료 — calendar_feed.py)
-    quickPanel(`<p class="kicker">매일의 기운, 내 달력에</p>${say("쓰던 달력에 날마다 한 줄씩 띄워 줄게. 밀어붙일 날인지, 숨 고를 날인지.", "small")}
+    quickPanel(`<p class="kicker">네 운세, 달력으로</p>${say("날마다 좋은 날, 조심할 날을 한 달 달력으로 보여 줄게. 일정을 넣으면 그날 그 일에 맞춰서까지.", "small")}
+      <a class="btn appbtn" href="/app">운세 달력 열기</a>
+      <p class="small muted" style="margin-top:16px">쓰던 달력에 날마다 한 줄씩 띄우고 싶으면</p>
       ${calButtons(r.cal)}
       <p class="small muted">생일은 저장하지 않아. 이 달력 주소를 남한테 주면 그 사람도 네 달력을 보니까 너만 써.</p>`, "calpanel");
   }
@@ -435,7 +437,7 @@ function showQuick(r, birth) {
   if (WANT && window.PRODUCTS[WANT]) return checkout(WANT);  // 상품 링크(?p=)로 온 손님은 바로 신청서
   const tour = [
     { sel: "#quick-result .panel:nth-of-type(2)", title: "이게 너야", text: "타고난 성향을 한 줄로 보여 줄게. 아래로 내리면 강점, 조심할 점, 다섯 기운, 올해와 오늘의 흐름이 이어져." },
-    { sel: ".calpanel .calbtns", title: "내 달력에 넣기", text: "쓰던 구글·아이폰 달력에 날마다 그날의 기운이 한 줄씩 떠. 한 번만 누르면 돼." },
+    { sel: ".calpanel .appbtn", title: "운세 달력", text: "네 생일로 한 달 운세를 달력으로 봐. 좋은 날, 조심할 날, 내 일정까지. 생일은 다시 안 적어도 돼." },
     { sel: ".askpanel .topics", title: "도령 상담 · 무료", text: "마음에 걸리는 고민을 하나 골라 봐. 상담실에서 네 사주로 같이 봐 줄게." },
   ];
   setTimeout(() => coach("me", tour), 1200);  // 페이지 넘김이 끝난 뒤

@@ -52,18 +52,43 @@
   #first input[type=date] { width: 100%; box-sizing: border-box; }
 
   /* 오늘 */
-  .today { margin-top: 14px; }
+  .today { margin-top: 12px; }
+  .today .fit { margin-left: 8px; vertical-align: middle; }
+  .today h4 { margin: 14px 0 2px; font: 700 13px "Noto Sans KR", sans-serif; color: #ffe45c; }
+  .today .dayev { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .today .dayev .top { display: flex; gap: 8px; align-items: center; }
+  .today .dayev p { margin: 6px 0 0; }
+  .today .addday { margin-top: 14px; width: 100%; }
+
+  /* 한 달 운세 달력 */
+  .mcal { margin-top: 14px; padding: 14px 10px; }
+  .mhead { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+  .mhead b { font: 400 22px "Black Han Sans", sans-serif; }
+  .mnav { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: #000; color: #fff; font-size: 22px; cursor: pointer; }
+  .flow { margin: 8px 4px 0; color: var(--ink-2); font-size: 14px; line-height: 1.6; }
+  .legend { display: flex; gap: 14px; margin: 10px 4px; font-size: 12px; color: var(--ink-3); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .dot { display: inline-grid; place-items: center; width: 10px; height: 10px; border-radius: 50%; font-style: normal; font-size: 8px; font-weight: 700; }
+  .dot.good { background: #ffe45c; }
+  .dot.care { width: 12px; height: 12px; border: 1.5px solid #fff; color: #fff; }
+  .evbar { display: inline-block; width: 14px; height: 4px; border-radius: 2px; background: #fff; }
+  .mgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .mgrid .wd { text-align: center; font-size: 11px; color: var(--ink-3); padding: 2px 0 4px; }
+  .mgrid .wd.sun, .cell.sun .n { color: #ff8a80; }
+  .cell { position: relative; min-height: 58px; padding: 4px 2px; border-radius: 10px; border: 1px solid transparent; background: #0b0b0b; color: #fff;
+    display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; font: inherit; min-width: 0; }
+  .cell .n { font: 700 14px "Noto Sans KR", sans-serif; }
+  .cell .mk { height: 12px; display: grid; place-items: center; }
+  .cell .evt { width: 100%; font-size: 10px; line-height: 1.2; padding: 1px 2px; border-radius: 4px; background: #fff; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cell.past { opacity: .4; }
+  .cell.today { border-color: #ffe45c; }
+  .cell.sel { background: #2a2a10; border-color: #ffe45c; outline: 2px solid #ffe45c; outline-offset: 1px; }
+  .cell:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
   .today .kicker { opacity: 1; margin: 0; color: #ffe45c; font: 700 12px "Noto Sans KR", sans-serif; letter-spacing: .12em; }
   .today .big { font: 400 30px/1.25 "Black Han Sans", sans-serif; margin: 6px 0; color: #fff; }
   .today p { margin: 4px 0 0; line-height: 1.6; }
   .warn { color: #ffe45c; font-size: 14px; }
 
-  /* 이번 주 */
-  .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
-  .week div { background: #111; border: 1px solid var(--line); border-radius: 10px; padding: 8px 2px; text-align: center; font-size: 11px; line-height: 1.35; color: var(--ink-2); overflow-wrap: anywhere; }
-  .week div b { display: block; color: #fff; font-size: 12px; margin-bottom: 4px; }
-  .week div .em { display: block; font-size: 18px; }
-  .week div.first { border-color: #ffe45c; }
 
   /* 내 일정 */
   .sechead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -101,7 +126,7 @@
   .kinds label input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
   .panel2 .row2 { display: flex; gap: 10px; margin-top: 18px; }
   .panel2 .row2 .btn { flex: 1; }
-  .menu .panel2 button.item { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); color: #fff; padding: 14px 4px; font: 500 16px "Noto Sans KR", sans-serif; cursor: pointer; }
+  .menu .panel2 .item { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); color: #fff; padding: 14px 4px; font: 500 16px "Noto Sans KR", sans-serif; cursor: pointer; }
   .err { color: #ffe45c; min-height: 1.2em; margin: 8px 0 0; font-size: 14px; }
 
   .calbtns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
@@ -142,10 +167,15 @@
   </section>
 
   <section id="main" hidden>
-    <div class="card today" id="today" aria-live="polite"></div>
-    <div class="week" id="week" aria-label="이번 주 날마다 기운"></div>
+    <section class="card mcal" id="mcal" aria-label="한 달 운세 달력">
+      <div class="mhead"><button type="button" class="mnav" id="m-prev" aria-label="지난달">‹</button><b id="m-title"></b><button type="button" class="mnav" id="m-next" aria-label="다음 달">›</button></div>
+      <p class="flow" id="m-flow"></p>
+      <div class="legend"><span><i class="dot good"></i>좋음</span><span><i class="dot care">!</i>조심</span><span><i class="evbar"></i>내 일정</span></div>
+      <div class="mgrid" id="m-grid"></div>
+    </section>
+    <div class="card today" id="dayd" aria-live="polite"></div>
 
-    <div class="sechead"><h2 class="sec">내 일정</h2><button class="btn" id="add-btn" type="button">+ 일정 넣기</button></div>
+    <div class="sechead"><h2 class="sec">다가오는 내 일정</h2><button class="btn" id="add-btn" type="button">+ 일정 넣기</button></div>
     <div id="events"></div>
 
     <h2 class="sec">날마다 기운, 쓰던 달력에도</h2>
@@ -177,6 +207,7 @@
     <button class="item" type="button" data-act="intro">처음 소개 다시 보기</button>
     <button class="item" type="button" data-act="birth">생일 바꾸기</button>
     <button class="item" type="button" data-act="clear">일정 모두 지우기</button>
+    <a class="item" href="/consult">도령에게 고민 상담하기 (운결 사이트)</a>
     <div class="row2"><button class="btn ghost" type="button" data-close>닫기</button></div>
   </div>
 </div>

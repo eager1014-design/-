@@ -11,12 +11,13 @@ AI를 쓰지 않는다 (비용 0, 바로 나옴). 일정·생일은 서버에 �
 
 자체 점검: python3 myday.py
 """
+import calendar
 from datetime import date, timedelta
 
 from calendar_feed import DAY_TITLE
-from quick import TODAY_GOD
+from quick import TODAY_GOD, YEAR_GOD
 from saju_engine import (BRANCH_ELEMENT, BRANCHES_KO, ELEMENTS, STEM_ELEMENT, STEMS_KO, _natal_lists,
-                         branch_main_stem, day_ganzhi, find_relations, ten_god)
+                         branch_main_stem, current_luck, day_ganzhi, find_relations, ten_god)
 
 # 그날 들어오는 기운을 쉬운 말로 (용어 대신)
 GOD_PLAIN = {
@@ -74,6 +75,25 @@ KINDS = {
             "tip": ["기운이 너를 밀어주는 날이야.", "평범하게 흘러가는 날이야.", "이날은 한 박자 천천히 가."]},
 }
 FIT = ("좋음", "보통", "조심")
+
+# 운세 달력(일정과 상관없는 그날 자체): 할 것 / 조심할 것 (그날 천간의 십신 기준, 친구 반말)
+DAY_DO = {
+    "비견": "네 방식대로 밀고 가 봐. 혼자 하는 일이 잘 풀려.", "겁재": "돈 쓰기 전에 하루만 기다려 봐.",
+    "식신": "잘하는 걸 하나 보여 줘. 맛있는 거 먹고 쉬어도 좋아.", "상관": "떠오르는 생각을 메모해 둬. 아이디어가 잘 나와.",
+    "편재": "새 사람, 새 제안에 한 번 '좋아'라고 해 봐.", "정재": "미뤄 둔 일 하나 끝내고, 돈 정리해 봐.",
+    "편관": "피하고 싶던 일, 오늘 정면으로 하면 오히려 빨리 끝나.", "정관": "약속·서류·시간을 지키면 인정받아.",
+    "편인": "혼자 공부하거나 생각 정리하기 좋아.", "정인": "도와 달라고 해 봐. 서류 일도 잘 풀려.",
+}
+DAY_DONT = {
+    "비견": "고집 싸움은 피해. 이겨도 남는 게 없어.", "겁재": "돈 빌려주기·내기·충동구매는 오늘 말고.",
+    "식신": "너무 늘어지면 해야 할 걸 놓쳐.", "상관": "윗사람한테 바로 반박하는 말은 한 번 삼켜.",
+    "편재": "큰돈 거는 건 한 번 더 따져.", "정재": "새 일 벌이기보다 하던 걸 마무리해.",
+    "편관": "무리한 약속이랑 밤샘은 몸이 먼저 지쳐.", "정관": "규칙 어기는 지름길은 오늘 꼭 걸려.",
+    "편인": "혼자 오해하지 말고 궁금하면 물어봐.", "정인": "받기만 하고 고맙다는 말 잊지 마.",
+}
+CLASH_NOTE = "너랑 부딪는 날이야. 큰 결정이나 이동은 하루 미루면 편해."
+# 그날 자체의 좋음: 대부분에게 무난히 좋은 기운 + 필요한 기운 + 손잡는 날. '조심'은 나와 부딪는 날(충)만 — 한 달 2~3일 (겁주지 않게)
+DAY_GOOD = {"식신", "정재", "정관", "정인", "편재"}
 MAX_EVENTS = 60
 WEEKDAY = "월화수목금토일"
 
@@ -160,7 +180,32 @@ def parse_events(raw, today):
     return out
 
 
-def reading(chart, events, today=None):
+def day_fit(chart, info):
+    if info["clash_me"]:
+        return "조심"
+    pts = (2 if info["stem_god"] in DAY_GOOD else 0) + (1 if info["branch_god"] in DAY_GOOD else 0)
+    pts += (chart["yongsin"] in info["elements"]) + info["harmony_me"]
+    return "좋음" if pts >= 3 else "보통"
+
+
+def month(chart, year, mon, today=None):
+    """운세 달력 한 달: 날마다 제목·좋음/보통/조심·할 것·조심할 것 + 이달 흐름 한 줄(그달 15일의 월운)."""
+    today = today or date.today()
+    days = []
+    for n in range(1, calendar.monthrange(year, mon)[1] + 1):
+        d = date(year, mon, n)
+        info = day_info(chart, d)
+        g = info["stem_god"]
+        days.append({"date": d.isoformat(), "n": n, "dow": d.weekday(), "fit": day_fit(chart, info),
+                     "title": DAY_TITLE.get(g, ""), "ganzhi": info["ko"], "do": DAY_DO.get(g, ""),
+                     "dont": CLASH_NOTE if info["clash_me"] else DAY_DONT.get(g, ""), "past": d < today})
+    flow = current_luck(chart, date(year, mon, 15))["month"]
+    return {"year": year, "month": mon, "days": days,
+            "flow": YEAR_GOD.get(flow["stem_god"], "").replace("한 해", "한 달"),
+            "count": {f: sum(x["fit"] == f for x in days) for f in FIT}}
+
+
+def reading(chart, events, today=None, ym=None):
     today = today or date.today()
     info = day_info(chart, today)
     week = []
@@ -173,7 +218,19 @@ def reading(chart, events, today=None):
                       "clash": info["clash_me"]},
             "week": week,
             "events": sorted((read_event(chart, e, today) for e in events), key=lambda x: x["date"]),
+            "month": month(chart, *(ym or (today.year, today.month)), today=today),
             "kinds": kinds_public()}
+
+
+def parse_month(raw, today):
+    """'2026-11' → (2026, 11). 지난 1년 ~ 앞으로 2년만, 아니면 이번 달."""
+    try:
+        y, m = (int(x) for x in str(raw).split("-")[:2])
+        if 1 <= m <= 12 and -12 <= (y - today.year) * 12 + m - today.month <= 24:
+            return y, m
+    except ValueError:
+        pass
+    return today.year, today.month
 
 
 if __name__ == "__main__":
@@ -195,7 +252,12 @@ if __name__ == "__main__":
     assert all(not e["better"] for e in r["events"] if e["kind"] == "payday"), "월급날은 옮길 수 없는데 추천함"
     # 한 달 동안 종류별로 좋음/조심이 몇 번인지 — 한쪽으로 쏠리면 규칙을 다시 볼 것
     for k in KINDS:
-        month = [score(chart, day_info(chart, t0 + timedelta(days=i)), k)[1] for i in range(30)]
-        print(f"{KINDS[k]['label']:<14} 좋음 {month.count('좋음'):>2} · 보통 {month.count('보통'):>2} · 조심 {month.count('조심'):>2}")
+        days30 = [score(chart, day_info(chart, t0 + timedelta(days=i)), k)[1] for i in range(30)]
+        print(f"{KINDS[k]['label']:<14} 좋음 {days30.count('좋음'):>2} · 보통 {days30.count('보통'):>2} · 조심 {days30.count('조심'):>2}")
+    for y, m in ((2026, 11), (2026, 12), (2027, 1)):
+        mo = month(chart, y, m, t0)
+        print(f"{y}-{m} 달력: {mo['count']} · 흐름: {mo['flow']}")
+        assert 0 < mo["count"]["좋음"] and mo["count"]["조심"] <= 6, "달력 좋음/조심이 쏠림"
+    assert parse_month("2026-12", t0) == (2026, 12) and parse_month("2030-1", t0) == (2026, 11) and parse_month("x", t0) == (2026, 11)
     print(r["today"], r["events"][0], sep="\n")
     print(f"✅ 자체 점검 통과 (일정 60개 계산 {took:.2f}초)")

@@ -765,14 +765,16 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(res)
 
     def api_myday(self, b):
-        """운결 앱: 생일 + 내 일정 → 오늘·이번 주·일정마다 그날 기운. 저장하지 않음(일정은 손님 폰에만), AI 안 씀."""
+        """운결 앱: 생일 + 내 일정 (+ 볼 달) → 오늘·한 달 운세 달력·일정마다 그날 기운. 저장하지 않음(일정은 손님 폰에만), AI 안 씀."""
         if too_many("myday:" + self.client_ip(), 120, 3600):
             return self.error("잠시 후 다시 해주세요.", 429)
         try:
             birth = parse_birth(b.get("birth") or {})
         except ValueError as e:
             return self.error(str(e))
-        res = myday.reading(chart_of_birth(birth), myday.parse_events(b.get("events"), date.today()))
+        today = date.today()
+        res = myday.reading(chart_of_birth(birth), myday.parse_events(b.get("events"), today), today,
+                            myday.parse_month(b.get("month"), today))
         res["cal"] = calendar_feed.make_token(birth, SECRET)
         self.send_json(res)
 

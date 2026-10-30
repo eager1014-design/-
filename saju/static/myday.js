@@ -1,5 +1,5 @@
 /* 운결 앱 — 내 일정 × 그날 기운 (2026-10-30 사장님: 먼저 사주 → 내 일정을 넣으면 그날 그 일에 맞는 기운).
-   처음: 소개 3장 → 생일 → 첫 일정 하나(건너뛰기 가능) → 오늘·이번 주·내 일정 + 화면 안내(코치마크). 소개·안내는 메뉴에서 다시 볼 수 있음.
+   처음: 소개 3장 → 생일 → 첫 일정 하나(건너뛰기 가능) → 한 달 운세 달력(날짜 누르면 그날 자세히)·내 일정 + 화면 안내(코치마크). 소개·안내는 메뉴에서 다시 볼 수 있음.
    생일·일정은 이 폰(localStorage)에만. 볼 때마다 /api/myday 로 보내 계산만 받아 온다 (서버 저장 X, AI X).
    7일 무료 체험 배지는 보여 주기만 한다 — 아직 수익화 전이라 잠그지 않음 (구독 4,990원 확정되면 여기서 잠금). */
 
@@ -11,16 +11,18 @@ const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catc
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const todayIso = () => iso(new Date());
 let DATA = null;
+let VIEW = todayIso().slice(0, 7);  // 보고 있는 달 'YYYY-MM'
+let SEL = todayIso();               // 달력에서 고른 날
 
 const INTRO = [
   { img: "/img/toon2/t3.jpg", title: "일정은 꽉 찼는데<br><em>어느 날이 좋은지</em> 모르겠지?", text: "계약, 면접, 월급날, 데이트… 날은 정해졌는데 마음이 괜히 불안할 때." },
   { img: "/img/toon2/t8.jpg", title: "생일 <em>하나</em>만 줘", text: "네 사주로 날마다 어떤 기운이 들어오는지 계산해 둘게. 태어난 시간은 몰라도 돼." },
-  { img: "/img/toon2/c06.jpg", title: "일정을 넣으면<br><em>그날 그 일</em>에 맞춰 알려 줄게", text: "좋은 날인지, 조심할 날인지, 옮길 수 있으면 더 좋은 날까지. 7일 동안 무료로 써 봐." },
+  { img: "/img/toon2/c06.jpg", title: "네 운세를<br><em>달력</em>으로 보여 줄게", text: "날마다 좋은 날·조심할 날, 일정을 넣으면 그날 그 일에 맞춰서까지. 7일 동안 무료로 써 봐." },
 ];
 
 const TOUR = [
-  { sel: "#today", title: "오늘의 기운", text: "앱을 열면 제일 먼저 오늘이 어떤 날인지 한 줄로 보여 줘." },
-  { sel: "#week", title: "이번 주 한눈에", text: "앞으로 7일이 어떤 날인지 미리 봐. '변동'이 붙은 날은 너랑 부딪는 날이야." },
+  { sel: "#mcal", title: "한 달 운세 달력", text: "노란 점은 좋은 날, 느낌표는 조심할 날이야. 맨 위엔 그달 흐름 한 줄. 옆 화살표로 다른 달도 봐." },
+  { sel: "#dayd", title: "그날 자세히", text: "날짜를 누르면 그날 할 것, 조심할 것, 그날 내 일정까지 여기 나와. 처음엔 오늘이야." },
   { sel: "#add-btn", title: "일정 넣기", text: "날짜랑 무슨 일인지만 고르면 돼. 그날 그 일에 맞는지 바로 알려 줄게." },
   { sel: "#trial", title: "7일 무료 체험", text: "지금은 전부 열려 있어. 남은 날이 여기 보여." },
   { sel: "#menu-btn", title: "다시 보고 싶으면", text: "이 안내랑 처음 소개는 메뉴에서 언제든 다시 볼 수 있어." },
@@ -109,6 +111,8 @@ function firstEvent() {
     if (!date) { $("#f-err").textContent = "날짜를 골라 줘."; return; }
     st.events.push({ id: Date.now().toString(36), date, kind, memo: "" });
     save();
+    VIEW = date.slice(0, 7);
+    SEL = date;
     try { await load(); } catch (e) { $("#f-err").textContent = e.message; }
   };
   $("#f-skip").onclick = openMain;
@@ -116,7 +120,7 @@ function firstEvent() {
 
 /* 3. 메인: 오늘 · 이번 주 · 내 일정 */
 async function fetchData() {
-  DATA = await api("/api/myday", { birth: st.birth, events: st.events.map(({ id, date, kind }) => ({ id, date, kind })) });
+  DATA = await api("/api/myday", { birth: st.birth, month: VIEW, events: st.events.map(({ id, date, kind }) => ({ id, date, kind })) });
 }
 async function load() {
   await fetchData();
@@ -129,17 +133,60 @@ function openMain() {
 }
 
 function render() {
-  const t = DATA.today;
-  $("#today").innerHTML = `<p class="kicker">오늘 · ${esc(t.day)}</p><p class="big">${esc(t.title)}</p><p>${esc(t.mood)}</p>
-    ${t.clash ? '<p class="warn">오늘은 너랑 부딪는 날이라 변동이 커. 큰 결정은 하루 미뤄도 괜찮아.</p>' : ""}`;
-  $("#week").innerHTML = DATA.week.map((w, k) => {
-    const [em, ...rest] = w.title.split(" ");
-    return `<div class="${k ? "" : "first"}"><b>${k ? esc(w.day.replace(/^\d+\//, "")) : "오늘"}</b><span class="em" aria-hidden="true">${esc(em)}</span>${esc(rest.join(" ").replace(/ 날$/, ""))}${w.clash ? '<br><span class="warn">변동</span>' : ""}</div>`;
-  }).join("");
+  monthView();
+  dayDetail();
   trial();
   events();
   $("#calbtns").innerHTML = calButtons(DATA.cal);
 }
+
+/* 한 달 운세 달력: 일요일부터, 날마다 좋음(노란 점)·조심(!)·내 일정 */
+const WD = "일월화수목금토";
+const short = (label) => label.split("·")[0].split("(")[0].trim();
+function monthView() {
+  const M = DATA.month, today = todayIso(), byDate = {};
+  DATA.events.forEach((e) => (byDate[e.date] = byDate[e.date] || []).push(e));
+  $("#m-title").textContent = `${M.year}년 ${M.month}월`;
+  $("#m-flow").textContent = M.flow ? `${M.month}월 흐름 — ${M.flow}` : "";
+  const lead = (M.days[0].dow + 1) % 7;  // 파이썬 요일(월=0) → 일요일 시작 칸
+  $("#m-grid").innerHTML = [...WD].map((w, k) => `<div class="wd${k ? "" : " sun"}">${w}</div>`).join("")
+    + "<div></div>".repeat(lead)
+    + M.days.map((d) => {
+      const evs = byDate[d.date] || [], cls = ["cell", d.past && "past", d.date === today && "today", d.date === SEL && "sel", (d.dow + 1) % 7 === 0 && "sun"].filter(Boolean).join(" ");
+      const mk = d.fit === "좋음" ? '<i class="dot good"></i>' : d.fit === "조심" ? '<i class="dot care">!</i>' : "";
+      const ev = evs.length ? `<span class="evt">${esc(short(evs[0].kind_label))}${evs.length > 1 ? " +" + (evs.length - 1) : ""}</span>` : "";
+      return `<button type="button" class="${cls}" data-d="${d.date}" aria-label="${d.month || M.month}월 ${d.n}일 ${d.fit}${evs.length ? ", 일정 " + evs.length + "개" : ""}"><span class="n">${d.n}</span><span class="mk">${mk}</span>${ev}</button>`;
+    }).join("");
+  $("#m-grid").querySelectorAll(".cell").forEach((c) => (c.onclick = () => {
+    SEL = c.dataset.d;
+    monthView();
+    dayDetail();
+    $("#dayd").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }));
+}
+
+function dayDetail() {
+  const d = DATA.month.days.find((x) => x.date === SEL) || DATA.month.days[0];
+  const dt = new Date(d.date + "T00:00"), label = `${dt.getMonth() + 1}/${dt.getDate()}(${WD[dt.getDay()]})`;
+  const evs = DATA.events.filter((e) => e.date === d.date);
+  $("#dayd").innerHTML = `<p class="kicker">${d.date === todayIso() ? "오늘 · " : ""}${label}</p>
+    <p class="big">${esc(d.title)}<span class="fit ${esc(d.fit)}">${esc(d.fit)}</span></p>
+    <h4>할 것</h4><p>${esc(d.do)}</p>
+    <h4>조심할 것</h4><p>${esc(d.dont)}</p>
+    ${evs.map((e) => `<div class="dayev"><div class="top"><b>${esc(e.kind_label)}</b><span class="fit ${esc(e.fit)}">${esc(e.fit)}</span></div><p>${esc(e.tip)}</p>
+      ${e.better.length ? `<p class="small muted">고를 수 있다면 ${e.better.map((b) => esc(b.day)).join(", ")}이 더 좋아.</p>` : ""}</div>`).join("")}
+    ${d.past ? "" : '<button class="btn ghost addday" type="button" id="add-day">+ 이날 일정 넣기</button>'}`;
+  $("#add-day")?.addEventListener("click", () => openAdd(d.date));
+}
+
+async function goMonth(step) {
+  const [y, m] = VIEW.split("-").map(Number), d = new Date(y, m - 1 + step, 1);
+  VIEW = iso(d).slice(0, 7);
+  SEL = VIEW === todayIso().slice(0, 7) ? todayIso() : `${VIEW}-01`;
+  try { await fetchData(); render(); } catch (e) { alert(e.message); }
+}
+$("#m-prev").onclick = () => goMonth(-1);
+$("#m-next").onclick = () => goMonth(1);
 
 function trial() {
   const used = Math.floor((new Date(todayIso()) - new Date(st.started || todayIso())) / 864e5) + 1;
@@ -182,14 +229,15 @@ document.querySelectorAll(".sheet").forEach((s) => {
 });
 addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelectorAll(".sheet").forEach((s) => (s.hidden = true)); });
 
-$("#add-btn").onclick = () => {
-  $("#ev-date").value = todayIso();
+$("#add-btn").onclick = () => openAdd(todayIso());
+function openAdd(date) {
+  $("#ev-date").value = date < todayIso() ? todayIso() : date;
   $("#ev-date").min = todayIso();
   $("#ev-memo").value = "";
   $("#add-err").textContent = "";
   $("#ev-kinds").innerHTML = DATA.kinds.map((k) => `<label><input type="radio" name="ev-kind" value="${esc(k.key)}"><span>${esc(k.label)}</span></label>`).join("");
   openSheet("add-sheet");
-};
+}
 $("#add-save").onclick = async () => {
   const date = $("#ev-date").value, kind = document.querySelector('input[name="ev-kind"]:checked')?.value;
   if (!date) { $("#add-err").textContent = "날짜를 골라 줘."; return; }
@@ -198,8 +246,10 @@ $("#add-save").onclick = async () => {
   st.events.push({ id: Date.now().toString(36), date, kind, memo: $("#ev-memo").value.trim().slice(0, 30) });
   save();
   closeSheet("add-sheet");
+  VIEW = date.slice(0, 7);  // 넣은 날이 있는 달로 가서 그날을 보여 준다
+  SEL = date;
   await load();
-  document.querySelector(`.ev[data-id="${st.events.at(-1).id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  $("#dayd").scrollIntoView({ behavior: "smooth", block: "center" });
 };
 
 /* 메뉴: 안내·소개 다시 보기, 생일 바꾸기, 지우기 */
