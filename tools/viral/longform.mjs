@@ -13,6 +13,7 @@ import { ROOT, DATA_DIR, UPLOAD_DIR, GEMINI_MODEL, load, save, saveUploads, imag
 import { gemini, watchVideo } from "../ai-bridge/gemini.mjs";
 import { SOUND_RULES, pickSections } from "./sound_rules.mjs";
 import { fillPhotos, creditLines } from "../commons.mjs";
+import { fillPaperPages, paperCreditLines } from "../paper_page.mjs";
 import { ensureSajuOutro, OUTRO_ASK, PINNED_ASK, withSaju } from "../saju_pin.mjs";
 import { BRIDGE_RULE, FORECAST_ASK, SELL_ASK, SELL_RULES } from "../sell_plan.mjs";
 import { AREA_LIST, recentList, TOPIC_AREAS } from "../topic_mix.mjs";
@@ -277,13 +278,14 @@ JSON 하나만: {"reply": "사장님께 두세 줄: 어떤 기준으로 골랐�
     const picked = JSON.parse(JSON.stringify(p.episode.scenes.slice(a, b + 1))).map((x) => {
       delete x.musicDrop; delete x.musicMute; delete x.pauseBefore; // 롱폼 음악 연출은 빼고
       delete x.punch; // 가운데 큰 강조 자막은 일반 자막과 같은 높이라 겹침 → 쇼츠에선 자막만 (2026-10-27)
-      if (x.cast === "corner" || (x.cast === "off" && !x.image && !x.drawFace)) x.cast = "right"; // 그림·표정 장면은 캐릭터를 겹치지 않음
+      if (x.cast === "corner" || (x.cast === "off" && !x.image && !x.drawFace && !x.page)) x.cast = "right"; // 그림·표정 장면은 캐릭터를 겹치지 않음
       return x;
     });
     const [l1, l2] = String(sh.title || "").split("/").map((t) => t.trim().slice(0, 14));
     const n = createProject({ title: [l1, l2].filter(Boolean).join(" ") || "롱폼에서 뽑은 쇼츠", brief: `롱폼 「${p.title}」에서 잘라 만든 쇼츠 — ${sh.angle || ""}`, channel: p.channel, format: "short" });
     const segment = picked.map((x) => x.narration).join(" ");
     n.photoCredits = (p.photoCredits || []).filter((c) => picked.some((x) => x.image === path.relative(path.join(VIDEO, "public"), c.file)));
+    n.paperCredits = (p.paperCredits || []).filter((c) => picked.some((x) => x.page === c.page));
     n.parent = { id: p.id, title: p.title, url: p.youtubeUrl || null, from: sh.from, to: picked.at(-1).id, segment };
     n.plan = { titles: [`${l1 || ""} / ${l2 || ""}`], hook: picked[0].narration, length: "", chapters: [{ title: "롱폼 구간", points: [`${sh.from}~${picked.at(-1).id}`, sh.angle || ""] }] };
     const end = { id: "end", type: "statement", text: "내 기질 궁금하면\n**고정 댓글** 링크", narration: "내 기질이 궁금하면 고정 댓글 링크를 한번 보세요.", holdSeconds: 3.5, cast: "right", face: "smile", gesture: "point" };
@@ -400,10 +402,10 @@ async function thumbs(p) {
 // ④ 대본 + 무료 초안 (목소리 없이 글자 수로 길이 어림)
 const SCENE_GUIDE = `[장면 종류 — 이것만] ${SCENES_LIST.filter((t) => !["dialogue", "screen"].includes(t)).join(" · ")}
 hook(lines[{text,cue}], kicker) · statement(text, kicker, sub, cue) · roadmap(title, items[]) · chapter(number, title, sub) · bigNumber(value, prefix, suffix, label, source, cue — 실제 숫자만)
-citation(authors, year, title, journal, finding, cue, findingCue — 확인된 논문만) · compare(title, left{title,icon,cue,items[]}, right{…}) · checklist(title, items[])
+citation(authors, year, title, journal, finding, cue, findingCue — 확인된 논문만, + 아는 경우 doi, quote(초록 속 핵심 영어 문장 그대로)) — 무료 공개 논문이면 진짜 논문 페이지가 뜨고 그 문장에 형광펜이 그어짐 (롱폼 2~4곳 추천) · compare(title, left{title,icon,cue,items[]}, right{…}) · checklist(title, items[])
 bars(title, bars[{label,value}], unit, source — 실제 데이터만) · story(icon, lines[] — 이모지 금지(화면에 안 나옴). 그림 없으면 "icon": 손그림 아이콘(battery·bed·brain·bulb·calendar·chart·check·clock·coffee·exclaim·fire·heart·house·lightning·lock·money·people·phone·question·search·speech·star·tear·thought 중, 없으면 생략). 롱폼은 대략 5장면마다 1곳(10~12곳), 쇼츠는 2~3곳에 "art": "삽화 설명 한 문장 — 채널 캐릭터(나)가 무엇을 하는지·어디인지·표정, 비교라면 왼쪽/오른쪽 대비로" — 그림이 연필로 그려지듯 나타남)
 story 표정 그리기: 감정이 확 바뀌는 순간 2~3곳(쇼츠 1곳)에 "drawFace": "smile|surprised|serious|laugh|worried|kind", "cast": "off" — 내 캐릭터 얼굴이 크게 그려지고 옆에 lines 글씨 (art 와 같이 쓰지 말 것)
-photo(실존 철학자·심리학자·위인을 말할 때만, 롱폼 2~4개 / 쇼츠 1~2개): {"person": "영문 전체 이름(위키백과 표기, 예: Arthur Schopenhauer)", "name": "한글 이름", "years": "1788–1860", "lines": [{text, cue}], "circle": {"at": "그 사람을 가리키는 순간의 단어"}} — 무료 사진이 자동으로 들어감. image·x·y 쓰지 말 것. 실존 인물은 art 로 그리지 말 것 · outro(question, cue, channel, channelCue)
+photo(실존 철학자·심리학자·위인을 말할 때만, 롱폼 2~4개 / 쇼츠 1~2개): {"person": "영문 전체 이름(위키백과 표기, 예: Arthur Schopenhauer)", "name": "한글 이름", "years": "1788–1860", "lines": [{text, cue}], "circle": {"at": "그 사람을 가리키는 순간의 단어"}, "cutout": true(절반쯤 — 배경을 지운 인물이 스티커처럼 붙고 얼굴에 손그림 동그라미)} — 무료 사진이 자동으로 들어감. image·x·y 쓰지 말 것. 실존 인물은 art 로 그리지 말 것 · outro(question, cue, channel, channelCue)
 pillars·elements = 사주 설명 장면 (사주 편일 때만)
 공통: id("s01"…), narration(필수, 사장님이 그대로 읽을 문장), keywords[], face(smile·surprised·serious·laugh·worried·kind), gesture(idea·point·think·explain·none), cast(right·left·center·corner·off)
 소품: "props": [{"icon": "이름", "at": "그 장면 내레이션 속 단어", "x": 0.2, "y": 0.4, "size": 220, "move": "bob|wiggle|pulse|spin"}] — 장면 뜻에 맞는 손그림 소품이 선으로 그려지며 나타나 계속 살짝 움직임. 쓸 수 있는 아이콘: brain·bulb·phone·battery·heart·clock·lightning·question·exclaim·check·chart·coffee·speech·thought·bed·money·calendar·lock·search·star·people·house·tear·fire. 장면 절반 정도에 1~2개, 글씨·캐릭터와 안 겹치게 빈 쪽(x 0.12~0.22 또는 0.78~0.88).
@@ -439,11 +441,13 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
     ep.soundPlan = true; // 효과음은 대본이 고른 것만 (sound_rules.mjs)
     ep.musicSections = pickSections(r.music_plan, ep.scenes || [], [], Date.now() % 97);
     const credits = await fillPhotos(ep, dir, (m) => log(p, m)); // 위인 사진 (위키미디어 무료, 못 받으면 이모지 장면으로)
+    const paperCredits = await fillPaperPages(ep, dir, (m) => log(p, m)); // 진짜 논문 화면 (자유 이용 논문만, 아니면 글자 카드)
     fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
     const check = run(p, `대본 검사 (${attempt}번째)`, NODE, ["scripts/check_episode.mjs", path.relative(VIDEO, epFile)], { cwd: VIDEO, allowFail: true });
     if (check.ok) {
       p.episode = ep;
       p.photoCredits = credits;
+      p.paperCredits = paperCredits;
       say(p, r.reply);
       break;
     }
@@ -565,6 +569,7 @@ forecast 는 사장님만 보는 '올리기 전 예측'이다. 기획안 sell �
   if (p.format === "short") p.youtube.description = p.youtube.description.split("\n").filter((l) => !(p.parent?.url && l.includes(p.parent.url))).join("\n").replace(/\n{3,}/g, "\n\n").trim();
   p.youtube.pinned = withSaju(p.format === "short" ? "" : p.youtube.pinned);
   if (p.photoCredits?.length) p.youtube.description += `\n\n📷 사진 출처 (Wikimedia Commons)\n${creditLines(p.photoCredits)}`; // CC BY 사진은 출처 표기가 조건
+  if (p.paperCredits?.length) p.youtube.description += `\n\n📄 화면에 나온 논문 (자유 이용 라이선스)\n${paperCreditLines(p.paperCredits)}`; // CC BY 는 출처 표기가 조건
   // 챕터: 실제 장면 시간으로 계산해 설명란에 붙인다 (유튜브 규칙: 0:00 부터, 3개 이상)
   let chNote = "";
   if (ch?.lines?.length >= 3) {

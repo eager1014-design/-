@@ -162,11 +162,66 @@ function BigNumber({ scene }) {
   );
 }
 
-// 6) 논문 출처 카드: authors, year, journal, title, finding
+// 6-1) 진짜 논문 화면 (2026-10-30, tools/paper_page.mjs 가 page·pageAspect·marks 를 채웠을 때): 실제 논문 페이지가 뜨고 →
+// 카메라가 핵심 문장 줄로 다가가며 → 형광펜이 줄마다 그어지고 → 옆(세로 화면은 아래)에 한글 finding.
+function PaperPage({ scene, cardAt, findAt }) {
+  const u = useUnit();
+  const short = useIsShort();
+  const frame = useCurrentFrame();
+  const size = useSceneSize();
+  const aspect = scene.pageAspect || 0.707;
+  const H = Math.min(size.height * (short ? 0.46 : 0.84), (size.width * (short ? 0.88 : 0.46)) / aspect);
+  const W = H * aspect;
+  const marks = scene.marks || [];
+  // 확대 목표: 표시된 줄들을 감싼 상자가 화면 폭을 거의 채우게 (1.6~3.2배)
+  const bx = marks.length ? Math.min(...marks.map((m) => m[0])) : 0.5;
+  const by = marks.length ? Math.min(...marks.map((m) => m[1])) : 0.3;
+  const bw = marks.length ? Math.max(...marks.map((m) => m[0] + m[2])) - bx : 0;
+  const bh = marks.length ? Math.max(...marks.map((m) => m[1] + m[3])) - by : 0;
+  const Z = marks.length ? Math.min(3.2, Math.max(1.6, 0.95 / Math.max(bw, 0.1))) : 1;
+  const zoomAt = cardAt + 16;
+  const z = interpolate(frame, [zoomAt, zoomAt + 26], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: (t) => 1 - Math.pow(1 - t, 3) });
+  const scale = 1 + (Z - 1) * z;
+  const cx = bx + bw / 2, cy = by + bh / 2;
+  // 확대 후 표시 줄 가운데가 화면 가운데에 오되 페이지 밖은 안 보이게
+  const tx = Math.min(0, Math.max(W - W * scale, W / 2 - cx * W * scale));
+  const ty = Math.min(0, Math.max(H - H * scale, H / 2 - cy * H * scale));
+  const hlAt = zoomAt + 26;
+  const enter = interpolate(frame, [cardAt, cardAt + 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return (
+    <AbsoluteFill style={{ flexDirection: short ? "column" : "row", justifyContent: "center", alignItems: "center", gap: 56 * u, padding: `0 ${60 * u}px` }}>
+      <Sfx at={[cardAt, hlAt, findAt]} whoosh={false} />
+      <div style={{ position: "relative", flex: "none", width: W, height: H, opacity: enter, transform: `translateY(${(1 - enter) * 60 * u}px) rotate(${-1 * (1 - z)}deg)`,
+        boxShadow: `0 ${16 * u}px ${44 * u}px rgba(0,0,0,0.22)`, border: `${2 * u}px solid ${COLORS.ink}`, background: "#FFFFFF", overflow: "hidden" }}>
+        <div style={{ position: "absolute", left: 0, top: 0, width: W, height: H, transformOrigin: "0 0", transform: `translate(${tx}px, ${ty}px) scale(${scale})` }}>
+          <Img src={staticFile(scene.page)} style={{ width: "100%", height: "100%", display: "block" }} />
+          {marks.map((m, i) => {
+            const p = interpolate(frame, [hlAt + i * 10, hlAt + i * 10 + 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+            return p > 0 && (
+              <div key={i} style={{ position: "absolute", left: `${m[0] * 100}%`, top: `${(m[1] - m[3] * 0.15) * 100}%`, width: `${m[2] * 100 * p}%`, height: `${m[3] * 130}%`,
+                background: COLORS.key, mixBlendMode: "multiply", opacity: 0.85, borderRadius: 2 }} />
+            );
+          })}
+        </div>
+        <div style={{ position: "absolute", left: 16 * u, bottom: 16 * u, background: COLORS.ink, borderRadius: 8 * u, padding: `${6 * u}px ${16 * u}px`, ...text(u, 22, 700, "#FFFFFF"), maxWidth: W - 32 * u, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {[scene.authors, scene.year].filter(Boolean).join(" · ")}{scene.journal ? <span style={{ opacity: 0.7, fontWeight: 500 }}> · {scene.journal}</span> : null}
+        </div>
+      </div>
+      {scene.finding && (
+        <Rise at={findAt} style={{ flex: short ? "none" : 1, minWidth: 0, maxWidth: short ? "90%" : undefined, textAlign: short ? "center" : "left" }}>
+          <Rich text={scene.finding} at={findAt} style={text(u, short ? 54 : 58, 800)} />
+        </Rise>
+      )}
+    </AbsoluteFill>
+  );
+}
+
+// 6) 논문 출처 카드: authors, year, journal, title, finding  (page 가 있으면 위의 진짜 논문 화면)
 function Citation({ scene }) {
   const u = useUnit();
   const short = useIsShort();
   const [cardAt, findAt] = revealFrames(scene, [{ cue: scene.cue }, { cue: scene.findingCue }]);
+  if (scene.page) return <PaperPage scene={scene} cardAt={cardAt} findAt={Math.max(findAt, cardAt + 60)} />;
   return (
     <Center>
       <Sfx at={[cardAt, findAt]} />
@@ -579,7 +634,62 @@ function Story({ scene, frames }) {
 // 얼굴에 빨간 점선 원이 그려지며(circle.at 단어) 오른쪽에 글씨. 세로 화면이면 사진 위·글씨 아래.
 // 칸: image, aspect(가로/세로), name("아르투어 쇼펜하우어"), years("1788–1860"), lines[{text, cue}],
 //     circle: { x, y, r (사진 기준 0~1), at: "단어" } — 얼굴 위치는 daily_short 가 제미나이로 찾음
+// 사진 오려 붙이기 (2026-10-30, photo 장면에 "cutout": true → commons.fillPhotos 가 cutoutImage 를 만듦):
+// 배경을 지운 인물이 흰 테두리 스티커처럼 붙고, 얼굴 둘레에 손으로 그린 동그라미가 그려지며, 이름표는 테이프처럼.
+function PhotoCutout({ scene, frames }) {
+  const u = useUnit();
+  const frame = useCurrentFrame();
+  const short = useIsShort();
+  const size = useSceneSize();
+  const lines = lineItems(scene, "lines");
+  const at = revealFrames(scene, lines);
+  const aspect = Math.min(1.4, Math.max(0.45, scene.cutAspect || 0.8));
+  const H = Math.min(size.height * (short ? 0.5 : 0.86), (size.width * (short ? 0.86 : 0.48)) / aspect);
+  const W = H * aspect;
+  const enter = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: "clamp", easing: (t) => 1 - Math.pow(1 - t, 3) });
+  const zoom = 1 + 0.05 * Math.min(1, frame / Math.max(1, frames));
+  const c = scene.circle;
+  const cAt = c ? (c.at ? cueFrame(scene, c.at) ?? 20 : 20) : 0;
+  const draw = c ? interpolate(frame, [cAt, cAt + 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;
+  // 손으로 그린 듯 살짝 삐뚤고 끝이 겹치는 동그라미 (얼굴 위치는 오린 그림 기준 — commons.fillPhotos)
+  const fx = c?.x ?? 0.5, fy = c?.y ?? 0.2;
+  const R = Math.max(W, H) * Math.min(0.24, Math.max(0.1, (c?.r ?? 0.14) * 1.1));
+  const pts = Array.from({ length: 100 }, (_, i) => {
+    const a = -Math.PI / 2 + (i / 88) * Math.PI * 2; // 한 바퀴 넘게 → 끝이 겹침
+    const k = 1 + 0.05 * Math.sin(i * 0.21) + 0.03 * Math.cos(i * 0.13) + 0.04 * (i / 100);
+    return `${(fx * W + Math.cos(a) * R * 1.05 * k).toFixed(1)},${(fy * H + Math.sin(a) * R * 0.92 * k).toFixed(1)}`;
+  });
+  const sticker = `drop-shadow(${5 * u}px 0 0 #fff) drop-shadow(-${5 * u}px 0 0 #fff) drop-shadow(0 ${5 * u}px 0 #fff) drop-shadow(0 -${5 * u}px 0 #fff) drop-shadow(0 ${12 * u}px ${18 * u}px rgba(0,0,0,0.25))`;
+  return (
+    <AbsoluteFill style={{ flexDirection: short ? "column" : "row", justifyContent: "center", alignItems: "center", gap: 50 * u, padding: `0 ${50 * u}px` }}>
+      <Sfx at={[...at, ...(c ? [cAt] : [])]} />
+      <div style={{ position: "relative", flex: "none", width: W, height: H, opacity: enter, transform: `translateY(${(1 - enter) * 50 * u}px) rotate(${-2 + 2 * (1 - enter)}deg) scale(${zoom})` }}>
+        <Img src={staticFile(scene.cutoutImage)} style={{ width: "100%", height: "100%", display: "block", filter: `${scene.color ? "" : "grayscale(0.2) contrast(1.06) "}${sticker}` }} />
+        {c && draw > 0 && (
+          <svg style={{ position: "absolute", inset: 0, overflow: "visible" }} width={W} height={H}>
+            <polyline points={pts.join(" ")} fill="none" stroke={COLORS.sage} strokeWidth={8 * u} strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - draw} />
+          </svg>
+        )}
+        {scene.name && (
+          <div style={{ position: "absolute", left: "50%", bottom: -18 * u, transform: "translateX(-50%) rotate(-3deg)", whiteSpace: "nowrap", width: "max-content",
+            background: "rgba(255,228,92,0.92)", padding: `${8 * u}px ${22 * u}px`, boxShadow: `0 ${4 * u}px ${10 * u}px rgba(0,0,0,0.15)`, ...text(u, 26, 800, "#111111") }}>
+            {scene.name}{scene.years ? <span style={{ opacity: 0.65, fontWeight: 600 }}> · {scene.years}</span> : null}
+          </div>
+        )}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 * u, flex: short ? "none" : 1, minWidth: 0, maxWidth: short ? "88%" : undefined, textAlign: short ? "center" : "left" }}>
+        {lines.map((l, i) => (
+          <Rise key={i} at={at[i]}>
+            <Rich text={l.text} at={at[i]} style={text(u, i === 0 ? 56 : 46, 800)} />
+          </Rise>
+        ))}
+      </div>
+    </AbsoluteFill>
+  );
+}
+
 function Photo({ scene, frames }) {
+  if (scene.cutoutImage) return <PhotoCutout scene={scene} frames={frames} />;
   const u = useUnit();
   const frame = useCurrentFrame();
   const short = useIsShort();

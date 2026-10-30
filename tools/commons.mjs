@@ -7,6 +7,7 @@
 //   → <저장 폴더>/<영문이름>_1.jpg … + credits.json 에 [{file, title, author, license, url}] 추가
 // 다른 Tool 에서: import { fetchPortraits } from "./commons.mjs"
 import fs from "node:fs";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,6 +15,7 @@ const API = "https://commons.wikimedia.org/w/api.php";
 const UA = { "User-Agent": "yeminhan-video-factory/1.0 (personal YouTube channel tool; eager1014@gmail.com)" };
 const OK = /^(public domain|pd\b|pd-|cc0|cc by(-sa)? ?[1-4]\.0|cc-by(-sa)?-[1-4]\.0)/i;
 const VIDEO_PUBLIC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../video/public");
+const PY = path.resolve(VIDEO_PUBLIC, "../../.venv/bin/python");
 const strip = (s = "") => s.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 
 // 인터넷이 잠깐 끊기면(fetch failed) 2초·5초 쉬고 다시 — 2026-10-23 첫 편에서 한 번 끊겨 사진이 빠졌음
@@ -131,9 +133,17 @@ export async function fillPhotos(ep, dir, log = console.log) {
       if (!g) continue;
       s.image = path.relative(VIDEO_PUBLIC, g.file);
       s.aspect = g.aspect;
-      if (s.circle) {
-        const face = await withTimeout(locateFace(g.file, person).catch(() => null), 45_000);
-        Object.assign(s.circle, face || { x: 0.5, y: 0.28, r: 0.16 });
+      if (s.cutout) { // 사진 오려 붙이기: 사람만 오린 투명 PNG (2026-10-30). 못 오리면 보통 액자 사진으로
+        const cut = g.file.replace(/\.\w+$/, ".cut.png");
+        if (!fs.existsSync(cut)) spawnSync(PY, [path.resolve(VIDEO_PUBLIC, "../scripts/person_cut.py"), g.file], { stdio: "ignore", timeout: 180_000 });
+        if (fs.existsSync(cut)) {
+          const b = fs.readFileSync(cut); // PNG 머리말의 폭·높이
+          Object.assign(s, { cutoutImage: path.relative(VIDEO_PUBLIC, cut), cutAspect: +(b.readUInt32BE(16) / b.readUInt32BE(20)).toFixed(3) });
+        } else log(`⚠️ ${person} 사진에서 사람을 못 오려서 액자 사진으로 둠`);
+      }
+      if (s.circle) { // 얼굴 위치는 실제로 화면에 쓰는 그림(오린 그림이 있으면 그것) 기준
+        const face = await withTimeout(locateFace(s.cutoutImage ? path.join(VIDEO_PUBLIC, s.cutoutImage) : g.file, person).catch(() => null), 45_000);
+        Object.assign(s.circle, face || { x: 0.5, y: s.cutoutImage ? 0.2 : 0.28, r: 0.16 });
       }
       if (!credits.some((c) => c.file === g.file)) credits.push(g);
     }
