@@ -22,7 +22,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CRED = path.join(ROOT, "credentials.json");
 const TOKEN = path.join(ROOT, "token.json");
 // upload = 영상 올리기, force-ssl = 내 채널로 댓글 달기 (2026-10-26 고정 댓글용 — 예전 열쇠엔 없어서 한 번 다시 로그인)
-const SCOPE = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.force-ssl";
+// yt-analytics.readonly = 노출수·클릭률·시청 지속률 읽기 (2026-10-30 클릭률 분석용, tools/youtube_stats.mjs)
+const SCOPE = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.force-ssl https://www.googleapis.com/auth/yt-analytics.readonly";
 
 function client() {
   if (!fs.existsSync(CRED)) throw new Error("credentials.json 이 없습니다. 구글 클라우드에서 OAuth 클라이언트(데스크톱 앱)를 만들어 맨 위 폴더에 넣어주세요.");
@@ -69,7 +70,7 @@ export async function login() {
   return "로그인 완료. 이제 업로드할 수 있습니다.";
 }
 
-async function accessToken() {
+export async function accessToken() {
   if (!fs.existsSync(TOKEN)) throw new Error("아직 로그인 안 됨. 터미널에서 `node tools/youtube_upload.mjs login` 을 한 번 실행해주세요.");
   const { client_id, client_secret } = client();
   const { refresh_token } = JSON.parse(fs.readFileSync(TOKEN, "utf8"));

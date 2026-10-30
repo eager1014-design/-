@@ -9,7 +9,7 @@
 //      → 그림을 캐릭터 쪽으로 크게 확대, 반대편을 어둡게 해서 흰 글씨(검은 테두리)를 크게
 //   ② 크림 배경 + 오려낸 캐릭터: image: "characters/main/think.cut.png" (scene 이 없을 때)
 //   ③ style: "bold" — 레퍼런스(Grabity) 공식 (2026-10-24): 흰/검은 바탕 + 아주 굵은 글씨 1~2줄(검은 테두리) + 단순한 손그림 하나 + 손글씨 메모
-//      bg: "black" | "white", layout: "top"(그림 위·글씨 아래) | "bottom"(글씨 위·그림 아래) | "text"(글씨만 크게)
+//      bg: "black" | "white", layout: "top"(그림 위·글씨 아래) | "bottom"(글씨 위·그림 아래) | "side"(얼굴 왼쪽 크게·글씨 오른쪽) | "overlap"(오린 캐릭터 크게 + 큰 글자를 비스듬히 앞에 겹침 — image 는 .cut.png) | "text"(글씨만 크게)
 //      lines 안의 **노랑**, !!빨강!!, 나머지 흰색. image: 손그림(흰 바탕이면 흰 바탕 그림, 검은 바탕이면 검은 바탕 그림), note: 손글씨 한 줄, noteX·noteY(0~1)
 import React from "react";
 import { AbsoluteFill, Img, staticFile, useVideoConfig } from "remotion";
@@ -34,9 +34,10 @@ function BoldThumb({ t, width, height }) {
   const u = Math.min(width, height) / 720;
   const dark = t.bg !== "white";
   const layout = t.image ? t.layout || "top" : "text";
-  const lines = t.lines || ["제목"];
+  const lines = t.lines || ["제목"]; // 줄은 대본이 쓴 그대로 — 자동으로 나누면 단이 많아져 안 읽힘 (2026-10-30 사장님)
   const longest = Math.max(...lines.map((l) => String(l).replace(/\*\*|!!/g, "").length));
-  const size = Math.min(layout === "text" ? 230 : 150, ((tall ? 1000 : 1200) / Math.max(longest, 3)) * 1.05) * u;
+  const side = layout === "side" && !tall; // 얼굴 왼쪽 크게 · 글씨 오른쪽 (2026-10-30: 글씨가 얼굴을 가리지 않게)
+  const size = side ? Math.min(170, 640 / Math.max(longest, 2.5)) * u : Math.min(layout === "text" ? 230 : 150, ((tall ? 1000 : 1200) / Math.max(longest, 3)) * 1.05) * u;
   const text = (
     <div style={{ textAlign: "center", zIndex: 2 }}>
       {lines.map((l, i) => (
@@ -48,6 +49,30 @@ function BoldThumb({ t, width, height }) {
   );
   const art = t.image && (
     <Img src={staticFile(t.image)} style={{ flex: 1, minHeight: 0, width: "100%", objectFit: "contain", mixBlendMode: dark ? "screen" : "multiply" }} />
+  );
+  // overlap: 글자가 물체처럼 — 오린 캐릭터 얼굴을 크게 두고, 큰 글자를 비스듬히 그 앞(어깨·손 쪽)에 겹쳐 올림. 글자를 뒤에 두면 앞 글자가 가려져 안 읽혀서 앞으로 (2026-10-30 사장님: "글자가 물체인 거지")
+  if (layout === "overlap" && !tall) {
+    const big = Math.min(250, 860 / Math.max(longest, 2.5)) * u;
+    return (
+      <AbsoluteFill style={{ background: dark ? "#050505" : "#FFFFFF", overflow: "hidden" }}>
+        <div style={{ position: "absolute", right: "3%", bottom: "8%", transform: "rotate(-6deg)", textAlign: "right", zIndex: 3 }}>
+          {lines.map((l, i) => (
+            <div key={i} style={{ fontFamily: "BlackHanSans", fontSize: big * (i === lines.length - 1 ? 1.12 : 0.9), lineHeight: 1.0, letterSpacing: "-0.03em", whiteSpace: "nowrap",
+              WebkitTextStroke: `${big * 0.1}px #0A0A0A`, paintOrder: "stroke fill", marginRight: i % 2 ? 0 : big * 0.35 }}>
+              <BoldText text={l} />
+            </div>
+          ))}
+        </div>
+        <Img src={staticFile(t.image)} style={{ position: "absolute", left: "2%", top: "-4%", height: "104%", zIndex: 2,
+          filter: `drop-shadow(${8 * u}px 0 0 ${dark ? "#050505" : "#fff"}) drop-shadow(-${8 * u}px 0 0 ${dark ? "#050505" : "#fff"}) drop-shadow(0 -${8 * u}px 0 ${dark ? "#050505" : "#fff"}) drop-shadow(${10 * u}px ${6 * u}px 0 rgba(0,0,0,0.18))` }} />
+      </AbsoluteFill>
+    );
+  }
+  if (side) return (
+    <AbsoluteFill style={{ background: dark ? "#050505" : "#FFFFFF", flexDirection: "row", alignItems: "center" }}>
+      <div style={{ width: "48%", height: "100%", display: "flex" }}>{art}</div>
+      <div style={{ width: "52%", display: "flex", justifyContent: "center", paddingRight: 16 * u }}>{text}</div>
+    </AbsoluteFill>
   );
   return (
     <AbsoluteFill style={{ background: dark ? "#050505" : "#FFFFFF" }}>

@@ -88,7 +88,13 @@ for (const line of res.stdout.split("\n")) {
   const b64 = s.match(/"(?:result|b64_json|image_base64|data)":"([A-Za-z0-9+/=]{1000,})"/)?.[1];
   if (b64) { fs.writeFileSync(out, Buffer.from(b64, "base64")); saved = out; }
 }
-if (!saved) {
+// 코덱스는 그림을 generated_images/<이번 실행 thread_id>/ 에 둔다 — 그 폴더만 보면 동시에 돌린 다른 그림을 집지 않는다 (2026-10-30 썸네일 두 편을 같이 그리다 그림이 뒤바뀜)
+const thread = res.stdout.match(/"thread_id":"([\w-]+)"/)?.[1];
+if (!saved && thread) {
+  const mine = imagesUnder(path.join(GEN_DIR, thread), 0).sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+  if (mine[0]) { fs.copyFileSync(mine[0], out); saved = out; }
+}
+if (!saved && !thread) {
   const fresh = imagesUnder(GEN_DIR, since)
     .filter((p) => p !== out)
     .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);

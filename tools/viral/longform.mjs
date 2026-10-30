@@ -320,9 +320,9 @@ async function plan(p) {
 ${SELL_RULES}
 JSON 하나만:
 {"reply": "사장님께 한두 줄(무엇을 누구에게 파는지 + 주 감정) + 고민할 점(sell.risk) 한 줄",
- "plan": {"area": "주제 영역 key 하나", "diary_ids": ["기획에 쓴 일기 id (없으면 빈 배열)"], ${SELL_ASK}, "titles": ["제목 후보 3개, 핵심 키워드를 앞에, 40자 이내"], "hook": "첫 10초에 할 말", "length": "예상 길이(분)",
+ "plan": {"area": "주제 영역 key 하나", "diary_ids": ["기획에 쓴 일기 id (없으면 빈 배열)"], ${SELL_ASK}, "titles": ["제목 후보 3개, 40자 이내 — 내 상황(언제·무엇을 할 때) + 궁금증, 학술 용어로 시작 금지('~의 심리학'·'안전기지' 같은 말은 뒤 괄호에만), 썸네일 글씨와 다른 말. 예: '다 무너졌을 때 다시 일어나는 사람에겐 이게 있었다'"], "hook": "첫 10초에 할 말", "length": "예상 길이(분)",
    "chapters": [{"title": "챕터 이름", "points": ["다룰 내용 2~4개"]}],
-   "thumbnails": [{"type": "물건비유|VS대결|반응|글씨만", "lines": ["첫 줄", "둘째 줄(선택)"], "bg": "black|white", "layout": "top|bottom|text", "art": "그릴 것 한 문장 (글씨만이면 빈 문자열)", "note": "손글씨 메모 한 줄(선택, 10자 이내, 예: (하버드대 교수))"}]}}
+   "thumbnails": ${THUMB_SCHEMA}}}
 ${THUMB_RULES}`);
   p.plan = r.plan;
   if (TOPIC_AREAS.some((a) => a.key === r.plan?.area)) p.area = r.plan.area;
@@ -347,13 +347,29 @@ JSON 하나만:
   say(p, r.reply);
 }
 
-// 썸네일 공식 — 레퍼런스 채널 Grabity 분석 (video/public/episodes/_refs/grabity.md, 2026-10-24 사장님: "썸네일이 가장 중요, 단순하게, 캐릭터는 안 나와도 됨")
-const THUMB_RULES = `[썸네일 규칙 — 레퍼런스 분석에서]
-- 시안 4개를 서로 다른 type 으로: 물건비유(누구나 0.5초에 아는 소품 하나: 뇌·침대·폰·황금알 등) / VS대결(두 가지 비교) / 반응(사람이나 동물이 상황에 반응) / 글씨만.
-- 글씨: 1~2줄, 줄마다 6자 안팎(최대 8자). 도발·반전·금지형이 잘 됨("억지로 하지 마세요", "이거부터 키우세요"). **노랑** !!빨강!! 표시, 나머지 흰색. 한 줄에 색은 하나만.
-- 썸네일 글씨와 영상 제목은 절대 같은 말 금지: 썸네일 = 감정 자극, 제목 = 설명·근거(예: '자제력의 심리학 (뇌가 갈망하도록 속이는 법)').
-- 학술 용어·추상어 금지(조회수 낮았던 패턴). 그림은 하나만, 단순하게. 캐릭터는 넣지 않아도 됨.
-- note 는 위트 있는 손글씨 한 줄(선택). bg 는 시안끼리 섞어서.`;
+// 썸네일 공식 — 레퍼런스 채널 Grabity 분석 (video/public/episodes/_refs/grabity.md, 2026-10-24) +
+// 2026-10-30 실제 성적 반영: 롱폼 3편 클릭률이 낮았음(안전기지 0.7%) — 화면이 비고·얼굴이 없고·작은 손글씨·검은 바탕이 공통. 사장님: "캐릭터 표정이 한몫할 것"
+const THUMB_RULES = `[썸네일 규칙 — 레퍼런스 분석 + 우리 채널 실제 클릭률에서]
+- 시안 4개: 캐릭터 3개(내 캐릭터 얼굴 클로즈업이 화면의 절반 이상, 과장된 표정으로 감정을 건드림 — 눈 휘둥그레·땀방울·입 크게 벌림·찔린 표정 등, 영상의 주 감정과 같은 표정, 3개는 표정이 서로 다르게) + 물건비유·VS대결·글씨만 중 1개. (사장님 2026-10-30: "얼굴 크게 해서 감정을 건드려야 해")
+  캐릭터 시안의 art = "내 캐릭터가 [상황 소품 하나]를 [행동]하며 [과장된 표정]" 처럼 상황+표정을 한 문장에.
+- 화면을 꽉 채울 것: 그림은 크게 하나, 빈 공간 없이. 휴대폰 작은 화면에서도 0.5초에 읽혀야 함.
+- 글씨: 2줄, 두 줄 합쳐 7~9자(띄어쓰기 빼고). 줄을 더 늘리지 말 것 — 단이 많으면 안 읽힘. 4개 중 2개 이상은 숫자를 넣을 것(밤 9시·딱 1곳·3가지·15분처럼, 영상에 실제로 나오는 숫자만). (사장님 2026-10-30) 도발·반전·금지형("또 시켰죠?", "다짐 금지"). **노랑** !!빨강!! 표시, 나머지 흰색. 한 줄에 색은 하나만.
+- 작은 손글씨 메모 금지(휴대폰에서 안 읽힘). 바탕은 흰색 기본 — 검은 바탕은 유튜브 다크 모드와 섞여서 4개 중 최대 1개.
+- 썸네일 글씨와 영상 제목은 절대 같은 말 금지: 썸네일 = 감정 자극, 제목 = 상황·궁금증.
+- 학술 용어·추상어 금지(안전기지·심리학 같은 말은 썸네일에 쓰지 않음).`;
+const THUMB_SCHEMA = `[{"type": "캐릭터|물건비유|VS대결|글씨만", "lines": ["첫 줄", "둘째 줄(선택)"], "bg": "white|black", "layout": "top|bottom|text", "art": "그릴 것 한 문장 (글씨만이면 빈 문자열). 캐릭터면 '내 캐릭터가 ○○하며 과장된 ○○ 표정'처럼 표정을 꼭"}]`;
+
+// [썸네일 다시] — 기획안 때 짠 시안 아이디어는 그때 규칙이라, 다시 그릴 땐 지금 규칙 + 사장님 마지막 말로 아이디어부터 새로 짠다
+function thumbIdeas(p) {
+  const last = [...(p.messages || [])].reverse().find((m) => m.role === "me")?.text || "";
+  const r = askClaude(p, `${context(p)}
+[기획안] ${JSON.stringify({ sell: p.plan.sell, titles: p.plan.titles, hook: p.plan.hook })}
+[지난 썸네일 시안 — 이걸 그대로 쓰지 말고 새로] ${JSON.stringify(p.plan.thumbnails)}
+[사장님 마지막 말] ${last}
+썸네일 시안 4개를 새로 짜. JSON 하나만: {"thumbnails": ${THUMB_SCHEMA}}
+${THUMB_RULES}`);
+  if (r.thumbnails?.length) p.plan.thumbnails = r.thumbnails;
+}
 const DOODLE = "굵은 검은 선 손그림 두들, 아주 단순하게, 색은 한두 가지 단색만(노랑·연두·하늘 중), 그림자·질감·글씨 없이, 가운데 큼직하게 하나";
 
 // 챗GPT 그림의 빈 여백을 잘라서 썸네일에서 그림이 크게 보이게 (바탕색과 다른 픽셀 영역 + 여백 4%)
@@ -374,6 +390,7 @@ if bb:
 // ③ 썸네일 4개: 챗GPT가 손그림 → 영상 공장이 굵은 글씨를 얹음 (style bold)
 async function thumbs(p) {
   if (!p.plan?.thumbnails?.length) throw new Error("기획안이 먼저 있어야 해요. [기획안 만들기]를 눌러주세요.");
+  if (p.thumbs?.length) thumbIdeas(p);
   const dir = epDir(p);
   fs.mkdirSync(path.join(dir, "img"), { recursive: true });
   const outDir = path.join(UPLOAD_DIR, `lf-${p.id}`);
@@ -384,9 +401,18 @@ async function thumbs(p) {
     const img = path.join(dir, "img", `thumb${i + 1}.png`);
     const dark = t.bg !== "white";
     const wantArt = t.layout !== "text" && t.art;
-    const g = wantArt ? run(p, `🎨 챗GPT가 썸네일 그림 ${i + 1}/${list.length} 그리는 중 (1분 안팎)`, NODE, [path.join(ROOT, "tools/gpt_image.mjs"), `${t.art}. ${DOODLE}, 배경은 완전한 ${dark ? "검정(#000000), 선은 흰색 또는 검정 테두리에 흰 채움" : "흰색(#FFFFFF)"}, 가로로 넓은 구도`, `--out=${img}`, "--size=1536x1024"], { allowFail: true, timeout: 600_000 }) : { ok: false };
+    const isChar = t.type === "캐릭터";
+    const charRef = path.join(VIDEO, "public/characters/round/ref_sheet.png");
+    const artPrompt = isChar
+      ? `${t.art}. 기준 그림의 동그란 안경 막대 캐릭터의 얼굴 클로즈업(얼굴이 그림 높이의 80% 이상, 어깨 위만, 정사각형에 가까운 구도), 표정은 만화처럼 아주 과장되게(커진 눈·크게 벌린 입·땀방울·효과선), 소품은 얼굴 옆에 작게 하나, ${DOODLE}`
+      : `${t.art}. ${DOODLE}`;
+    const g = wantArt ? run(p, `🎨 챗GPT가 썸네일 그림 ${i + 1}/${list.length} 그리는 중 (1분 안팎)`, NODE, [path.join(ROOT, "tools/gpt_image.mjs"), `${artPrompt}, 배경은 완전한 ${dark ? "검정(#000000), 선은 흰색 또는 검정 테두리에 흰 채움" : "흰색(#FFFFFF)"}${isChar ? "" : ", 가로로 넓은 구도"}`, `--out=${img}`, isChar ? "--size=1024x1024" : "--size=1536x1024", ...(isChar && fs.existsSync(charRef) ? [`--ref=${charRef}`] : [])], { allowFail: true, timeout: 600_000 }) : { ok: false };
     if (g.ok && fs.existsSync(img)) trimImage(img, dark);
-    const props = { format: "long", style: "bold", bg: t.bg, lines: t.lines, note: t.note, layout: g.ok && fs.existsSync(img) ? t.layout || "top" : "text", ...(g.ok && fs.existsSync(img) ? { image: path.relative(path.join(VIDEO, "public"), img) } : {}) };
+    // 캐릭터는 흰 배경을 오려(cutout.mjs) 큰 글자를 비스듬히 앞에 겹쳐 올림 — 글자가 그림 속 물체처럼 (2026-10-30 사장님)
+    const cut = img.replace(/\.png$/, ".cut.png");
+    if (isChar && g.ok && fs.existsSync(img) && !dark) spawnSync(NODE, ["scripts/cutout.mjs", img], { cwd: VIDEO });
+    const useCut = isChar && fs.existsSync(cut) && !dark;
+    const props = { format: "long", style: "bold", bg: t.bg, lines: t.lines, layout: g.ok && fs.existsSync(img) ? (useCut ? "overlap" : isChar ? "side" : t.layout || "top") : "text", ...(g.ok && fs.existsSync(img) ? { image: path.relative(path.join(VIDEO, "public"), useCut ? cut : img) } : {}) };
     const pf = path.join(dir, `thumb${i + 1}.json`);
     fs.writeFileSync(pf, JSON.stringify({ thumbnail: props }, null, 2)); // 썸네일 틀은 upload.json 모양({ thumbnail: … })을 받는다
     const png = path.join(outDir, `thumb${i + 1}_${Date.now()}.png`);
@@ -559,7 +585,7 @@ async function upload(p) {
 ${p.episode ? `[대본]\n${p.episode.scenes.map((s) => s.narration).join(" ").slice(0, 6000)}` : ""}
 
 유튜브 ${p.format === "short" ? "쇼츠" : ""} 업로드 문구를 써.${p.format === "short" ? " 쇼츠는 챕터 시간 없이." : ""} JSON 하나만:
-{"reply": "한두 줄", "youtube": {"titles": ["제목 후보 3개, 100자 이내, 핵심 키워드 앞"], "description": "설명란 (첫 2줄에 키워드, 댓글 질문 1개, 해시태그 3개. 챕터 시간·영상 길이는 쓰지 말 것 — 프로그램이 실제 시간으로 붙임)", "tags": ["태그 10개 이내"],
+{"reply": "한두 줄", "youtube": {"titles": ["제목 후보 3개, 100자 이내 — 내 상황(언제·무엇을 할 때) + 궁금증, 학술 용어로 시작 금지('~의 심리학'·'안전기지' 같은 말은 뒤 괄호에만), 썸네일 글씨와 다른 말 (2026-10-30: 롱폼 클릭률 0.7%였던 '~의 심리학' 제목 반성)"], "description": "설명란 (첫 2줄에 키워드, 댓글 질문 1개, 해시태그 3개. 챕터 시간·영상 길이는 쓰지 말 것 — 프로그램이 실제 시간으로 붙임)", "tags": ["태그 10개 이내"],
   "pinned": "${PINNED_ASK}"},
  ${FORECAST_ASK}}
 forecast 는 사장님만 보는 '올리기 전 예측'이다. 기획안 sell 과 실제 대본·썸네일 문구를 비교해서, 약속을 지키는지·감정이 하나인지·운결 연결이 자연스러운지 냉정하게.`);
