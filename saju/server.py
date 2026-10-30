@@ -27,6 +27,7 @@ from urllib.parse import urlparse, parse_qs, quote
 
 import billing
 import calendar_feed
+import myday
 import db
 import interpret
 import knowledge as K
@@ -389,6 +390,8 @@ class Handler(BaseHTTPRequestHandler):
             path = "/admin.html"
         elif path.rstrip("/") == "/consult":  # 도령과 마주 앉아 하는 상담
             path = "/consult.html"
+        elif path.rstrip("/") == "/app":  # 운결 앱: 내 일정 × 그날 기운 (myday.py) — 예전 구독 앱 자리
+            path = "/myday.html"
         elif not os.path.splitext(path)[1] or path in ("/index.html", "/app.js"):
             return self.redirect("/")
         full = os.path.normpath(os.path.join(STATIC, path.lstrip("/")))
@@ -434,6 +437,7 @@ class Handler(BaseHTTPRequestHandler):
             ("GET", "/api/apply/config"): self.api_apply_config,
             ("POST", "/api/apply"): self.api_apply,
             ("POST", "/api/quick"): self.api_quick,
+            ("POST", "/api/myday"): self.api_myday,
             ("POST", "/api/quick/unlock"): self.api_quick_unlock,
             ("GET", "/api/invite/status"): self.api_invite_status,
             ("POST", "/api/quick/concern"): self.api_quick_concern,
@@ -758,6 +762,18 @@ class Handler(BaseHTTPRequestHandler):
                 reward_by_link(str(b.get("inv")), birth)
         res = quick.reading(birth, chart_of_birth)
         res["cal"] = calendar_feed.make_token(birth, SECRET)  # '내 달력에 넣기' 주소 (생일은 저장 안 하고 주소에 서명해 둠)
+        self.send_json(res)
+
+    def api_myday(self, b):
+        """운결 앱: 생일 + 내 일정 → 오늘·이번 주·일정마다 그날 기운. 저장하지 않음(일정은 손님 폰에만), AI 안 씀."""
+        if too_many("myday:" + self.client_ip(), 120, 3600):
+            return self.error("잠시 후 다시 해주세요.", 429)
+        try:
+            birth = parse_birth(b.get("birth") or {})
+        except ValueError as e:
+            return self.error(str(e))
+        res = myday.reading(chart_of_birth(birth), myday.parse_events(b.get("events"), date.today()))
+        res["cal"] = calendar_feed.make_token(birth, SECRET)
         self.send_json(res)
 
     def calendar_ics(self, token):

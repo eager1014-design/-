@@ -344,3 +344,6 @@
 .coach-row .linkbtn { margin: 0; }
 .calbtns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 16px 0 10px; }
 .pdfcover { display: block; width: 62%; max-width: 230px; margin: 14px auto 12px; border-radius: 4px; box-shadow: 0 0 0 1px rgba(217,178,106,.35), 0 8px 24px rgba(0,0,0,.6); }
+.coach-again { position: fixed; right: 14px; bottom: 14px; z-index: 50; width: 40px; height: 40px; padding: 0; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--paper); color: var(--ink-2); font: 700 18px "Noto Sans KR", sans-serif; cursor: pointer; }
+.coach-again:hover { color: var(--ink); border-color: var(--gold); }

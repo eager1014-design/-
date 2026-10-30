@@ -102,3 +102,59 @@ function turnPage(title, swap) {
     setTimeout(() => { c.classList.remove("on"); done(); }, 650);
   }, 750));
 }
+
+/* 첫 방문 안내 (코치마크, 2026-10-30 사장님) — 첫 화면 무료 풀이·운결 앱 공용: 볼 곳을 하나씩 밝혀 짚어 준다.
+   한 번 보면(건너뛰어도) 이 브라우저에선 저절로는 안 뜸. Esc·건너뛰기로 언제든 닫힘.
+   again=true 면 본 적 있어도 다시 보여 준다 ('안내 다시 보기' 버튼, 사장님 2026-10-30). */
+function coach(key, steps, again) {
+  if (!again) try { if (localStorage.getItem("coach:" + key)) return; } catch (e) { return; }
+  if (document.querySelector(".coach")) return;
+  const list = steps.filter((s) => document.querySelector(s.sel)?.offsetParent);
+  if (!list.length) return;
+  let i = 0;
+  const veil = document.createElement("div");
+  veil.className = "coach";
+  veil.innerHTML = `<div class="coach-hole"></div><div class="coach-tip" role="dialog" aria-modal="true" aria-labelledby="coachT"></div>`;
+  document.body.appendChild(veil);
+  const hole = veil.querySelector(".coach-hole"), tip = veil.querySelector(".coach-tip");
+  const onKey = (e) => { if (e.key === "Escape") done(); };
+  function done() {
+    veil.remove();
+    removeEventListener("resize", show);
+    removeEventListener("keydown", onKey);
+    try { localStorage.setItem("coach:" + key, "1"); } catch (e) { /* 다음에 또 보일 뿐 */ }
+  }
+  function show() {
+    const s = list[i], el = document.querySelector(s.sel);
+    if (!el) return done();
+    const tall = el.offsetHeight > innerHeight * 0.55; // 화면보다 긴 곳은 위에 맞추고 안내는 화면 아래에
+    el.scrollIntoView({ block: tall ? "start" : "center" });
+    const r = el.getBoundingClientRect(), p = 8;
+    Object.assign(hole.style, { left: `${r.left - p}px`, top: `${Math.max(4, r.top - p)}px`, width: `${r.width + p * 2}px`, height: `${Math.min(r.height + p * 2, innerHeight - 8)}px` });
+    tip.innerHTML = `<div class="small muted">${i + 1} / ${list.length}</div><b id="coachT">${s.title}</b><p>${s.text}</p>
+      <div class="coach-row"><button type="button" class="linkbtn" data-skip>건너뛰기</button><button type="button" class="btn" data-next>${i === list.length - 1 ? "알겠어" : "다음"}</button></div>`;
+    const below = r.bottom + tip.offsetHeight + 20 < innerHeight;
+    Object.assign(tip.style, { left: `${Math.max(12, Math.min(r.left, innerWidth - tip.offsetWidth - 12))}px`, top: `${tall ? innerHeight - tip.offsetHeight - 12 : below ? Math.min(r.bottom + 16, innerHeight - tip.offsetHeight - 12) : Math.max(12, r.top - tip.offsetHeight - 16)}px` });
+    tip.querySelector("[data-next]").onclick = () => (++i < list.length ? show() : done());
+    tip.querySelector("[data-skip]").onclick = done;
+    tip.querySelector("[data-next]").focus({ preventScroll: true });
+  }
+  addEventListener("resize", show);
+  addEventListener("keydown", onKey);
+  show();
+}
+
+/* 오른쪽 아래 동그란 '?' = 안내 다시 보기 (한 화면에 하나, 글자 버튼은 카드 글씨를 가려서 작게) */
+function coachAgain(run) {
+  let b = document.querySelector(".coach-again");
+  if (!b) {
+    b = document.createElement("button");
+    b.type = "button";
+    b.className = "coach-again";
+    b.textContent = "?";
+    b.title = "안내 다시 보기";
+    b.setAttribute("aria-label", "안내 다시 보기");
+    document.body.appendChild(b);
+  }
+  b.onclick = run;
+}

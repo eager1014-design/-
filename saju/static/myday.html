@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>운결 · 내 일정의 기운</title>
+<meta name="description" content="생일 하나 넣고 내 일정을 적으면, 그날 그 일에 맞는 기운을 운결 도령이 알려 줘.">
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:title" content="운결 · 내 일정의 기운">
+<meta property="og:description" content="계약·면접·월급날·데이트… 그날 그 일에 맞는 기운을 알려 줄게.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/toon.css">
+<link rel="stylesheet" href="/chalk.css">
+<style>
+  /* 운결 앱 — 칠판 스킨(검정 + 흰 선 + 노랑) 위에 앱 화면만 */
+  .appw { max-width: 560px; margin: 0 auto; padding: 0 16px 90px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .topbar .right { display: flex; align-items: center; gap: 8px; }
+  .trial { font: 700 12px "Noto Sans KR", sans-serif; padding: 5px 10px; border-radius: 999px; border: 1px solid #ffe45c; color: #ffe45c; white-space: nowrap; }
+  .trial:empty { display: none; }
+  .iconbtn { background: none; border: 1px solid var(--line); color: #fff; border-radius: 10px; padding: 6px 10px; font: 500 14px "Noto Sans KR", sans-serif; cursor: pointer; }
+  h2.sec { font: 400 22px "Black Han Sans", sans-serif; margin: 28px 0 10px; color: #fff; }
+  .card { background: #111; border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+  .muted { color: var(--ink-3); }
+  .small { font-size: 13px; }
+
+  /* 온보딩: 한 장씩 넘기는 소개 */
+  #onb { min-height: 100svh; display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 24px 0; }
+  #onb img { width: min(300px, 70vw); aspect-ratio: 1; object-fit: contain; margin: 0 auto; display: block; }
+  #onb h1 { font: 400 28px/1.3 "Black Han Sans", sans-serif; margin: 12px 0 8px; color: #fff; }
+  #onb h1 em { font-style: normal; color: #ffe45c; }
+  #onb p { margin: 0 auto; max-width: 340px; color: var(--ink-2); line-height: 1.7; }
+  .dots3 { display: flex; justify-content: center; gap: 8px; margin: 22px 0; }
+  .dots3 i { width: 8px; height: 8px; border-radius: 50%; background: #333; }
+  .dots3 i.on { background: #ffe45c; width: 22px; border-radius: 4px; }
+  .onb-row { display: flex; gap: 10px; justify-content: center; }
+  .onb-row .btn { min-width: 140px; }
+  .slide { animation: rise .45s ease-out both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+
+  /* 생일 */
+  #setup .card { margin-top: 18px; }
+  #setup h1, #first h1 { font: 400 26px "Black Han Sans", sans-serif; margin: 24px 0 6px; }
+  #first .card { margin-top: 18px; }
+  #first label.t { display: block; margin: 4px 0 8px; font-weight: 700; font-size: 14px; }
+  #first label.t + input { margin-bottom: 0; }
+  #first .kinds { margin-bottom: 16px; }
+  #first input[type=date] { width: 100%; box-sizing: border-box; }
+
+  /* 오늘 */
+  .today { margin-top: 14px; }
+  .today .kicker { opacity: 1; margin: 0; color: #ffe45c; font: 700 12px "Noto Sans KR", sans-serif; letter-spacing: .12em; }
+  .today .big { font: 400 30px/1.25 "Black Han Sans", sans-serif; margin: 6px 0; color: #fff; }
+  .today p { margin: 4px 0 0; line-height: 1.6; }
+  .warn { color: #ffe45c; font-size: 14px; }
+
+  /* 이번 주 */
+  .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+  .week div { background: #111; border: 1px solid var(--line); border-radius: 10px; padding: 8px 2px; text-align: center; font-size: 11px; line-height: 1.35; color: var(--ink-2); overflow-wrap: anywhere; }
+  .week div b { display: block; color: #fff; font-size: 12px; margin-bottom: 4px; }
+  .week div .em { display: block; font-size: 18px; }
+  .week div.first { border-color: #ffe45c; }
+
+  /* 내 일정 */
+  .sechead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .sechead .btn { padding: 9px 14px; font: 400 16px "Black Han Sans", sans-serif; }
+  .ev { margin-top: 10px; }
+  .ev.past { opacity: .5; }
+  .ev .top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ev .when { font: 700 15px "Noto Sans KR", sans-serif; color: #fff; }
+  .ev .what { color: var(--ink-2); font-size: 14px; }
+  .fit { margin-left: auto; font: 700 13px "Noto Sans KR", sans-serif; padding: 4px 10px; border-radius: 999px; }
+  .fit.좋음 { background: #ffe45c; color: #000; }
+  .fit.보통 { border: 1px solid #777; color: #ddd; }
+  .fit.조심 { border: 2px solid #fff; color: #fff; }
+  .ev .tip { margin: 10px 0 4px; font-size: 16px; line-height: 1.6; color: #fff; }
+  .ev ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink-3); font-size: 13px; line-height: 1.6; }
+  .ev .better { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #1a1a0a; border: 1px dashed #ffe45c; font-size: 14px; line-height: 1.6; }
+  .ev .better button { margin: 6px 6px 0 0; }
+  .ev .acts { display: flex; justify-content: flex-end; margin-top: 8px; }
+  .linkish { background: none; border: 0; color: var(--ink-3); font: 500 13px "Noto Sans KR", sans-serif; cursor: pointer; padding: 4px; text-decoration: underline; }
+  .chipbtn { background: #000; color: #ffe45c; border: 1px solid #ffe45c; border-radius: 999px; padding: 5px 12px; font: 600 13px "Noto Sans KR", sans-serif; cursor: pointer; }
+  .empty { text-align: center; padding: 22px 16px; color: var(--ink-2); line-height: 1.7; }
+
+  /* 일정 넣기 (아래에서 올라오는 칸) */
+  .sheet { position: fixed; inset: 0; z-index: 120; background: rgba(0,0,0,.7); display: flex; align-items: flex-end; justify-content: center; }
+  .sheet[hidden] { display: none; }
+  .sheet .panel2 { width: 100%; max-width: 560px; max-height: 92svh; overflow: auto; background: #111; border-top: 2px solid #ffe45c; border-radius: 18px 18px 0 0; padding: 18px 16px 24px; animation: up .25s ease-out both; }
+  @keyframes up { from { transform: translateY(30px); opacity: 0; } }
+  .panel2 h3 { margin: 0 0 12px; font: 400 22px "Black Han Sans", sans-serif; }
+  .panel2 label.t { display: block; margin: 14px 0 6px; font-weight: 700; font-size: 14px; }
+  .panel2 input[type=date], .panel2 input[type=text] { width: 100%; box-sizing: border-box; }
+  .kinds { display: flex; flex-wrap: wrap; gap: 8px; }
+  .kinds label input { position: absolute; opacity: 0; pointer-events: none; }
+  .kinds label span { display: inline-block; padding: 8px 12px; border-radius: 999px; border: 1px solid #555; font-size: 14px; cursor: pointer; }
+  .kinds label input:checked + span { background: #ffe45c; color: #000; border-color: #ffe45c; }
+  .kinds label input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
+  .panel2 .row2 { display: flex; gap: 10px; margin-top: 18px; }
+  .panel2 .row2 .btn { flex: 1; }
+  .menu .panel2 button.item { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); color: #fff; padding: 14px 4px; font: 500 16px "Noto Sans KR", sans-serif; cursor: pointer; }
+  .err { color: #ffe45c; min-height: 1.2em; margin: 8px 0 0; font-size: 14px; }
+
+  .calbtns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .calbtns .btn { flex: 1; min-width: 140px; text-align: center; }
+  @media (prefers-reduced-motion: reduce) { .slide, .sheet .panel2 { animation: none; } }
+</style>
+</head>
+<body class="apply">
+<header class="topbar" id="bar" hidden>
+  <a class="brand" href="/" aria-label="운결 처음 화면으로"><span class="seal">運</span>운결</a>
+  <div class="right"><span class="trial" id="trial"></span><button class="iconbtn" id="menu-btn" type="button" aria-label="메뉴">메뉴</button></div>
+</header>
+<main class="appw">
+  <section id="onb" hidden></section>
+
+  <section id="setup" hidden>
+    <h1>먼저 생일 하나만 줘</h1>
+    <p class="muted">태어난 시간은 몰라도 돼. 생일은 이 폰에만 저장돼.</p>
+    <div class="card">
+      <div id="birth-box"></div>
+      <button class="btn block" id="setup-go" type="button" style="margin-top:16px">내 기운 보기</button>
+      <p class="err" id="setup-err" role="alert"></p>
+    </div>
+  </section>
+
+  <section id="first" hidden>
+    <h1>첫 일정 하나 넣어 볼까?</h1>
+    <p class="muted">다가오는 일 하나만 골라 봐. 그날 기운을 바로 보여 줄게.</p>
+    <div class="card">
+      <label class="t">무슨 일?</label>
+      <div class="kinds" id="f-kinds" role="radiogroup" aria-label="일정 종류"></div>
+      <label class="t" for="f-date">언제?</label>
+      <input type="date" id="f-date">
+      <button class="btn block" id="f-go" type="button" style="margin-top:16px">그날 기운 보기</button>
+      <p class="err" id="f-err" role="alert"></p>
+    </div>
+    <p style="text-align:center"><button class="linkish" id="f-skip" type="button">나중에 할게</button></p>
+  </section>
+
+  <section id="main" hidden>
+    <div class="card today" id="today" aria-live="polite"></div>
+    <div class="week" id="week" aria-label="이번 주 날마다 기운"></div>
+
+    <div class="sechead"><h2 class="sec">내 일정</h2><button class="btn" id="add-btn" type="button">+ 일정 넣기</button></div>
+    <div id="events"></div>
+
+    <h2 class="sec">날마다 기운, 쓰던 달력에도</h2>
+    <div class="card" id="calbox">
+      <p class="small muted" style="margin:0">구글·아이폰 달력에 날마다 그날의 기운이 한 줄씩 떠. 한 번만 누르면 돼.</p>
+      <div class="calbtns" id="calbtns"></div>
+    </div>
+  </section>
+</main>
+
+<div class="sheet" id="add-sheet" hidden>
+  <div class="panel2" role="dialog" aria-modal="true" aria-labelledby="add-t">
+    <h3 id="add-t">일정 넣기</h3>
+    <label class="t" for="ev-date">언제?</label>
+    <input type="date" id="ev-date">
+    <label class="t">무슨 일?</label>
+    <div class="kinds" id="ev-kinds" role="radiogroup" aria-label="일정 종류"></div>
+    <label class="t" for="ev-memo">한 줄 메모 <span class="muted small">(선택)</span></label>
+    <input type="text" id="ev-memo" maxlength="30" placeholder="예) 전세 계약, 2시 면접">
+    <p class="small muted">일정은 이 폰에만 저장돼. 서버에는 남기지 않아.</p>
+    <p class="err" id="add-err" role="alert"></p>
+    <div class="row2"><button class="btn ghost" type="button" data-close>닫기</button><button class="btn" type="button" id="add-save">넣기</button></div>
+  </div>
+</div>
+
+<div class="sheet menu" id="menu" hidden>
+  <div class="panel2" role="dialog" aria-modal="true" aria-label="메뉴">
+    <button class="item" type="button" data-act="tour">화면 안내 다시 보기</button>
+    <button class="item" type="button" data-act="intro">처음 소개 다시 보기</button>
+    <button class="item" type="button" data-act="birth">생일 바꾸기</button>
+    <button class="item" type="button" data-act="clear">일정 모두 지우기</button>
+    <div class="row2"><button class="btn ghost" type="button" data-close>닫기</button></div>
+  </div>
+</div>
+
+<footer class="foot">
+  <p>운결은 명리학을 바탕으로 재미로 보는 참고용 서비스이며, 의료·법률·투자 자문을 대신하지 않습니다. 중요한 결정은 꼭 전문가와 상의하세요.</p>
+  <p>마음이 많이 힘드시다면 자살예방상담전화 109 · 정신건강위기상담 1577-0199</p>
+</footer>
+<script src="/form.js"></script>
+<script src="/myday.js"></script>
+</body>
+</html>
