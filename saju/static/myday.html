@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>운결 · 내 일정의 기운</title>
+<title>운결 · 운세 달력</title>
 <meta name="description" content="생일 하나 넣고 내 일정을 적으면, 그날 그 일에 맞는 기운을 운결 도령이 알려 줘.">
 <meta name="theme-color" content="#000000">
 <meta property="og:type" content="website">
@@ -28,33 +28,24 @@
   .muted { color: var(--ink-3); }
   .small { font-size: 13px; }
 
-  /* 온보딩: 한 장씩 넘기는 소개 */
-  #onb { min-height: 100svh; display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 24px 0; }
-  #onb img { width: min(300px, 70vw); aspect-ratio: 1; object-fit: contain; margin: 0 auto; display: block; }
-  #onb h1 { font: 400 28px/1.3 "Black Han Sans", sans-serif; margin: 12px 0 8px; color: #fff; }
-  #onb h1 em { font-style: normal; color: #ffe45c; }
-  #onb p { margin: 0 auto; max-width: 340px; color: var(--ink-2); line-height: 1.7; }
-  .dots3 { display: flex; justify-content: center; gap: 8px; margin: 22px 0; }
-  .dots3 i { width: 8px; height: 8px; border-radius: 50%; background: #333; }
-  .dots3 i.on { background: #ffe45c; width: 22px; border-radius: 4px; }
-  .onb-row { display: flex; gap: 10px; justify-content: center; }
-  .onb-row .btn { min-width: 140px; }
-  .slide { animation: rise .45s ease-out both; }
-  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
-
   /* 생일 */
   #setup .card { margin-top: 18px; }
-  #setup h1, #first h1 { font: 400 26px "Black Han Sans", sans-serif; margin: 24px 0 6px; }
-  #first .card { margin-top: 18px; }
-  #first label.t { display: block; margin: 4px 0 8px; font-weight: 700; font-size: 14px; }
-  #first label.t + input { margin-bottom: 0; }
-  #first .kinds { margin-bottom: 16px; }
-  #first input[type=date] { width: 100%; box-sizing: border-box; }
+  #setup h1 { font: 400 26px "Black Han Sans", sans-serif; margin: 24px 0 6px; }
 
   /* 오늘 */
   .today { margin-top: 12px; }
   .today .fit { margin-left: 8px; vertical-align: middle; }
   .today h4 { margin: 14px 0 2px; font: 700 13px "Noto Sans KR", sans-serif; color: #ffe45c; }
+  .today .core { margin-top: 10px; font-size: 16px; line-height: 1.75; color: #fff; }
+  .today .under { color: var(--ink-2); font-size: 14px; }
+  .dogrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .dogrid > div { background: #000; border: 1px solid var(--line); border-radius: 10px; padding: 2px 12px 10px; }
+  .areas { margin: 4px 0 0; display: grid; gap: 6px; }
+  .areas div { display: grid; grid-template-columns: 72px 1fr; gap: 8px; }
+  .areas dt { color: var(--ink-3); font-size: 13px; padding-top: 2px; }
+  .areas dd { margin: 0; line-height: 1.6; }
+  .today .note { margin-top: 16px; }
+  @media (max-width: 360px) { .dogrid { grid-template-columns: 1fr; } }
   .today .dayev { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
   .today .dayev .top { display: flex; gap: 8px; align-items: center; }
   .today .dayev p { margin: 6px 0 0; }
@@ -131,39 +122,23 @@
 
   .calbtns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   .calbtns .btn { flex: 1; min-width: 140px; text-align: center; }
-  @media (prefers-reduced-motion: reduce) { .slide, .sheet .panel2 { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .sheet .panel2 { animation: none; } }
 </style>
 </head>
 <body class="apply">
-<header class="topbar" id="bar" hidden>
+<header class="topbar" id="bar">
   <a class="brand" href="/" aria-label="운결 처음 화면으로"><span class="seal">運</span>운결</a>
-  <div class="right"><span class="trial" id="trial"></span><button class="iconbtn" id="menu-btn" type="button" aria-label="메뉴">메뉴</button></div>
+  <div class="right"><span class="trial" id="trial"></span><button class="iconbtn" id="menu-btn" type="button" aria-label="설정">설정</button></div>
 </header>
 <main class="appw">
-  <section id="onb" hidden></section>
-
   <section id="setup" hidden>
     <h1>먼저 생일 하나만 줘</h1>
-    <p class="muted">태어난 시간은 몰라도 돼. 생일은 이 폰에만 저장돼.</p>
+    <p class="muted">생일만 주면 날마다 들어오는 기운을 달력으로 보여 줄게. 태어난 시간은 몰라도 돼. 생일은 이 폰에만 저장돼.</p>
     <div class="card">
       <div id="birth-box"></div>
       <button class="btn block" id="setup-go" type="button" style="margin-top:16px">내 기운 보기</button>
       <p class="err" id="setup-err" role="alert"></p>
     </div>
-  </section>
-
-  <section id="first" hidden>
-    <h1>첫 일정 하나 넣어 볼까?</h1>
-    <p class="muted">다가오는 일 하나만 골라 봐. 그날 기운을 바로 보여 줄게.</p>
-    <div class="card">
-      <label class="t">무슨 일?</label>
-      <div class="kinds" id="f-kinds" role="radiogroup" aria-label="일정 종류"></div>
-      <label class="t" for="f-date">언제?</label>
-      <input type="date" id="f-date">
-      <button class="btn block" id="f-go" type="button" style="margin-top:16px">그날 기운 보기</button>
-      <p class="err" id="f-err" role="alert"></p>
-    </div>
-    <p style="text-align:center"><button class="linkish" id="f-skip" type="button">나중에 할게</button></p>
   </section>
 
   <section id="main" hidden>
@@ -202,12 +177,10 @@
 </div>
 
 <div class="sheet menu" id="menu" hidden>
-  <div class="panel2" role="dialog" aria-modal="true" aria-label="메뉴">
+  <div class="panel2" role="dialog" aria-modal="true" aria-label="설정">
     <button class="item" type="button" data-act="tour">화면 안내 다시 보기</button>
-    <button class="item" type="button" data-act="intro">처음 소개 다시 보기</button>
     <button class="item" type="button" data-act="birth">생일 바꾸기</button>
     <button class="item" type="button" data-act="clear">일정 모두 지우기</button>
-    <a class="item" href="/consult">도령에게 고민 상담하기 (운결 사이트)</a>
     <div class="row2"><button class="btn ghost" type="button" data-close>닫기</button></div>
   </div>
 </div>

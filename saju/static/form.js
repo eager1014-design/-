@@ -109,7 +109,7 @@ function turnPage(title, swap) {
 function coach(key, steps, again) {
   if (!again) try { if (localStorage.getItem("coach:" + key)) return; } catch (e) { return; }
   if (document.querySelector(".coach")) return;
-  const list = steps.filter((s) => document.querySelector(s.sel)?.offsetParent);
+  const list = steps.filter((s) => document.querySelector(s.sel)?.getClientRects().length);  // 보이는 것만 (화면에 고정된 메뉴 포함)
   if (!list.length) return;
   let i = 0;
   const veil = document.createElement("div");
@@ -196,3 +196,45 @@ document.addEventListener("click", (e) => {
     try { navigator.clipboard.writeText(c.dataset.calcopy).then(done, pick); } catch (err) { pick(); }
   }
 });
+
+/* 생일 공용 (사주 · 상담 · 달력): 어디서든 한 번 넣으면 이 폰에 남아 다른 메뉴도 그대로 씀. 서버에는 저장 안 함 */
+function loadBirth() {
+  for (const s of [localStorage, sessionStorage]) {
+    try { const b = JSON.parse(s.getItem("ungyeol_birth") || "null"); if (b?.year && b?.gender) return b; } catch (e) { /* 다음 */ }
+  }
+  return null;
+}
+function saveBirth(b) {
+  for (const s of [localStorage, sessionStorage]) {
+    try { s.setItem("ungyeol_birth", JSON.stringify(b)); } catch (e) { /* 이 화면에서만 */ }
+  }
+}
+
+/* 저장해 둔 생일로 입력칸(birthFields)을 채움 */
+function fillBirth(prefix, b) {
+  if (!b?.year) return;
+  $(`#${prefix}-y`).value = b.year; $(`#${prefix}-m`).value = b.month; $(`#${prefix}-d`).value = b.day;
+  $(`#${prefix}-h`).value = b.hour ?? "";
+  if (b.minute) $(`#${prefix}-min`).value = b.minute;
+  const cal = b.calendar === "lunar" ? (b.leap ? "leap" : "lunar") : "solar";
+  document.querySelector(`input[name="${prefix}-cal"][value="${cal}"]`).checked = true;
+  const g = document.querySelector(`input[name="${prefix}-g"][value="${b.gender}"]`);
+  if (g) g.checked = true;
+}
+
+/* 운결 사이트 메뉴 (2026-10-30 사장님: "사주 · 상담 · 달력을 운결 사이트 메뉴 안에"). 화면 아래에 늘 붙어 있음 */
+const NAV = [
+  { href: "/", label: "사주", on: (p) => p === "/" || p === "/apply.html" },
+  { href: "/consult", label: "상담", on: (p) => p.startsWith("/consult") },
+  { href: "/app", label: "달력", on: (p) => p.startsWith("/app") || p === "/myday.html" },
+];
+const NAV_STEP = { sel: ".tabbar", title: "운결 메뉴", text: "사주: 생일로 나를 봐. 상담: 고민을 도령한테 물어봐. 달력: 날마다 들어오는 기운을 한 달로 봐. 생일은 한 번만 넣으면 셋 다 같이 써." };
+(function siteNav() {
+  const p = location.pathname.replace(/\/$/, "") || "/";
+  const nav = document.createElement("nav");
+  nav.className = "tabbar";
+  nav.setAttribute("aria-label", "운결 메뉴");
+  nav.innerHTML = NAV.map((t) => `<a href="${t.href}"${t.on(p) ? ' class="on" aria-current="page"' : ""}>${t.label}</a>`).join("");
+  document.body.appendChild(nav);
+  document.body.classList.add("has-tabbar");
+})();

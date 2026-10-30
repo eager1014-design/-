@@ -415,7 +415,7 @@ function showQuick(r, birth) {
   }
   if (window.PRODUCTS.manual) certPanel(r);  // 공식 예민인 인증서 (무료·공유용) → 사용설명서 (2026-10-27)
   // 다음: 고민은 도령의 상담실에서 (묻고 답하며 제대로). 생년월일은 이 탭에서만 넘겨준다
-  try { sessionStorage.setItem("ungyeol_birth", JSON.stringify(birth)); } catch (e) { /* 상담실에서 다시 물음 */ }
+  saveBirth(birth);  // 상담·달력 메뉴도 이 생일을 그대로 씀
   const T = [["counsel", "고민 상담", "무엇이든 하나"], ["love", "연애운 · 인연", "언제, 누구와"], ["reunion", "재회운", "다시 닿을까"],
     ["match", "궁합", "그 사람과 나"], ["career", "직업 · 재물", "일과 돈의 길"], ["pet", "반려동물", "우리 아이 (재미로)"]];
   quickPanel(`<img class="cutimg" src="/img/toon2/t6.jpg" alt="도령이 설명서를 펼쳐 보임"><p class="line small">이게 너야. 마음에 걸리는 게 있으면 물어봐. 같이 보자.</p>
@@ -439,6 +439,7 @@ function showQuick(r, birth) {
     { sel: "#quick-result .panel:nth-of-type(2)", title: "이게 너야", text: "타고난 성향을 한 줄로 보여 줄게. 아래로 내리면 강점, 조심할 점, 다섯 기운, 올해와 오늘의 흐름이 이어져." },
     { sel: ".calpanel .appbtn", title: "운세 달력", text: "네 생일로 한 달 운세를 달력으로 봐. 좋은 날, 조심할 날, 내 일정까지. 생일은 다시 안 적어도 돼." },
     { sel: ".askpanel .topics", title: "도령 상담 · 무료", text: "마음에 걸리는 고민을 하나 골라 봐. 상담실에서 네 사주로 같이 봐 줄게." },
+    NAV_STEP,
   ];
   setTimeout(() => coach("me", tour), 1200);  // 페이지 넘김이 끝난 뒤
   coachAgain(() => coach("me", tour, true));
@@ -486,13 +487,7 @@ function pickProduct(key, birth) {
     const el = document.querySelector(`input[name="product"][value="${key}"]`);
     if (el) { el.checked = true; onProduct(); }
   }
-  if (birth) {
-    $("#me-y").value = birth.year; $("#me-m").value = birth.month; $("#me-d").value = birth.day;
-    $("#me-h").value = birth.hour ?? "";
-    const cal = birth.calendar === "lunar" ? (birth.leap ? "leap" : "lunar") : "solar";
-    document.querySelector(`input[name="me-cal"][value="${cal}"]`).checked = true;
-    const g = document.querySelector(`input[name="me-g"][value="${birth.gender}"]`); if (g) g.checked = true;
-  }
+  fillBirth("me", birth);
   $("#form").scrollIntoView({ behavior: "smooth" });
 }
 
@@ -506,6 +501,7 @@ function initQuick() {
     return $(".toon");
   });
   $("#q-birth").innerHTML = birthFields("q");
+  fillBirth("q", loadBirth());  // 상담·달력에서 넣은 생일이 있으면 채워 둠
   qf.onsubmit = async (e) => {
     e.preventDefault();
     const btn = $("#q-go"), err = $("#q-err");

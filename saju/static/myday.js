@@ -1,5 +1,6 @@
-/* 운결 앱 — 내 일정 × 그날 기운 (2026-10-30 사장님: 먼저 사주 → 내 일정을 넣으면 그날 그 일에 맞는 기운).
-   처음: 소개 3장 → 생일 → 첫 일정 하나(건너뛰기 가능) → 한 달 운세 달력(날짜 누르면 그날 자세히)·내 일정 + 화면 안내(코치마크). 소개·안내는 메뉴에서 다시 볼 수 있음.
+/* 운결 운세 달력 (/app) — 운결 사이트 아래 메뉴의 '달력' (2026-10-30 사장님: 사주 · 상담 · 달력을 한 사이트 메뉴로).
+   생일(사이트 어디서든 한 번 넣으면 공용, form.js loadBirth) → 한 달 운세 달력(날짜 누르면 그날 자세히)·내 일정.
+   처음 안내는 소개 장(온보딩) 대신 화면을 짚어 주는 코치마크만 (사장님: "온보딩보다는 코치마크").
    생일·일정은 이 폰(localStorage)에만. 볼 때마다 /api/myday 로 보내 계산만 받아 온다 (서버 저장 X, AI X).
    7일 무료 체험 배지는 보여 주기만 한다 — 아직 수익화 전이라 잠그지 않음 (구독 4,990원 확정되면 여기서 잠금). */
 
@@ -13,117 +14,48 @@ const todayIso = () => iso(new Date());
 let DATA = null;
 let VIEW = todayIso().slice(0, 7);  // 보고 있는 달 'YYYY-MM'
 let SEL = todayIso();               // 달력에서 고른 날
-
-const INTRO = [
-  { img: "/img/toon2/t3.jpg", title: "일정은 꽉 찼는데<br><em>어느 날이 좋은지</em> 모르겠지?", text: "계약, 면접, 월급날, 데이트… 날은 정해졌는데 마음이 괜히 불안할 때." },
-  { img: "/img/toon2/t8.jpg", title: "생일 <em>하나</em>만 줘", text: "네 사주로 날마다 어떤 기운이 들어오는지 계산해 둘게. 태어난 시간은 몰라도 돼." },
-  { img: "/img/toon2/c06.jpg", title: "네 운세를<br><em>달력</em>으로 보여 줄게", text: "날마다 좋은 날·조심할 날, 일정을 넣으면 그날 그 일에 맞춰서까지. 7일 동안 무료로 써 봐." },
-];
+const birth = () => loadBirth() || st.birth;  // 예전 앱에만 저장된 생일도 씀
 
 const TOUR = [
   { sel: "#mcal", title: "한 달 운세 달력", text: "노란 점은 좋은 날, 느낌표는 조심할 날이야. 맨 위엔 그달 흐름 한 줄. 옆 화살표로 다른 달도 봐." },
-  { sel: "#dayd", title: "그날 자세히", text: "날짜를 누르면 그날 할 것, 조심할 것, 그날 내 일정까지 여기 나와. 처음엔 오늘이야." },
-  { sel: "#add-btn", title: "일정 넣기", text: "날짜랑 무슨 일인지만 고르면 돼. 그날 그 일에 맞는지 바로 알려 줄게." },
+  { sel: "#dayd", title: "그날 깊게 보기", text: "날짜를 누르면 그날 어떤 기운이 들어오는지 자세히 풀어 줄게. 할 것·조심할 것, 일·돈·사람·몸, 행운 포인트, 그날 내 일정까지. 처음엔 오늘이야." },
+  { sel: "#add-btn", title: "일정 넣기", text: "계약, 면접, 데이트… 날짜랑 무슨 일인지만 고르면 그날 그 일에 맞는지 알려 줄게." },
   { sel: "#trial", title: "7일 무료 체험", text: "지금은 전부 열려 있어. 남은 날이 여기 보여." },
-  { sel: "#menu-btn", title: "다시 보고 싶으면", text: "이 안내랑 처음 소개는 메뉴에서 언제든 다시 볼 수 있어." },
+  NAV_STEP,
 ];
 
 function show(id) {
-  ["onb", "setup", "first", "main"].forEach((s) => ($("#" + s).hidden = s !== id));
-  $("#bar").hidden = id === "onb";
+  ["setup", "main"].forEach((s) => ($("#" + s).hidden = s !== id));
   const again = document.querySelector(".coach-again");
-  if (again) again.hidden = id !== "main";  // 화면 안내는 메인 화면에서만
+  if (again) again.hidden = id !== "main";  // 화면 안내는 달력 화면에서만
   window.scrollTo(0, 0);
 }
 
-/* 1. 온보딩: 소개 3장 */
-function intro(then) {
-  let i = 0;
-  show("onb");
-  const box = $("#onb");
-  const draw = () => {
-    const s = INTRO[i], last = i === INTRO.length - 1;
-    box.innerHTML = `<div class="slide"><img src="${s.img}" alt=""><h1>${s.title}</h1><p>${s.text}</p></div>
-      <div class="dots3" aria-hidden="true">${INTRO.map((_, k) => `<i class="${k === i ? "on" : ""}"></i>`).join("")}</div>
-      <div class="onb-row">${last ? "" : '<button class="btn ghost" type="button" data-skip>건너뛰기</button>'}
-        <button class="btn" type="button" data-next>${last ? "시작하기" : "다음"}</button></div>`;
-    box.querySelector("[data-next]").onclick = () => (last ? end() : (i++, draw()));
-    box.querySelector("[data-skip]")?.addEventListener("click", end);
-    box.querySelector("[data-next]").focus({ preventScroll: true });
-  };
-  const end = () => { st.onboarded = true; save(); then(); };
-  // 휴대폰에서 옆으로 밀어도 넘어가게
-  let x0 = null;
-  box.ontouchstart = (e) => (x0 = e.touches[0].clientX);
-  box.ontouchend = (e) => {
-    if (x0 === null) return;
-    const dx = e.changedTouches[0].clientX - x0;
-    x0 = null;
-    if (dx < -50) (i < INTRO.length - 1 ? (i++, draw()) : end());
-    else if (dx > 50 && i > 0) (i--, draw());
-  };
-  draw();
-}
-
-/* 2. 생일 */
+/* 1. 생일 (사이트에서 이미 넣었으면 건너뜀) */
 function setup() {
   show("setup");
   $("#birth-box").innerHTML = birthFields("me");
-  let pre = st.birth;
-  if (!pre) try { pre = JSON.parse(sessionStorage.getItem("ungyeol_birth") || "null"); } catch (e) { /* 없음 */ }
-  if (pre?.year) {  // 첫 화면·상담실에서 넣었던 생일이 있으면 채워 둔다
-    $("#me-y").value = pre.year; $("#me-m").value = pre.month; $("#me-d").value = pre.day;
-    $("#me-h").value = pre.hour ?? ""; $("#me-min").value = pre.minute || "";
-    const cal = pre.calendar === "lunar" ? (pre.leap ? "leap" : "lunar") : "solar";
-    document.querySelector(`input[name="me-cal"][value="${cal}"]`).checked = true;
-    const g = document.querySelector(`input[name="me-g"][value="${pre.gender}"]`);
-    if (g) g.checked = true;
-  }
+  fillBirth("me", birth());
   $("#setup-go").onclick = async () => {
     const b = readBirth("me"), y = +b.year, m = +b.month, d = +b.day;
     const err = $("#setup-err");
     if (!(y >= 1920 && y <= new Date().getFullYear() && m >= 1 && m <= 12 && d >= 1 && d <= 31)) { err.textContent = "태어난 해·월·일을 숫자로 적어 줘."; return; }
     if (!b.gender) { err.textContent = "성별을 골라 줘."; return; }
     err.textContent = "";
-    st.birth = b;
-    st.started = st.started || todayIso();
-    try { await fetchData(); } catch (e) { err.textContent = e.message; st.birth = null; return; }
-    save();
-    if (!st.events.length && !st.askedFirst) firstEvent();
-    else openMain();
+    const old = birth();
+    saveBirth(b);
+    try { await load(); } catch (e) { err.textContent = e.message; if (old) saveBirth(old); return; }
   };
-}
-
-/* 2-1. 첫 일정 하나: 빈 화면부터 보지 않게, 생일 다음에 바로 하나 넣어 결과를 보여 준다 (사장님 2026-10-30) */
-function firstEvent() {
-  show("first");
-  st.askedFirst = true;
-  save();
-  $("#f-kinds").innerHTML = DATA.kinds.map((k) => `<label><input type="radio" name="f-kind" value="${esc(k.key)}"><span>${esc(k.label)}</span></label>`).join("");
-  const d = new Date();
-  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7));  // 다가오는 토요일 (오늘이 토요일이면 오늘)
-  $("#f-date").value = iso(d);
-  $("#f-date").min = todayIso();
-  $("#f-kinds").onchange = () => ($("#f-err").textContent = "");
-  $("#f-go").onclick = async () => {
-    const kind = document.querySelector('input[name="f-kind"]:checked')?.value, date = $("#f-date").value;
-    if (!kind) { $("#f-err").textContent = "무슨 일인지 하나 골라 줘."; return; }
-    if (!date) { $("#f-err").textContent = "날짜를 골라 줘."; return; }
-    st.events.push({ id: Date.now().toString(36), date, kind, memo: "" });
-    save();
-    VIEW = date.slice(0, 7);
-    SEL = date;
-    try { await load(); } catch (e) { $("#f-err").textContent = e.message; }
-  };
-  $("#f-skip").onclick = openMain;
 }
 
 /* 3. 메인: 오늘 · 이번 주 · 내 일정 */
 async function fetchData() {
-  DATA = await api("/api/myday", { birth: st.birth, month: VIEW, events: st.events.map(({ id, date, kind }) => ({ id, date, kind })) });
+  DATA = await api("/api/myday", { birth: birth(), month: VIEW, events: st.events.map(({ id, date, kind }) => ({ id, date, kind })) });
 }
 async function load() {
   await fetchData();
+  st.started = st.started || todayIso();
+  save();
   openMain();
 }
 function openMain() {
@@ -171,8 +103,15 @@ function dayDetail() {
   const evs = DATA.events.filter((e) => e.date === d.date);
   $("#dayd").innerHTML = `<p class="kicker">${d.date === todayIso() ? "오늘 · " : ""}${label}</p>
     <p class="big">${esc(d.title)}<span class="fit ${esc(d.fit)}">${esc(d.fit)}</span></p>
-    <h4>할 것</h4><p>${esc(d.do)}</p>
-    <h4>조심할 것</h4><p>${esc(d.dont)}</p>
+    <p class="core">${esc(d.deep.core)}</p>
+    ${d.deep.under ? `<p class="under">${esc(d.deep.under)}</p>` : ""}
+    <div class="dogrid"><div><h4>할 것</h4><p>${esc(d.do)}</p></div><div><h4>조심할 것</h4><p>${esc(d.dont)}</p></div></div>
+    <h4>분야별로 보면</h4>
+    <dl class="areas">${d.deep.areas.map((a) => `<div><dt>${esc(a.k)}</dt><dd>${esc(a.v)}</dd></div>`).join("")}</dl>
+    <h4>너의 다섯 기운으로 보면</h4><p>${esc(d.deep.element)}</p>
+    ${d.deep.links.length ? `<h4>삶의 어느 부분이 움직이나</h4>${d.deep.links.map((l) => `<p>· ${esc(l)}</p>`).join("")}` : ""}
+    <h4>행운 포인트</h4><p>${esc(d.deep.lucky)}</p>
+    <p class="small muted note">재미로 보는 참고용이야. 중요한 결정은 네 판단이 먼저야.</p>
     ${evs.map((e) => `<div class="dayev"><div class="top"><b>${esc(e.kind_label)}</b><span class="fit ${esc(e.fit)}">${esc(e.fit)}</span></div><p>${esc(e.tip)}</p>
       ${e.better.length ? `<p class="small muted">고를 수 있다면 ${e.better.map((b) => esc(b.day)).join(", ")}이 더 좋아.</p>` : ""}</div>`).join("")}
     ${d.past ? "" : '<button class="btn ghost addday" type="button" id="add-day">+ 이날 일정 넣기</button>'}`;
@@ -259,13 +198,11 @@ $("#menu").addEventListener("click", (e) => {
   if (!act) return;
   closeSheet("menu");
   if (act === "tour") coach("app", TOUR, true);
-  if (act === "intro") intro(() => (st.birth ? load() : setup()));
   if (act === "birth") setup();
   if (act === "clear" && confirm("일정을 모두 지울까? 되돌릴 수 없어.")) { st.events = []; save(); load(); }
 });
 coachAgain(() => coach("app", TOUR, true));
 
 /* 시작 */
-if (!st.onboarded) intro(() => (st.birth ? load() : setup()));
-else if (st.birth) load().catch(() => setup());
+if (birth()) load().catch(() => setup());
 else setup();

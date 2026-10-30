@@ -96,8 +96,7 @@ function pick(opts) {
 const birthText = (b) => `${b.year}년 ${b.month}월 ${b.day}일 (${b.calendar === "lunar" ? "음력" : "양력"}) · ${b.gender === "female" ? "여" : "남"}`;
 
 async function askBirth() {
-  let saved = null;
-  try { saved = JSON.parse(sessionStorage.getItem("ungyeol_birth") || "null"); } catch (e) { /* 없음 */ }
+  const saved = loadBirth();  // 사주·달력에서 넣은 생일도 같이 씀
   if (saved?.year) {
     await dory(`네가 태어난 날은 ${birthText(saved)}. 그대로 보면 되겠지?`);
     if (await pick([{ label: "그래, 맞다", value: true }, { label: "다시 적을게", value: false }])) return saved;
@@ -111,7 +110,7 @@ async function askBirth() {
       const y = +b.year, m = +b.month, d = +b.day;
       if (!(y >= 1920 && y <= new Date().getFullYear() && m >= 1 && m <= 12 && d >= 1 && d <= 31)) { a.querySelector("#b-err").textContent = "태어난 해·월·일을 숫자로 적어라."; return; }
       if (!b.gender) { a.querySelector("#b-err").textContent = "성별을 골라라."; return; }
-      try { sessionStorage.setItem("ungyeol_birth", JSON.stringify(b)); } catch (e) { /* 괜찮음 */ }
+      saveBirth(b);
       a.remove();
       me(birthText(b));
       done(b);
@@ -165,6 +164,7 @@ async function start() {
   CFG = await api("/api/consult/config");
   const topics = CFG.topics;
   await dory("어서 와. 오늘은 뭐가 궁금해?", "", "c01");
+  setTimeout(() => coach("nav", [NAV_STEP]), 400);  // 처음 온 사람: 아래 메뉴(사주·상담·달력)부터 짚어 줌
   const want = new URLSearchParams(location.search).get("t");
   if (topics[want]) { me(topics[want].label); S.topic = want; }
   else S.topic = await pick(Object.entries(topics).map(([k, t]) => ({ label: t.label, value: k })));

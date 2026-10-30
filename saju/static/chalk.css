@@ -53,8 +53,12 @@ body.apply, body.consult {
 .room-head img { box-shadow: none !important; }
 .seg input:checked + span { color: #000 !important; background: #ffe45c !important; border-color: #ffe45c !important; }
 
-/* 사이트 → 운결 앱(운세 달력) 입구 (2026-10-30 사장님: "이 사이트에 앱이 연결되게") */
-.applink { padding: 7px 14px; border-radius: 999px; border: 1.5px solid #ffe45c; color: #ffe45c !important; text-decoration: none;
-  font: 700 14px "Noto Sans KR", sans-serif; white-space: nowrap; }
-.applink:hover { background: #ffe45c; color: #000 !important; }
+/* 운결 메뉴: 사주 · 상담 · 달력 (form.js siteNav) — 화면 아래 고정 */
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(3, 1fr);
+  background: #000; border-top: 1px solid #2a2a2a; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.tabbar a { display: grid; place-items: center; height: 56px; color: #9a9a9a !important; text-decoration: none; font: 700 16px "Noto Sans KR", sans-serif; }
+.tabbar a.on { color: #ffe45c !important; box-shadow: inset 0 3px 0 #ffe45c; }
+.tabbar a:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+body.has-tabbar { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+body.has-tabbar .coach-again { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
 .calpanel .appbtn { display: block; text-align: center; margin: 14px 0 4px; }
