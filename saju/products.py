@@ -137,7 +137,8 @@ _CATALOG = [
                   ("평생 지침", "이 사주가 행복해지는 원칙 5가지와 지금 바로 할 행동. 마지막에 따뜻한 정리", 1300)],
      "data": ["months", "daeun"]},
     # 월 구독: 매일 아침 7시 '오늘의 흐름' 메일 (subs.py). 풀이 PDF가 아니라 장(chapters)이 없음
-    {"key": "daily", "label": "매일 아침, 오늘의 흐름 (월 구독)", "price": 9900, "tier": "구독", "pages": 0, "partner": None,
+    # 2026-10-30 사장님: "구독제는 없애" → 숨김(새 신청 막힘). 이미 구독 중인 분의 메일·기간 계산(subs.py)은 그대로 돌게 상품은 남김
+    {"key": "daily", "label": "매일 아침, 오늘의 흐름 (월 구독)", "price": 9900, "tier": "구독", "pages": 0, "partner": None, "hidden": True,
      "subscription": True, "days": 30,
      "desc": "매일 아침 7시, 내 사주로 본 오늘의 기운과 할 일·조심할 것을 메일로. 하루하루의 방향을 잡아줘요",
      "chapters": [], "data": []},

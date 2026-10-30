@@ -343,3 +343,4 @@
 @media (prefers-reduced-motion: reduce) { .coach-hole { transition: none; } }
 .coach-row .linkbtn { margin: 0; }
 .calbtns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 16px 0 10px; }
+.pdfcover { display: block; width: 62%; max-width: 230px; margin: 14px auto 12px; border-radius: 4px; box-shadow: 0 0 0 1px rgba(217,178,106,.35), 0 8px 24px rgba(0,0,0,.6); }

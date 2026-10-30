@@ -130,18 +130,6 @@ async function init() {
   $("#more-products").onclick = () => $("#form").classList.add("all");
   refreshDiscount();
   bindToc($("#products"));
-  if (cfg.products.daily) {
-    const price = cfg.products.daily.price;
-    $("#sub-price").textContent = `월 ${won(price)}`;
-    $("#sub-day").textContent = Math.round(price / 30).toLocaleString("ko-KR");
-    $("#pick-daily").textContent = `운결에게 맡기기 · 월 ${won(price)}`;
-  }
-  $("#pick-daily").onclick = (e) => {  // 구독을 골라둔 채로: 생년월일 → 고민 → 간단 신청 흐름으로
-    e.preventDefault();
-    WANT = "daily";
-    if (QUICK) { checkout("daily"); $("#form").scrollIntoView({ behavior: "smooth" }); }
-    else $("#quick").scrollIntoView({ behavior: "smooth" });
-  };
   document.body.classList.toggle("no-free", !cfg.free_first);
   let lastTier = "";
   $("#products").innerHTML = Object.entries(cfg.products).map(([k, p]) => {
@@ -438,6 +426,7 @@ function showQuick(r, birth) {
   const full = window.PRODUCTS.full;
   if (full) {
     const fp = quickPanel(`<p class="kicker">네 사주, 한 권으로</p>${say("방금 본 너를 PDF 한 권으로 정리해 줄게.", "small")}
+      <img class="pdfcover" src="/img/pdf/cover.jpg" alt="PDF 표지 예시 — 표지에 네 이름이 들어가">
       <p class="small muted">타고난 성향 · 다섯 기운 · 일과 돈 · 사람 · 올해의 흐름 · 약 ${full.pages}쪽.
         친구에게 운결을 보내서 친구가 자기 사주를 보면 <b style="color:var(--gold)">무료</b>로 보내 줄게 (<a href="/consult" style="color:var(--gold)">상담실</a>에서 링크 받기 · 1인 1회).</p>
       ${tocToggle("full")}
@@ -445,14 +434,11 @@ function showQuick(r, birth) {
     fp.querySelector("#pick-full").onclick = () => pickProduct("full", QUICK.birth);
     bindToc(fp);
   }
-  $("#tail").hidden = false;  // 맨 끝: 매일 아침 구독
-  if (TOON_IO) $("#tail").querySelectorAll(".panel").forEach((p) => { if (!TYPE_QUEUE.has(p)) watchPanel(p); });
   if (WANT && window.PRODUCTS[WANT]) return checkout(WANT);  // 상품 링크(?p=)로 온 손님은 바로 신청서
   setTimeout(() => coach("me", [  // 페이지 넘김이 끝난 뒤
     { sel: "#quick-result .panel:nth-of-type(2)", title: "이게 너야", text: "타고난 성향을 한 줄로 보여 줄게. 아래로 내리면 강점, 조심할 점, 다섯 기운, 올해와 오늘의 흐름이 이어져." },
     { sel: ".calpanel .calbtns", title: "내 달력에 넣기", text: "쓰던 구글·아이폰 달력에 날마다 그날의 기운이 한 줄씩 떠. 한 번만 누르면 돼." },
     { sel: ".askpanel .topics", title: "도령 상담 · 무료", text: "마음에 걸리는 고민을 하나 골라 봐. 상담실에서 네 사주로 같이 봐 줄게." },
-    { sel: "#pick-daily", title: "매일 아침, 오늘의 흐름", text: "원하면 매일 아침 7시에 오늘 하루의 방향을 보내 줄게. 언제든 그만둘 수 있어." },
   ]), 1200);
 }
 
