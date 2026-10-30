@@ -138,9 +138,7 @@ function render() {
   }).join("");
   trial();
   events();
-  const feed = `${location.host}/cal/${DATA.cal}.ics`;
-  $("#calbtns").innerHTML = `<a class="btn" href="webcal://${feed}">아이폰 달력에 넣기</a>
-    <a class="btn ghost" target="_blank" rel="noopener" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent("webcal://" + feed)}">구글 달력에 넣기</a>`;
+  $("#calbtns").innerHTML = calButtons(DATA.cal);
 }
 
 function trial() {

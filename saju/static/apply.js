@@ -407,10 +407,8 @@ function showQuick(r, birth) {
   quickPanel(`<p class="kicker">올해 ${r.year.year}년 · ${esc(r.year.ko)}</p>${say(r.year.text)}
     <p class="kicker" style="margin-top:22px">오늘 ${esc(r.today.date)} · ${esc(r.today.ko)}일</p>${say(r.today.text)}`, "fortune");
   if (r.cal) {  // 운세 달력: 쓰던 구글·아이폰 달력에 날마다 한 줄 (2026-10-30, 지인 체험용 무료 — calendar_feed.py)
-    const feed = `${location.host}/cal/${r.cal}.ics`;
     quickPanel(`<p class="kicker">매일의 기운, 내 달력에</p>${say("쓰던 달력에 날마다 한 줄씩 띄워 줄게. 밀어붙일 날인지, 숨 고를 날인지.", "small")}
-      <div class="calbtns"><a class="btn" href="webcal://${feed}">아이폰 달력에 넣기</a>
-        <a class="btn ghost" target="_blank" rel="noopener" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent("webcal://" + feed)}">구글 달력에 넣기</a></div>
+      ${calButtons(r.cal)}
       <p class="small muted">생일은 저장하지 않아. 이 달력 주소를 남한테 주면 그 사람도 네 달력을 보니까 너만 써.</p>`, "calpanel");
   }
   if (window.PRODUCTS.manual) certPanel(r);  // 공식 예민인 인증서 (무료·공유용) → 사용설명서 (2026-10-27)

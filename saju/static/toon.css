@@ -347,3 +347,10 @@
 .coach-again { position: fixed; right: 14px; bottom: 14px; z-index: 50; width: 40px; height: 40px; padding: 0; border-radius: 50%; border: 1px solid var(--line);
   background: var(--paper); color: var(--ink-2); font: 700 18px "Noto Sans KR", sans-serif; cursor: pointer; }
 .coach-again:hover { color: var(--ink); border-color: var(--gold); }
+.calhelp { text-align: left; margin: 4px 0 12px; padding: 14px; border: 1px dashed var(--gold); border-radius: 12px; font-size: 14px; line-height: 1.65; }
+.calhelp p { margin: 0 0 8px; }
+.calhelp ol { margin: 0 0 10px; padding-left: 20px; }
+.calhelp li { margin-bottom: 6px; }
+.calurl { display: flex; gap: 8px; align-items: center; }
+.calurl code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 11px; color: var(--ink-3); user-select: all; }
+.calurl .btn { flex: none; padding: 8px 12px; font-size: 13px; }

@@ -158,3 +158,41 @@ function coachAgain(run) {
   }
   b.onclick = run;
 }
+
+/* 운세 달력 버튼 (첫 화면·운결 앱 공용, 2026-10-30).
+   구글 캘린더는 폰에서 주소로 달력을 추가할 수 없다 (눌러도 구글 달력만 열리고 아무것도 안 생김 — 사장님 제보).
+   그래서 폰에서 '구글'을 누르면 안내를 펼친다: 주소 복사 → 컴퓨터에서 한 번 추가 → 안드로이드는 앱에서 동기화 켜기.
+   아이폰 기본 달력은 webcal:// 로 폰에서 바로 구독된다. 컴퓨터에서는 구글 링크로 바로 추가. */
+const IS_PHONE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+function calButtons(token) {
+  const url = `${location.origin}/cal/${token}.ics`, webcal = url.replace(/^https?:/, "webcal:");
+  const google = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}`;
+  return `<div class="calbtns">
+      ${/Android/i.test(navigator.userAgent) ? "" : `<a class="btn" href="${webcal}">아이폰 달력에 넣기</a>`}
+      <a class="btn ghost" target="_blank" rel="noopener" href="${google}" data-gcal>구글 달력에 넣기</a></div>
+    <div class="calhelp" hidden>
+      <p><b>구글 달력은 폰에서는 바로 못 넣어.</b> 컴퓨터에서 한 번만 넣으면 폰 구글 캘린더에도 떠.</p>
+      <ol>
+        <li>아래 <b>주소 복사</b>를 눌러서 카톡 '나와의 채팅' 같은 데 붙여 둬.</li>
+        <li>컴퓨터에서 <b>calendar.google.com</b> → 왼쪽 <b>다른 캘린더</b> 옆 <b>+</b> → <b>URL로 추가</b> → 주소 붙여넣기 → 캘린더 추가.</li>
+        <li>안드로이드 폰이면: 구글 캘린더 앱 → 메뉴 → <b>설정</b> → <b>운결 운세 달력</b> → <b>동기화</b> 켜기.</li>
+      </ol>
+      <div class="calurl"><code>${esc(url)}</code><button type="button" class="btn" data-calcopy="${esc(url)}">주소 복사</button></div>
+      <p class="small muted">처음 뜨기까지 몇 분에서 몇 시간 걸릴 수 있어. 그 뒤로는 구글이 알아서 새로 받아 와.</p>
+    </div>`;
+}
+document.addEventListener("click", (e) => {
+  const g = e.target.closest("[data-gcal]");
+  if (g && IS_PHONE) {
+    e.preventDefault();
+    const help = g.closest(".calbtns").nextElementSibling;
+    help.hidden = !help.hidden;
+    if (!help.hidden) help.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  const c = e.target.closest("[data-calcopy]");
+  if (c) {
+    const done = () => { c.textContent = "복사했어"; setTimeout(() => (c.textContent = "주소 복사"), 1800); };
+    const pick = () => { const r = document.createRange(); r.selectNodeContents(c.previousElementSibling); const s = getSelection(); s.removeAllRanges(); s.addRange(r); c.textContent = "길게 눌러 복사"; };
+    try { navigator.clipboard.writeText(c.dataset.calcopy).then(done, pick); } catch (err) { pick(); }
+  }
+});
