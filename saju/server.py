@@ -26,6 +26,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, quote
 
 import billing
+import calendar_feed
 import db
 import interpret
 import knowledge as K
@@ -363,6 +364,8 @@ class Handler(BaseHTTPRequestHandler):
             done = retention.opt_out(q.get("e"), q.get("t"))
             return self.simple_page("광고 메일을 더 보내지 않을게요. 풀이·구독 메일은 그대로 받으실 수 있어요." if done
                                     else "링크가 올바르지 않아요. 이 메일에 답장으로 알려주시면 직접 처리해 드릴게요.")
+        if path.startswith("/cal/") and path.endswith(".ics"):
+            return self.calendar_ics(path[len("/cal/"):-len(".ics")])
         if path == "/billing/success":
             return self.billing_success(q)
         if path == "/billing/fail":
@@ -753,7 +756,24 @@ class Handler(BaseHTTPRequestHandler):
         if b.get("inv"):  # 친구가 보낸 링크로 와서 자기 사주를 봤다 → 링크 주인에게 기본 리포트 무료·할인
             if invite.record(str(b.get("inv")), str(b.get("vid") or ""), birth):
                 reward_by_link(str(b.get("inv")), birth)
-        self.send_json(quick.reading(birth, chart_of_birth))
+        res = quick.reading(birth, chart_of_birth)
+        res["cal"] = calendar_feed.make_token(birth, SECRET)  # '내 달력에 넣기' 주소 (생일은 저장 안 하고 주소에 서명해 둠)
+        self.send_json(res)
+
+    def calendar_ics(self, token):
+        """운세 달력 구독 주소 /cal/<토큰>.ics — 구글·아이폰 달력이 하루 한 번쯤 다시 받아 감 (calendar_feed.py)."""
+        if too_many("cal:" + self.client_ip(), 120, 3600):
+            return self.error("잠시 후 다시 해주세요.", 429)
+        birth = calendar_feed.read_token(token, SECRET)
+        if not birth:
+            return self.error("달력 주소가 올바르지 않아요.", 404)
+        body = calendar_feed.ics(birth, chart_of_birth).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/calendar; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "private, max-age=3600")
+        self.end_headers()
+        self.wfile.write(body)
 
     def api_quick_concern(self, b):
         """고민을 고르면 그 자리에서 짧은 풀이 + 잠긴 깊은 풀이. 저장 안 함."""

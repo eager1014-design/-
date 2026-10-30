@@ -150,6 +150,19 @@
     .case { transition: border-color .2s; }
     .case:hover { border-color: var(--accent); }
   }
+  /* 처음 온 손님 안내 (코치마크) */
+  .coach { position: fixed; inset: 0; z-index: 100; }
+  .coach-hole { position: fixed; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(10, 18, 30, .6); outline: 2px solid var(--accent); transition: all .25s; pointer-events: none; }
+  .coach-tip { position: fixed; width: min(320px, calc(100vw - 24px)); background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: 0 12px 32px rgba(0,0,0,.2); font-family: var(--body); }
+  .coach-tip small { color: var(--muted); }
+  .coach-tip b { display: block; font-size: 17px; margin-top: 2px; }
+  .coach-tip p { margin: 6px 0 12px; line-height: 1.6; font-size: 15px; }
+  .coach-row { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+  .coach-row button { font: 600 14px var(--body); border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: none; color: var(--muted); }
+  .coach-row [data-next] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .coach-row [data-next] { color: #0D1522; } }
+  :root[data-theme="dark"] .coach-row [data-next] { color: #0D1522; }
+  @media (prefers-reduced-motion: reduce) { .coach-hole { transition: none; } }
 </style>
 
 <div class="wrap">
@@ -444,5 +457,50 @@
       try { navigator.clipboard.writeText(el.textContent.trim()).then(done, select); } catch (e) { select(); }
     });
   });
+
+  // 처음 온 손님에게 볼 곳을 하나씩 밝혀 짚어 준다 (2026-10-30). 한 번 보면(건너뛰어도) 이 브라우저에선 다시 안 뜸.
+  function coach(key, steps) {
+    try { if (localStorage.getItem("coach:" + key)) return; } catch (e) { return; }
+    const list = steps.filter((s) => document.querySelector(s.sel)?.offsetParent);
+    if (!list.length) return;
+    let i = 0;
+    const veil = document.createElement("div");
+    veil.className = "coach";
+    veil.innerHTML = `<div class="coach-hole"></div><div class="coach-tip" role="dialog" aria-modal="true" aria-labelledby="coachT"></div>`;
+    document.body.appendChild(veil);
+    const hole = veil.querySelector(".coach-hole"), tip = veil.querySelector(".coach-tip");
+    const onKey = (e) => { if (e.key === "Escape") done(); };
+    function done() {
+      veil.remove();
+      removeEventListener("resize", show);
+      removeEventListener("keydown", onKey);
+      try { localStorage.setItem("coach:" + key, "1"); } catch (e) { /* 다음에 또 보일 뿐 */ }
+    }
+    function show() {
+      const s = list[i], el = document.querySelector(s.sel);
+      if (!el) return done();
+      const tall = el.offsetHeight > innerHeight * 0.55; // 화면보다 긴 곳은 위에 맞추고 안내는 화면 아래에
+      el.scrollIntoView({ block: tall ? "start" : "center" });
+      const r = el.getBoundingClientRect(), p = 8;
+      Object.assign(hole.style, { left: `${r.left - p}px`, top: `${Math.max(4, r.top - p)}px`, width: `${r.width + p * 2}px`, height: `${Math.min(r.height + p * 2, innerHeight - 8)}px` });
+      tip.innerHTML = `<small>${i + 1} / ${list.length}</small><b id="coachT">${s.title}</b><p>${s.text}</p>
+        <div class="coach-row"><button type="button" data-skip>건너뛰기</button><button type="button" data-next>${i === list.length - 1 ? "둘러보기" : "다음"}</button></div>`;
+      const below = r.bottom + tip.offsetHeight + 20 < innerHeight;
+      Object.assign(tip.style, { left: `${Math.max(12, Math.min(r.left, innerWidth - tip.offsetWidth - 12))}px`, top: `${tall ? innerHeight - tip.offsetHeight - 12 : below ? Math.min(r.bottom + 16, innerHeight - tip.offsetHeight - 12) : Math.max(12, r.top - tip.offsetHeight - 16)}px` });
+      tip.querySelector("[data-next]").onclick = () => (++i < list.length ? show() : done());
+      tip.querySelector("[data-skip]").onclick = done;
+      tip.querySelector("[data-next]").focus({ preventScroll: true });
+    }
+    addEventListener("resize", show);
+    addEventListener("keydown", onKey);
+    show();
+  }
+  setTimeout(() => coach("portfolio", [
+    { sel: ".promo", title: "1분 영상부터", text: "직접 만들어서 지금도 매일 쓰고 있는 자동화가 실제로 돌아가는 모습이에요." },
+    { sel: ".inds", title: "어떤 가게세요?", text: "가게 종류를 고르면 그 업종에서 자주 귀찮은 일만 추려서 보여 드려요." },
+    { sel: ".pains", title: "\u201c이거 내 얘기다\u201d 싶은 것", text: "해당하는 걸 모두 눌러 주세요. 하나도 없어도 괜찮아요." },
+    { sel: "#send", title: "보내기", text: "고른 일이 체크된 채로 문의 화면이 열려요. 1분이면 끝나요." },
+    { sel: ".cases", title: "지금까지 자동화한 일", text: "사례마다 손으로 하던 순서와 지금 자동으로 돌아가는 순서를 나란히 적었어요." },
+  ]), 1000);
 </script>
 

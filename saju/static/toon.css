@@ -331,3 +331,15 @@
   .backlink { display: block; margin: 8px auto 0; text-align: center; color: var(--ink-3); font-size: 14px; background: none; border: 0; text-decoration: underline; cursor: pointer; }
   [hidden] { display: none !important; }
   .cutimg { display: block; width: 100%; max-width: 560px; border-radius: 6px; border: 1px solid rgba(217,178,106,.3); box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+
+/* 첫 방문 안내 (코치마크) — apply.js coach() */
+.coach { position: fixed; inset: 0; z-index: 200; }
+.coach-hole { position: fixed; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(5, 4, 8, .72); outline: 2px solid var(--gold); transition: all .25s; pointer-events: none; }
+.coach-tip { position: fixed; width: min(320px, calc(100vw - 24px)); background: var(--paper); color: var(--ink); border: 1px solid var(--gold); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+.coach-tip b { font-size: 17px; color: var(--gold); }
+.coach-tip p { margin: 6px 0 12px; line-height: 1.6; }
+.coach-row { display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
+.coach-row .btn { padding: 8px 16px; font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .coach-hole { transition: none; } }
+.coach-row .linkbtn { margin: 0; }
+.calbtns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 16px 0 10px; }
