@@ -26,3 +26,6 @@
 - sigh.mp3 — " sigh" by wjtaylor, 1.4초, 다운로드 7,199 · https://freesound.org/s/265249/ (CC0)
 - kaching.mp3 — "Store Scanner Beep" by zerolagtime, 1.2초, 다운로드 11,283 · https://freesound.org/s/144418/ (CC0)
 - tick.mp3 — "Ticking Clock.wav" by Izkhanilov, 2.0초, 다운로드 3,891 · https://freesound.org/s/54848/ (CC0)
+- swipe_card.mp3 — "Swipe Whoosh" by qubodup, 0.45초 · https://freesound.org/s/60007/ (CC0) — 롱폼 전환 기본 (2026-10-30 사장님)
+- woosh_short.mp3 — "Short Woosh 04.wav" by ironcross32, 0.23초 · https://freesound.org/s/582895/ (CC0)
+- whoosh_high.mp3 — "Sfx - Whoosh High 1 (12).wav" by Sheyvan, 0.5초 · https://freesound.org/s/568290/ (CC0)

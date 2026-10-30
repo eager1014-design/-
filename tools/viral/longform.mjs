@@ -425,7 +425,7 @@ async function script(p) {
 
 기획안대로 ${short ? "쇼츠" : "롱폼"} 대본을 episode.json 으로 써. 사장님 목소리로 읽을 문장이니 입말로.
 ${SCENE_GUIDE}
-${SOUND_RULES(short ? "쇼츠는 2구간" : "롱폼은 4구간: 오프닝·훅 tense → 과거 고백 sad → 깨달음·전환 playful → 다짐·마무리 hopeful (내용에 맞게 조정)")}
+${SOUND_RULES(short ? "쇼츠는 2구간" : "롱폼은 4구간: 오프닝·훅 tense → 과거 고백 sad → 깨달음·전환 playful → 다짐·마무리 hopeful (내용에 맞게 조정)")}${short ? "" : "\n   롱폼의 장면 전환 효과음은 swipe_card 를 기본으로, 가끔 다른 전환 소리를 섞기 (2026-10-30 사장님)"}
 ${p.plan?.sell ? `[이 영상이 파는 것] ${JSON.stringify(p.plan.sell)}\n썸네일·제목의 약속(promise)을 첫 15초 안에 지키고, 주 감정(emotion)을 끝까지 유지하고, 보고 나서 남는 것(value)을 한 문장으로 꼭 말할 것.\n` : ""}${BRIDGE_RULE}
 ${OUTRO_ASK}
 ${short ? SHORT_RULES : "챕터마다 chapter 장면으로 시작, 처음은 hook, 끝은 outro. 장면 하나에 1~2문장(3초 안팎마다 화면이 바뀌게 — 레퍼런스 평균 2.6초), 그래서 장면 40~80개. 짧은 단문·해요체."}${p.episode ? `\n[지난 대본 — 사장님 말대로 고쳐서 다시]\n${JSON.stringify(p.episode.scenes.map((s) => [s.id, s.type, s.narration]))}` : ""}${feedback ? `\n[대본 검사에서 나온 문제 — 고쳐서 다시]\n${feedback}` : ""}

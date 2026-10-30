@@ -12,7 +12,8 @@ export const SOUND_RULES = (sections) => `[소리·강조 자막 원칙 — 꼭 
    cue 는 문장 첫 단어(문장 시작 직전에 울림)로. 같은 소리를 바로 다음 장면에 연달아 쓰지만 말 것(여러 번 쓰는 건 괜찮음).
    - 질문·호기심·반전: thud(쿵) · drum(쿠궁) · heartbeat(심장)
    - 숫자·결론·핵심: thud(쿵) · camera(찰칵) · ding(띵)
-   - 장면·문맥 전환: whoosh(휘익) · swipe(슉) · pageturn(스윽)
+   - 장면·문맥 전환: whoosh(휘익) · swipe(슉) · swipe_card(카드 넘기는 휙) · woosh_short(아주 짧은 휙) · whoosh_high(높고 날카로운 휙) · pageturn(스윽)
+     전환 소리는 한 가지만 반복하지 말고 번갈아 쓸 것 (2026-10-30 사장님: 다양하게)
    - 희망·다짐·긍정 전환: ding(띵) · correct(띵동) · sparkle(반짝) · bell(띵)
    - 그 밖에: scratch(반전 직전 긁힘) · gasp(헉) · sigh(한숨) · tick(째깍) · notification(알림) · typing(타자)
 2) 감정 구간: 이혼·약·바닥·부모님·고백 이야기를 하는 장면은 "emotion": true 로 표시 → 효과음·강조 색이 자동으로 빠지고 음악이 낮아짐. 여기엔 sfx·punch 넣지 말 것.
