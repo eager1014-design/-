@@ -71,7 +71,10 @@ export async function fetchPortraits(name, outDir, count = 3) {
   const main = await wikidataImage(name).catch(() => null);
   if (main) picked.push(...(await details([`File:${main}`])));
   const s = await get({ action: "query", list: "search", srsearch: `${name} portrait filetype:bitmap`, srnamespace: "6", srlimit: "30" });
-  const more = await details((s.query?.search || []).map((x) => x.title).slice(0, 30));
+  // 추가 사진은 위키데이터 대표 사진이 있는 사람만 + 파일 이름에 그 사람 이름이 다 있는 것만 — 'Mary Ainsworth' 에 동명이인·다른 Mary 사진이 잡히던 문제 (2026-10-31). 다른 사람 사진을 내보내느니 안 쓴다
+  const tokens = name.toLowerCase().split(/\s+/).filter((t) => t.length > 1);
+  const hasName = (title) => tokens.every((t) => title.toLowerCase().includes(t));
+  const more = main ? await details((s.query?.search || []).map((x) => x.title).filter(hasName).slice(0, 30)) : [];
   for (const m of more) if (!picked.some((p) => p.title === m.title)) picked.push(m);
   // 쓸 수 있는 것만, 퍼블릭 도메인 먼저, 너무 작은 그림·로고·서명은 빼기
   const usable = picked.filter((p) => p.ok && /jpeg|png/.test(p.mime) && p.w >= 400 && p.h >= 400 && !/signature|autograph|logo|coat of arms|grave|tomb/i.test(p.title))

@@ -69,6 +69,54 @@ function BoldThumb({ t, width, height }) {
       </AbsoluteFill>
     );
   }
+  // behind: 누끼 인물 + 흰 테두리 + '글자 뒤 인물'(레퍼런스 2026-10-31) — 첫 줄을 둘로 나눠 머리 양옆에 크게 깔고 캐릭터가 그 앞을 가림, 둘째 줄은 아래에 맨 앞으로.
+  // 머리가 글자를 가려도 읽히게 말 사이 틈에 머리를 둔다
+  if (layout === "behind" && !tall) {
+    const paint = t.bg === "red" ? "#C8161D" : dark ? "#050505" : "#FFFFFF";
+    const [top, bottom] = lines;
+    const parts = String(top).split(" ");
+    const cutAt = parts.length < 2 ? 0 : parts.reduce((best, _, i) => { // 양쪽 글자 수가 가장 비슷해지는 띄어쓰기
+      if (!i) return best;
+      const gap = (k) => Math.abs(parts.slice(0, k).join("").length - parts.slice(k).join("").length);
+      return gap(i) < gap(best) ? i : best;
+    }, 1);
+    const left = parts.slice(0, cutAt).join(" ");
+    const right = parts.slice(cutAt).join(" ");
+    const count = (x) => x.replace(/\*\*|!!|\s/g, "").length;
+    const all = Math.max(count(left) + count(right), 1);
+    const big = Math.min(235, 830 / Math.max(all, 3)) * u;
+    const headX = 50 + ((count(left) - count(right)) / all) * 24; // 짧은 쪽으로 머리를 옮겨 글자 자리를 넓힌다
+    const word = (w, side) => w && (
+      <div style={{ position: "absolute", top: "5%", [side]: side === "left" ? "2%" : "2%", width: `${side === "left" ? headX - 19 : 100 - headX - 19}%`, display: "flex", justifyContent: "center", fontFamily: "BlackHanSans", fontSize: big, lineHeight: 1.05, letterSpacing: "-0.03em", whiteSpace: "nowrap", WebkitTextStroke: `${big * 0.09}px #0A0A0A`, paintOrder: "stroke fill", zIndex: 1 }}>
+        <span><BoldText text={w} /></span>
+      </div>
+    );
+    const low = bottom ? Math.min(150, 1160 / count(bottom)) * u : 0;
+    // 첫 줄에 띄어쓰기가 없으면(3~4자) 화면 폭 가득 깐다 — 머리가 가려도 글자가 커서 읽힘 (사장님 2026-10-31 '1인기업' 레퍼런스)
+    const giant = parts.length < 2;
+    const huge = Math.min(430, 1250 / Math.max(count(top), 2)) * u;
+    return (
+      <AbsoluteFill style={{ background: paint, overflow: "hidden" }}>
+        {giant ? (
+          <div style={{ position: "absolute", top: "1%", left: 0, right: 0, textAlign: "center", fontFamily: "BlackHanSans", fontSize: huge, lineHeight: 1.05, letterSpacing: "-0.02em", whiteSpace: "nowrap", WebkitTextStroke: `${huge * 0.05}px #0A0A0A`, paintOrder: "stroke fill", zIndex: 1 }}>
+            <BoldText text={top} />
+          </div>
+        ) : (
+          <>
+            {word(left, "left")}
+            {word(right, "right")}
+          </>
+        )}
+        <Img src={staticFile(t.image)} style={{ position: "absolute", left: giant ? "56%" : `${headX}%`, transform: "translateX(-50%)", top: giant ? (bottom ? "12%" : "17%") : "7%", height: giant ? (bottom ? "86%" : "100%") : bottom ? "92%" : "98%", zIndex: 2,
+          filter: `drop-shadow(${7 * u}px 0 0 #fff) drop-shadow(-${7 * u}px 0 0 #fff) drop-shadow(0 -${7 * u}px 0 #fff) drop-shadow(0 ${7 * u}px 0 #fff)` }} />
+        {bottom && (
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: "3%", textAlign: "center", fontFamily: "BlackHanSans", fontSize: low, lineHeight: 1, letterSpacing: "-0.03em", whiteSpace: "nowrap", WebkitTextStroke: `${low * 0.12}px #0A0A0A`, paintOrder: "stroke fill", zIndex: 3 }}>
+            <BoldText text={bottom} />
+          </div>
+        )}
+      </AbsoluteFill>
+    );
+  }
   if (side) return (
     <AbsoluteFill style={{ background: dark ? "#050505" : "#FFFFFF", flexDirection: "row", alignItems: "center" }}>
       <div style={{ width: "48%", height: "100%", display: "flex" }}>{art}</div>

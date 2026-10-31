@@ -598,8 +598,8 @@ function Story({ scene, frames }) {
             ? <DrawStrokes src={scene.strokes} frames={frames} color={scene.drawBg} />
             : <DrawCover frames={frames} rows={short ? 7 : 6} color={scene.drawBg} />)}
         </AbsoluteFill>
-        {/* 글씨가 잘 보이도록 글씨 쪽만 살짝 어둡게 */}
-        <AbsoluteFill
+        {/* 실제 영상 위에서만 글씨 쪽을 어둡게 — 삽화엔 그라데이션 금지, 글씨 테두리로 읽히게 (2026-10-31 사장님) */}
+        {scene.video && <AbsoluteFill
           style={{
             background:
               side === "left"
@@ -610,7 +610,7 @@ function Story({ scene, frames }) {
                     ? "linear-gradient(180deg, rgba(43,42,40,0.6) 0%, rgba(43,42,40,0.3) 22%, rgba(43,42,40,0) 38%)"
                     : "linear-gradient(180deg, rgba(43,42,40,0) 45%, rgba(43,42,40,0.55) 100%)",
           }}
-        />
+        />}
       </AbsoluteFill>
       <AbsoluteFill
         style={{
@@ -620,9 +620,9 @@ function Story({ scene, frames }) {
         }}
       >
         {lines.map((l, i) => (
-          // 칠판 스킨은 card 가 어두워서 그림 위 글씨는 흰색
+          // 스킨 글씨색 + 바탕색 테두리 — 어떤 그림 위에서도 읽히게
           <Rise key={i} at={at[i]} style={{ marginTop: 14 * u, textAlign: side === "center" || side === "top" ? "center" : side, maxWidth: side === "center" || side === "top" ? "86%" : "46%" }}>
-            <Rich text={l.text} at={at[i]} style={{ ...text(u, 62, 800, COLORS.dark ? "#FFFFFF" : COLORS.card), textShadow: `0 ${2 * u}px ${14 * u}px rgba(0,0,0,0.35)` }} />
+            <Rich text={l.text} at={at[i]} style={{ ...text(u, 62, 800, COLORS.ink), WebkitTextStroke: `${10 * u}px ${COLORS.bg}`, paintOrder: "stroke fill" }} />
           </Rise>
         ))}
       </AbsoluteFill>

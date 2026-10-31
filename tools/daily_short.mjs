@@ -17,6 +17,7 @@ import { spawnSync } from "node:child_process";
 import { ROOT, DATA_DIR, load, save, upsert, searchYoutube, analyze, saveSettings } from "./viral/core.mjs";
 import { fillPhotos as fillPhotosIn, creditLines } from "./commons.mjs";
 import { SOUND_RULES, pickSections } from "./viral/sound_rules.mjs";
+import { CITE_RULE, checkCitations } from "./paper_page.mjs";
 import { ensureSajuOutro, OUTRO_ASK, PINNED_ASK, withSaju } from "./saju_pin.mjs";
 import { AREA_LIST, pickArea, recentList, TOPIC_AREAS } from "./topic_mix.mjs";
 
@@ -177,7 +178,7 @@ ${past}
 ${feedback ? `\n[사장님 수정 요청 — 반드시 반영]\n${feedback}\n\n[직전 대본]\n${JSON.stringify(st.idea)}\n` : ""}
 [절대 규칙]
 1. 일기에 없는 사장님 경험·숫자·사건을 지어내지 마. 일기 내용은 사장님 말을 다듬어 1인칭으로.
-2. 연구·통계 인용 금지. 예외: Assary 외 2020(Molecular Psychiatry) 쌍둥이 연구 — 예민함 차이의 47%가 유전. 그 외 숫자가 꼭 필요하면 쓰지 말고 비유로.
+2. ${CITE_RULE}
 3. image·video·pose 칸은 쓰지 말 것. 이모지는 쓰지 말 것(화면에 안 나옴 — 사장님 2026-10-28 "짜쳐 보인다"). 그림 없는 story 에는 "icon": 손그림 아이콘 1개(battery·bed·brain·bulb·calendar·chart·check·clock·coffee·exclaim·fire·heart·house·lightning·lock·money·people·phone·question·search·speech·star·tear·thought 중 뜻이 맞는 것, 없으면 생략). 이야기의 핵심 장면 4~6개에는 "art": "삽화 설명" 을 추가 — 채널 캐릭터(나)가 무엇을 하는지, 어디인지, 표정을 구체적으로 한 문장(예: "시끄러운 카페에서 두 손으로 귀를 막고 눈을 질끈 감은 나, 주변 사람들은 흐린 회색 실루엣"). 그림은 자동으로 그려지고, 그 장면 글씨는 화면 왼쪽에 나온다. 실존 인물(위인)은 art 로 그리지 말고 photo 장면으로. 감정이 확 바뀌는 story 장면 1곳에는 art 대신 "drawFace": "smile|surprised|serious|laugh|worried|kind", "cast": "off" — 내 캐릭터 얼굴이 크게 그려지고 그 아래 lines 글씨.
 4. 장면 10~14개 — 장면 하나에 1~2문장(3초 안팎마다 화면이 바뀌게, 레퍼런스 평균 2.6초), 짧은 단문·해요체, 내레이션 합계 250~400자 (약 40~55초). 숫자는 내레이션에서 한글("일곱 번"), 화면 글씨에서 숫자.
 5. 모든 cue·at 값은 그 장면 narration 안에 띄어쓰기까지 똑같이 있는 말이어야 함.
@@ -257,6 +258,12 @@ async function script(st, feedback) {
     ensureSajuOutro(ep); // 모든 영상 마지막에 사주 안내 한 문장 (사장님 2026-10-27)
     if (look === "full") delete ep.frame;
     else ep.frame = { ...(ep.frame || {}), brand: "예민한자립가" };
+    const badPapers = await checkCitations(ep, (m) => log(st, m));
+    if (badPapers.length && attempt < 3) {
+      prompt = `${writingPrompt(st, feedback)}\n\n[직전 대본의 문제 — 고쳐서 다시 전체 출력]\n이 논문은 학술 DB 에서 못 찾았어. 지어낸 것일 수 있으니 실제 논문으로 바꾸거나 그 내용을 빼: ${badPapers.join(" / ")}`;
+      continue;
+    }
+    if (badPapers.length) log(st, `⚠ 못 찾은 논문이 남았어요. 공개 전에 확인이 필요해요: ${badPapers.join(" / ")}`);
     const credits = await fillPhotosIn(ep, dir, (m) => log(st, m));
     const epFile = path.join(dir, "episode.json");
     fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
@@ -290,7 +297,10 @@ async function script(st, feedback) {
 const CHARACTER_REF = path.join(VIDEO, "public/characters/round/ref_sheet.png");
 const ART_STYLE_OLD = "16:9 가로 삽화. 기준 그림의 캐릭터(둥근 안경, 부스스한 머리, 검은 선화)를 그대로 그려줘. 캐릭터는 깔끔한 검은 선화(몸 안은 흰색) 그대로, 배경은 부드러운 크림·세이지색 종이 질감 수채화. 글씨·말풍선·자막은 절대 넣지 말 것. 캐릭터와 주요 사물은 화면 오른쪽 절반에, 왼쪽 40%는 글씨가 들어갈 빈 배경으로 비워둘 것. 장면: ";
 const ART_STYLE_CHALK = "16:9 가로 삽화. 배경은 완전한 검정(#000000) 단색. 모든 선은 굵고 둥근 흰색 손그림 두들, 아주 단순하게, 포인트 색은 노랑 하나만. 사람은 기준 그림의 캐릭터(동그란 머리, 정수리 머리카락 두세 가닥, 큰 동그란 안경, 막대 팔다리)로, 다른 사람도 같은 막대 사람 그림체로. 그림자·질감·그라데이션·글씨·말풍선 없이. 캐릭터와 주요 사물은 화면 오른쪽 절반에, 왼쪽 40%는 글씨가 들어갈 빈 검정으로 비워둘 것. 장면: ";
-const artStyle = () => (load().settings?.skin === "chalk" ? ART_STYLE_CHALK : ART_STYLE_OLD);
+// 흰 바탕 스킨: 삽화도 흰 바탕 + 검은 선 (2026-10-31 사장님: 쇼츠 그림이 크림색으로 나오던 문제)
+const ART_STYLE_PAPER = "16:9 가로 삽화. 배경은 완전한 흰색(#FFFFFF) 단색. 모든 선은 굵고 둥근 검정 손그림 두들, 아주 단순하게, 포인트 색은 파랑 하나만. 사람은 기준 그림의 캐릭터(동그란 머리, 정수리 머리카락 두세 가닥, 큰 동그란 안경, 막대 팔다리)로, 다른 사람도 같은 막대 사람 그림체로. 그림자·질감·그라데이션·글씨·말풍선 없이. 캐릭터와 주요 사물은 화면 오른쪽 절반에, 왼쪽 40%는 글씨가 들어갈 빈 배경으로 비워둘 것. 장면: ";
+const artStyle = () => ({ chalk: ART_STYLE_CHALK, cute: ART_STYLE_OLD }[load().settings?.skin] || ART_STYLE_PAPER);
+const artBg = () => ({ chalk: "#000000", cute: "#FFF7EA" }[load().settings?.skin] || "#FFFFFF");
 async function fillArt(st, ep, dir) {
   for (const s of ep.scenes) if (s.drawFace) ["smile", "surprised", "serious", "laugh", "worried", "kind"].includes(s.drawFace) ? (s.cast = "off") : delete s.drawFace; // 있는 표정만
   const scenes = ep.scenes.filter((s) => s.art && !s.image).slice(0, 6); // 이모지 대신 그림을 더 (2026-10-28)
@@ -303,7 +313,7 @@ async function fillArt(st, ep, dir) {
         { allowFail: true, timeout: 300_000 });
       if (!r.ok || !fs.existsSync(out)) { log(st, `⚠️ 삽화 실패 → 이모지 그대로 (${r.out.trim().split("\n").pop()})`); continue; }
     }
-    Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), out), textSide: tall ? "center" : "left", motion: s.motion || "zoomIn", focusX: tall ? 0.5 : 0.7, cast: "off", draw: true });
+    Object.assign(s, { image: path.relative(path.join(VIDEO, "public"), out), textSide: tall ? "center" : "left", motion: s.motion || "zoomIn", focusX: tall ? 0.5 : 0.7, cast: "off", draw: true, drawBg: artBg() });
     // 손이 펜으로 한 줄씩 그리는 연출용 획 (video/scripts/strokes.py, 무료·몇 초). 실패하면 예전 지그재그 연출 (2026-10-28)
     if (fs.existsSync(PY) && run(st, `✏️ 삽화 ${i + 1} 선 따기`, PY, ["video/scripts/strokes.py", out], { allowFail: true }).ok) s.strokes = path.relative(path.join(VIDEO, "public"), out.replace(/\.png$/, ".strokes.json")); // 연필로 그려지듯 나타남 (2026-10-27)
     delete s.emoji;

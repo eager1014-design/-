@@ -13,7 +13,7 @@ import { ROOT, DATA_DIR, UPLOAD_DIR, GEMINI_MODEL, load, save, saveUploads, imag
 import { gemini, watchVideo } from "../ai-bridge/gemini.mjs";
 import { SOUND_RULES, pickSections } from "./sound_rules.mjs";
 import { fillPhotos, creditLines } from "../commons.mjs";
-import { fillPaperPages, paperCreditLines } from "../paper_page.mjs";
+import { CITE_RULE, checkCitations, fillPaperPages, paperCreditLines } from "../paper_page.mjs";
 import { ensureSajuOutro, OUTRO_ASK, PINNED_ASK, withSaju } from "../saju_pin.mjs";
 import { BRIDGE_RULE, FORECAST_ASK, SELL_ASK, SELL_RULES } from "../sell_plan.mjs";
 import { AREA_LIST, recentList, TOPIC_AREAS } from "../topic_mix.mjs";
@@ -352,12 +352,13 @@ JSON 하나만:
 const THUMB_RULES = `[썸네일 규칙 — 레퍼런스 분석 + 우리 채널 실제 클릭률에서]
 - 시안 4개: 캐릭터 3개(내 캐릭터 얼굴 클로즈업이 화면의 절반 이상, 과장된 표정으로 감정을 건드림 — 눈 휘둥그레·땀방울·입 크게 벌림·찔린 표정 등, 영상의 주 감정과 같은 표정, 3개는 표정이 서로 다르게) + 물건비유·VS대결·글씨만 중 1개. (사장님 2026-10-30: "얼굴 크게 해서 감정을 건드려야 해")
   캐릭터 시안의 art = "내 캐릭터가 [상황 소품 하나]를 [행동]하며 [과장된 표정]" 처럼 상황+표정을 한 문장에.
+- 캐릭터 시안은 '누끼 + 흰 테두리 + 글자 뒤 인물' (사장님 2026-10-31 레퍼런스): 첫 줄을 머리 양옆에 크게 깔므로 lines[0] 은 띄어쓰기로 두 덩어리, 합쳐 4~6자("또 눌렀다") 또는 띄어쓰기 없는 한 낱말 3~4자("눌렀다" — 화면 폭 가득 크게 깔림, 캐릭터 시안 3개 중 1~2개는 이걸로). lines[1] 은 선택 — 가슴 위에 얹는 8자 이내 한 줄(**노랑**).
 - 화면을 꽉 채울 것: 그림은 크게 하나, 빈 공간 없이. 휴대폰 작은 화면에서도 0.5초에 읽혀야 함.
 - 글씨: 2줄, 두 줄 합쳐 7~9자(띄어쓰기 빼고). 줄을 더 늘리지 말 것 — 단이 많으면 안 읽힘. 4개 중 2개 이상은 숫자를 넣을 것(밤 9시·딱 1곳·3가지·15분처럼, 영상에 실제로 나오는 숫자만). (사장님 2026-10-30) 도발·반전·금지형("또 시켰죠?", "다짐 금지"). **노랑** !!빨강!! 표시, 나머지 흰색. 한 줄에 색은 하나만.
-- 작은 손글씨 메모 금지(휴대폰에서 안 읽힘). 바탕은 흰색 기본 — 검은 바탕은 유튜브 다크 모드와 섞여서 4개 중 최대 1개.
+- 작은 손글씨 메모 금지(휴대폰에서 안 읽힘). 바탕은 검정 기본 (사장님 2026-10-31: 흰색보다 잘 읽힘). 캐릭터는 바탕이 검어도 몸은 흰색, 선만 검은색.
 - 썸네일 글씨와 영상 제목은 절대 같은 말 금지: 썸네일 = 감정 자극, 제목 = 상황·궁금증.
 - 학술 용어·추상어 금지(안전기지·심리학 같은 말은 썸네일에 쓰지 않음).`;
-const THUMB_SCHEMA = `[{"type": "캐릭터|물건비유|VS대결|글씨만", "lines": ["첫 줄", "둘째 줄(선택)"], "bg": "white|black", "layout": "top|bottom|text", "art": "그릴 것 한 문장 (글씨만이면 빈 문자열). 캐릭터면 '내 캐릭터가 ○○하며 과장된 ○○ 표정'처럼 표정을 꼭"}]`;
+const THUMB_SCHEMA = `[{"type": "캐릭터|물건비유|VS대결|글씨만", "lines": ["첫 줄", "둘째 줄(선택)"], "bg": "black|white", "layout": "top|bottom|text", "art": "그릴 것 한 문장 (글씨만이면 빈 문자열). 캐릭터면 '내 캐릭터가 ○○하며 과장된 ○○ 표정'처럼 표정을 꼭"}]`;
 
 // [썸네일 다시] — 기획안 때 짠 시안 아이디어는 그때 규칙이라, 다시 그릴 땐 지금 규칙 + 사장님 마지막 말로 아이디어부터 새로 짠다
 function thumbIdeas(p) {
@@ -404,7 +405,7 @@ async function thumbs(p) {
     const wantArt = t.layout !== "text" && t.art;
     const charRef = path.join(VIDEO, "public/characters/round/ref_sheet.png");
     const artPrompt = isChar
-      ? `${t.art}. 기준 그림의 동그란 안경 막대 캐릭터의 얼굴 클로즈업(얼굴이 그림 높이의 80% 이상, 어깨 위만, 정사각형에 가까운 구도), 표정은 만화처럼 아주 과장되게(커진 눈·크게 벌린 입·땀방울·효과선), 소품은 얼굴 옆에 작게 하나, ${DOODLE}`
+      ? `${t.art}. 기준 그림의 동그란 안경 막대 캐릭터의 가슴 위 상반신(얼굴이 그림 높이의 55% 안팎이고 그 아래로 어깨·가슴이 넉넉히 보이게, 아래 30%는 몸통만, 정사각형 구도, 머리 위 여백 없이), 표정은 만화처럼 아주 과장되게(커진 눈·크게 벌린 입·땀방울), 머리 위쪽엔 효과선 넣지 말 것, 소품은 몸 옆에 하나, ${DOODLE}`
       : `${t.art}. ${DOODLE}`;
     const g = wantArt ? run(p, `🎨 챗GPT가 썸네일 그림 ${i + 1}/${list.length} 그리는 중 (1분 안팎)`, NODE, [path.join(ROOT, "tools/gpt_image.mjs"), `${artPrompt}, 배경은 완전한 ${dark ? "검정(#000000), 선은 흰색 또는 검정 테두리에 흰 채움" : "흰색(#FFFFFF)"}${isChar ? "" : ", 가로로 넓은 구도"}`, `--out=${img}`, isChar ? "--size=1024x1024" : "--size=1536x1024", ...(isChar && fs.existsSync(charRef) ? [`--ref=${charRef}`] : [])], { allowFail: true, timeout: 600_000 }) : { ok: false };
     if (g.ok && fs.existsSync(img)) trimImage(img, dark);
@@ -412,7 +413,7 @@ async function thumbs(p) {
     const cut = img.replace(/\.png$/, ".cut.png");
     if (isChar && g.ok && fs.existsSync(img)) spawnSync(NODE, ["scripts/cutout.mjs", img, "--close=24", "--cropped-bottom"], { cwd: VIDEO });
     const useCut = isChar && fs.existsSync(cut);
-    const props = { format: "long", style: "bold", bg: t.bg, lines: t.lines, layout: g.ok && fs.existsSync(img) ? (useCut ? "overlap" : isChar ? "side" : t.layout || "top") : "text", ...(g.ok && fs.existsSync(img) ? { image: path.relative(path.join(VIDEO, "public"), useCut ? cut : img) } : {}) };
+    const props = { format: "long", style: "bold", bg: t.bg, lines: t.lines, layout: g.ok && fs.existsSync(img) ? (useCut ? "behind" : isChar ? "side" : t.layout || "top") : "text", ...(g.ok && fs.existsSync(img) ? { image: path.relative(path.join(VIDEO, "public"), useCut ? cut : img) } : {}) };
     const pf = path.join(dir, `thumb${i + 1}.json`);
     fs.writeFileSync(pf, JSON.stringify({ thumbnail: props }, null, 2)); // 썸네일 틀은 upload.json 모양({ thumbnail: … })을 받는다
     const png = path.join(outDir, `thumb${i + 1}_${Date.now()}.png`);
@@ -439,7 +440,8 @@ pillars·elements = 사주 설명 장면 (사주 편일 때만)
 
 const SHORT_RULES = `[쇼츠 규칙] 장면 10~14개(장면 하나에 1~2문장, 3초 안팎마다 화면이 바뀌게), 내레이션 합계 250~400자. "frame": {"title": ["첫 줄", "둘째 줄"]} (위에 고정되는 제목, 줄마다 14자 이내). 제목 아래는 나누지 않은 한 화면. 첫 장면 첫 문장 = 3초 안에 멈추게 하는 훅.
 화면 글씨는 짧게 (한 줄 12자 이내). compare 항목 2개씩 10자 이내, checklist 3개 14자 이내. 끝은 outro(댓글로 답하고 싶은 질문).
-가운데 장면 2~3곳에 "comments": [{"text": "시청자가 달 법한 한마디 16자 이내", "at": "그 장면 내레이션 속 단어"}] (화면에 '예시' 표시됨, 실제 후기처럼 꾸미지 말 것).`;
+가운데 장면 2~3곳에 "comments": [{"text": "시청자가 달 법한 한마디 16자 이내", "at": "그 장면 내레이션 속 단어"}] (화면에 '예시' 표시됨, 실제 후기처럼 꾸미지 말 것).
+${CITE_RULE}`;
 
 async function script(p) {
   if (!p.plan) throw new Error("기획안이 먼저 있어야 해요.");
@@ -464,6 +466,11 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
       ? { ...r.episode, format: "short", style: "punchy", pace: { speed: 1.3, trim: true }, presenter: true, skin, frame: { ...(r.episode.frame || {}), brand: p.channel.split(" (")[0] } } // 위 고정 제목 + 아래 한 무대 (나누지 않음)
       : { ...r.episode, format: "long", style: "calm", presenter: true, captions: true, skin, pace: { speed: 1.3, trim: true } };
     ensureSajuOutro(ep); // 모든 영상 마지막에 사주 안내 한 문장 (사장님 2026-10-27)
+    const badPapers = await checkCitations(ep, (m) => log(p, m));
+    if (badPapers.length && attempt < 3) {
+      feedback = `이 논문은 학술 DB(OpenAlex)에서 못 찾았어 — 지어낸 것일 수 있으니 실제로 확인되는 논문으로 바꾸거나 그 내용을 빼: ${badPapers.join(" / ")}`;
+      continue;
+    }
     ep.soundPlan = true; // 효과음은 대본이 고른 것만 (sound_rules.mjs)
     ep.musicSections = pickSections(r.music_plan, ep.scenes || [], [], Date.now() % 97);
     const credits = await fillPhotos(ep, dir, (m) => log(p, m)); // 위인 사진 (위키미디어 무료, 못 받으면 이모지 장면으로)
@@ -474,7 +481,7 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
       p.episode = ep;
       p.photoCredits = credits;
       p.paperCredits = paperCredits;
-      say(p, r.reply);
+      say(p, badPapers.length ? `${r.reply}\n\n⚠ 학술 DB 에서 못 찾은 논문이 남아 있어요. 올리기 전에 확인이 필요해요: ${badPapers.join(" / ")}` : r.reply);
       break;
     }
     feedback = check.out.slice(-2000);

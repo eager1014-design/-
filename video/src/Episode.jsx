@@ -9,7 +9,7 @@ import { wipe } from "@remotion/transitions/wipe";
 import { loadFont } from "@remotion/fonts";
 import { FONT, FRAME, SIZES, SKINS, TRANSITION_FRAMES } from "./theme.js";
 import { applyPace, cueFrame, sceneFrames, SFX_LEAD, voiceSafeVolume, voiceSeconds } from "./timing.js";
-import { Background, CommentPop, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, Props, Punch, PunchSfx, SOUND, Stickers, sfxFile, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
+import { Background, CiteTag, CommentPop, CaptionBandContext, CaptionBottomContext, Captions, ChapterProgress, Props, Punch, PunchSfx, SOUND, Stickers, sfxFile, FrameContext, SideCharacter, SizeContext, StyleContext } from "./components.jsx";
 import { SCENES } from "./scenes.jsx";
 import { Cast, castTimeline, setCharacter } from "./presenter.jsx";
 import { BAND, BandCast, Comments } from "./band.jsx";
@@ -288,6 +288,7 @@ export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm
                 {it.scene.stickers && <Stickers scene={it.scene} />}
                 {it.scene.props && <Props scene={it.scene} />}
                 {it.scene.comments && <CommentPop scene={it.scene} framed={!!frame} />}
+                {it.scene.cite && <CiteTag cite={it.scene.cite} />}
                 {it.scene.punch && !BUSY_CENTER.has(it.scene.type) && <Punch scene={it.scene} />}
                 {it.scene.punch && !BUSY_CENTER.has(it.scene.type) && <PunchSfx scene={it.scene} />}
                 {showProgress && <ChapterProgress chapters={bar} current={it.chapter} />}

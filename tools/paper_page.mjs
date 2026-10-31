@@ -31,7 +31,37 @@ async function findWork(s) {
   if (!list.length && s.title) list = (await getJson(`${API}/works?search=${encodeURIComponent(s.title)}${s.year ? `&filter=publication_year:${s.year}` : ""}&per-page=3`))?.results || [];
   if (!s.title) return list[0] || null;
   const want = words(s.title);
-  return list.find((w) => { const got = words(w.title); return [...want].filter((x) => got.has(x)).length >= Math.max(1, want.size * 0.5); }) || null;
+  // 학술 DB 제목엔 부제가 빠진 경우가 많아서('Lending a Hand'), DB 제목 단어가 대본 제목에 다 들어 있어도 같은 논문으로 친다 (저자 대조는 checkCitations)
+  return list.find((w) => { const got = words(w.title); const same = [...want].filter((x) => got.has(x)).length; return same >= Math.max(1, want.size * 0.5) || (got.size >= 2 && same === got.size); }) || null;
+}
+
+// 연구를 말하는 쇼츠 장면의 규칙 (2026-10-31 사장님: 숏폼에도 출처) — 매일 쇼츠·영상 만들기 숏폼 공통
+export const CITE_RULE = `연구 인용은 영상당 최대 2개, 실제로 확실히 아는 유명 연구만. 그 장면에 꼭 "cite": {"authors": "Watts, Duncan & Quan", "year": 2018, "title": "논문 영어 제목 전체"} — 프로그램이 학술 DB 에서 대조해 없으면 대본을 다시 쓰게 하고, 화면에 '출처: 저자 (연도)'가 작게 뜸. 모르면 쓰지 말고 비유로. 저자·연도·숫자를 지어내면 안 됨`;
+
+// 대본에 나온 논문이 실제로 있는지 OpenAlex 로 대조 (citation 장면 + 장면의 cite 칸). 못 찾은 것 목록을 돌려줌 (2026-10-31: 지어낸 논문이 영상에 나가지 않게)
+// 학술 DB 접속이 안 되면 확인을 못 한 것이지 가짜인 건 아니므로 빈 목록 + 경고
+export async function checkCitations(ep, log = console.log) {
+  const list = (ep.scenes || []).flatMap((s) => (s.type === "citation" ? [s] : s.cite ? [s.cite] : []));
+  if (!list.length) return [];
+  if (!(await getJson(`${API}/works?per-page=1`).catch(() => null))) {
+    log("⚠ 학술 DB 에 접속이 안 돼서 논문 대조를 못 했어요");
+    return [];
+  }
+  const bad = [];
+  for (const c of list) {
+    const cite = `${c.authors || "?"} ${c.year || ""}`.trim();
+    // 책은 판마다 연도가 달라서 연도 없이 한 번 더 찾는다 (±3년까지)
+    const w = (await findWork(c).catch(() => null)) || (c.year && (await findWork({ ...c, year: undefined }).catch(() => null)));
+    const yearOk = w && (!c.year || Math.abs(Number(w.publication_year) - Number(c.year)) <= 3);
+    const names = (w?.authorships || []).map((a) => a.author?.display_name || "").join(" ").toLowerCase();
+    const authorOk = w && (!names || (String(c.authors || "").toLowerCase().match(/[a-z]{3,}/g) || []).some((x) => names.includes(x)));
+    if (yearOk && authorOk) log(`✅ 논문 확인: ${cite}`);
+    else {
+      log(`❌ 논문 못 찾음: ${cite} "${c.title || ""}"`);
+      bad.push(`${cite} "${c.title || ""}"`);
+    }
+  }
+  return bad;
 }
 
 // 초록(OpenAlex 는 '단어 → 위치' 목록) → 문장

@@ -303,6 +303,16 @@ export const iconOf = (x) => (ICONS.includes(x?.icon) ? x.icon : EMOJI_ICON[x?.e
 
 // 스티커: 장면 칸 "stickers": [{"emoji": "✨", "at": "단어", "x": 0.82, "y": 0.18, "size": 90}] — 그 단어에서 통통 튀며 나타나 살짝 흔들림
 // x·y 는 화면 비율(0~1), size 는 1080 기준 px. 귀여운 스타일(skin cute)에서 반짝이·전구·말풍선 같은 포인트용
+// 연구를 말하는 장면 위쪽의 작은 출처 (cite: {authors, year, title}) — 쇼츠에 논문 카드까지 넣으면 흐름이 끊겨서 한 줄만 (2026-10-31)
+export function CiteTag({ cite }) {
+  const frame = useCurrentFrame();
+  return (
+    <div style={{ position: "absolute", top: 18, left: 60, right: 60, textAlign: "center", opacity: interpolate(frame, [4, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }), fontFamily: FONT, fontWeight: 800, fontSize: 32, color: "#fff", WebkitTextStroke: "6px #111", paintOrder: "stroke fill", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", zIndex: 5 }}>
+      출처: {cite.authors} ({cite.year})
+    </div>
+  );
+}
+
 export function Stickers({ scene }) {
   const frame = useCurrentFrame();
   const { fps, width } = useVideoConfig();
