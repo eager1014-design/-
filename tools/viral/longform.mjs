@@ -399,9 +399,9 @@ async function thumbs(p) {
   const list = p.plan.thumbnails.slice(0, 4);
   for (const [i, t] of list.entries()) {
     const img = path.join(dir, "img", `thumb${i + 1}.png`);
-    const dark = t.bg !== "white";
-    const wantArt = t.layout !== "text" && t.art;
     const isChar = t.type === "캐릭터";
+    const dark = t.bg !== "white" && !isChar; // 그림 바탕 — 캐릭터는 썸네일 바탕이 검어도 항상 흰 바탕에 그려 오림: 몸은 흰색, 선만 검은색 (2026-10-31 사장님)
+    const wantArt = t.layout !== "text" && t.art;
     const charRef = path.join(VIDEO, "public/characters/round/ref_sheet.png");
     const artPrompt = isChar
       ? `${t.art}. 기준 그림의 동그란 안경 막대 캐릭터의 얼굴 클로즈업(얼굴이 그림 높이의 80% 이상, 어깨 위만, 정사각형에 가까운 구도), 표정은 만화처럼 아주 과장되게(커진 눈·크게 벌린 입·땀방울·효과선), 소품은 얼굴 옆에 작게 하나, ${DOODLE}`
@@ -410,8 +410,8 @@ async function thumbs(p) {
     if (g.ok && fs.existsSync(img)) trimImage(img, dark);
     // 캐릭터는 흰 배경을 오려(cutout.mjs) 큰 글자를 비스듬히 앞에 겹쳐 올림 — 글자가 그림 속 물체처럼 (2026-10-30 사장님)
     const cut = img.replace(/\.png$/, ".cut.png");
-    if (isChar && g.ok && fs.existsSync(img) && !dark) spawnSync(NODE, ["scripts/cutout.mjs", img], { cwd: VIDEO });
-    const useCut = isChar && fs.existsSync(cut) && !dark;
+    if (isChar && g.ok && fs.existsSync(img)) spawnSync(NODE, ["scripts/cutout.mjs", img, "--close=24", "--cropped-bottom"], { cwd: VIDEO });
+    const useCut = isChar && fs.existsSync(cut);
     const props = { format: "long", style: "bold", bg: t.bg, lines: t.lines, layout: g.ok && fs.existsSync(img) ? (useCut ? "overlap" : isChar ? "side" : t.layout || "top") : "text", ...(g.ok && fs.existsSync(img) ? { image: path.relative(path.join(VIDEO, "public"), useCut ? cut : img) } : {}) };
     const pf = path.join(dir, `thumb${i + 1}.json`);
     fs.writeFileSync(pf, JSON.stringify({ thumbnail: props }, null, 2)); // 썸네일 틀은 upload.json 모양({ thumbnail: … })을 받는다

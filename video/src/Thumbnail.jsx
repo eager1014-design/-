@@ -52,10 +52,11 @@ function BoldThumb({ t, width, height }) {
   );
   // overlap: 글자가 물체처럼 — 오린 캐릭터 얼굴을 크게 두고, 큰 글자를 비스듬히 그 앞(어깨·손 쪽)에 겹쳐 올림. 글자를 뒤에 두면 앞 글자가 가려져 안 읽혀서 앞으로 (2026-10-30 사장님: "글자가 물체인 거지")
   if (layout === "overlap" && !tall) {
-    const big = Math.min(250, 860 / Math.max(longest, 2.5)) * u;
+    const big = Math.min(250, 860 / Math.max(longest, 2.5)) * u * (t.textScale || 1);
+    const edge = "#fff"; // 검은 바탕에서도 흰 스티커 테두리 — 검은 선이 바탕에 묻히지 않게 (2026-10-31)
     return (
       <AbsoluteFill style={{ background: dark ? "#050505" : "#FFFFFF", overflow: "hidden" }}>
-        <div style={{ position: "absolute", right: "3%", bottom: "8%", transform: "rotate(-6deg)", textAlign: "right", zIndex: 3 }}>
+        <div style={{ position: "absolute", right: "3%", ...(t.textPos === "top" ? { top: "4%" } : { bottom: "8%" }), transform: "rotate(-6deg)", textAlign: "right", zIndex: 3 }}>
           {lines.map((l, i) => (
             <div key={i} style={{ fontFamily: "BlackHanSans", fontSize: big * (i === lines.length - 1 ? 1.12 : 0.9), lineHeight: 1.0, letterSpacing: "-0.03em", whiteSpace: "nowrap",
               WebkitTextStroke: `${big * 0.1}px #0A0A0A`, paintOrder: "stroke fill", marginRight: i % 2 ? 0 : big * 0.35 }}>
@@ -64,7 +65,7 @@ function BoldThumb({ t, width, height }) {
           ))}
         </div>
         <Img src={staticFile(t.image)} style={{ position: "absolute", left: "2%", top: "-4%", height: "104%", zIndex: 2,
-          filter: `drop-shadow(${8 * u}px 0 0 ${dark ? "#050505" : "#fff"}) drop-shadow(-${8 * u}px 0 0 ${dark ? "#050505" : "#fff"}) drop-shadow(0 -${8 * u}px 0 ${dark ? "#050505" : "#fff"}) drop-shadow(${10 * u}px ${6 * u}px 0 rgba(0,0,0,0.18))` }} />
+          filter: `drop-shadow(${8 * u}px 0 0 ${edge}) drop-shadow(-${8 * u}px 0 0 ${edge}) drop-shadow(0 -${8 * u}px 0 ${edge}) drop-shadow(0 ${8 * u}px 0 ${edge})` }} />
       </AbsoluteFill>
     );
   }
