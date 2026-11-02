@@ -1,7 +1,7 @@
 // 모든 장면이 같이 쓰는 부품: 배경, 형광펜 글자, 자막, 챕터 진행 표시, 효과음, 등장 움직임.
 import React, { createContext, useContext } from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { COLORS, FONT } from "./theme.js";
+import { COLORS, FONT, SAFE } from "./theme.js";
 import { captionChunks, cueFrame, SFX_LEAD, voiceSafeVolume } from "./timing.js";
 
 // 장면을 그릴 크기를 영상 크기와 다르게 정할 때 (제목 띠 쇼츠: 세로 영상 가운데 칸에 장면을 가로 배치로 그림).
@@ -123,6 +123,9 @@ export function Rich({ text, at = 0, color = COLORS.amber, style }) {
   );
 }
 
+// 쇼츠 발치: 자막 아래 끝이 안전선(SAFE.bottom)에 닿는 여백 (2026-11-02 사장님: 댓글이 카드를 가림)
+const FOOT_BOTTOM = 1920 - SAFE.bottom;
+
 // 하단 자막. 내레이션을 조각내서 말하는 속도에 맞춰 보여준다.
 export function Captions({ scene }) {
   const frame = useCurrentFrame();
@@ -132,7 +135,9 @@ export function Captions({ scene }) {
   const u = fr ? 1.15 / fr.scale : unit;
   const short = useIsShort() || !!fr;
   const punchy = usePunchy();
-  const bottomPx = useContext(CaptionBottomContext);
+  const stageBottom = useContext(CaptionBottomContext);
+  // 댓글이 뜨는 장면은 자막을 안전선까지 내린다 — 댓글은 그 바로 아래 (도중에 자막이 튀지 않게 장면 내내)
+  const bottomPx = stageBottom != null && scene.comments?.length ? FOOT_BOTTOM : stageBottom;
   const band = useContext(CaptionBandContext);
   const chunks = captionChunks(scene, band ? band.chunk : 15); // 한 줄 최대 15자 (사운드·자막 원칙 2026-10-24)
   const now = chunks.find((c) => frame >= c.from && frame < c.to);
@@ -413,11 +418,15 @@ export function PunchSfx({ scene }) {
 // 댓글 말풍선 (2026-10-28 업그레이드): 유튜브 댓글 모양 — 기본 프로필 동그라미, "@예시 · 방금", 좋아요·답글 줄,
 // 조금 뒤 채널 주인 하트(내 캐릭터 얼굴 + 빨간 하트)가 톡 붙는다. 이모지는 쓰지 않음.
 // 장면 칸 "comments": [{ "text": "이거 완전 저예요", "at": "단어", "real": true, "name": "닉네임" }]
-// 가짜 댓글 금지(표시광고법) → real 이 아니면 이름 자리에 "예시". 한 번에 하나, 글씨와 캐릭터 머리 사이(화면 y 약 1020~1240)에 뜬다 (세로 영상만).
+// 가짜 댓글 금지(표시광고법) → real 이 아니면 이름 자리에 "예시". 한 번에 하나 (세로 영상만).
 // framed: 위 제목 띠가 있는 쇼츠면 무대가 y 500 부터라 그만큼 뺀 자리
-export function CommentPop({ scene, framed }) {
+// 진행자 쇼츠 무대는 발치에 뜬다: 안전선 바로 아래(y 1411~), 카드·얼굴을 안 가리는 대신 앱 글씨와 일부 겹칠 수 있음 (사장님 선택 2026-11-02)
+// castPos: 캐릭터가 왼쪽·오른쪽·구석이면 말풍선을 좁혀 반대쪽으로, 가운데면 얼굴 아래(y 1625~)로 비킨다
+export function CommentPop({ scene, framed, castPos }) {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
+  const foot = useContext(CaptionBottomContext) != null;
+  const aside = foot && ["left", "right", "corner"].includes(castPos);
   if (!scene.comments?.length || width > height) return null;
   const list = scene.comments.map((c, i) => ({ ...c, from: (c.at && cueFrame(scene, c.at)) ?? 10 + i * 40 }));
   const c = list.filter((x) => frame >= x.from).at(-1);
@@ -435,8 +444,9 @@ export function CommentPop({ scene, framed }) {
         </Sequence>
       ))}
       <div key={c.text} style={{
-        position: "absolute", left: "50%", top: framed ? 520 : 1020, width: 880, zIndex: 5,
-        opacity: pop, transform: `translateX(-50%) translateY(${(1 - pop) * 50}px) scale(${0.9 + 0.1 * pop})`,
+        position: "absolute", zIndex: 5, top: foot ? (castPos === "center" ? 1625 : SAFE.bottom + 12) - 500 : framed ? 520 : 1020,
+        ...(aside ? { width: 640, ...(castPos === "left" ? { right: 1080 - SAFE.right } : { left: SAFE.left }) } : { left: 100, width: 880 }),
+        opacity: pop, transform: `translateY(${(1 - pop) * 50}px) scale(${0.9 + 0.1 * pop})`,
         display: "flex", gap: 20, alignItems: "flex-start",
         background: "rgba(255,255,255,0.98)", borderRadius: 30, padding: "22px 28px", boxShadow: "0 12px 34px rgba(0,0,0,0.28)", fontFamily: FONT,
       }}>
