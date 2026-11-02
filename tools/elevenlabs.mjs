@@ -81,7 +81,8 @@ if (cmd === "narrate") {
   if (!voiceId) die('목소리가 없습니다. episode.json 에 "voice": {"provider": "elevenlabs", "id": "…"} 를 넣거나 --voice=<ID> (ID는 node tools/elevenlabs.mjs voices)');
   const model = flags.model || episode.voice?.model || "eleven_v3";
   // 문단 하나 = 장면 하나. 문단 사이 쉼이 장면 경계가 된다
-  const text = episode.scenes.map((s) => s.narration.trim()).join("\n\n");
+  const { voiceScript } = await import("./voice_script.mjs"); // 말투 태그 포함 (태그 없는 대본은 예전과 똑같음)
+  const text = voiceScript(episode.scenes);
   if (text.length > 5000) die(`대본이 ${text.length}자입니다. 한 번에 5,000자까지라서 나눠서 녹음해야 합니다.`);
   const out = path.join(path.dirname(file), "voice_full.mp3");
   const hash = (await import("node:crypto")).createHash("sha1").update(JSON.stringify([text, voiceId, model])).digest("hex").slice(0, 12);

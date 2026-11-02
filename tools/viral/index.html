@@ -560,7 +560,7 @@ async function loadLong() {
 function lfNext(p, btn) {
   const short = p.format === "short";
   if (p.busy) return `<span class="note">⏳ ${esc(p.busy)} — 끝나면 여기에 다음 할 일이 떠요.</span>`;
-  if (p.ask === "eleven" && p.episode) return `<button class="btn" onclick="lfEleven(${p.episode.scenes.reduce((n, s) => n + (s.narration || "").length, 0)}, this)">🎙 일레븐랩스로 녹음하기 (크레딧)</button>`;
+  if (p.ask === "eleven" && p.episode) return `<button class="btn" onclick="lfEleven(${(p.voiceParts || []).join("").length || p.episode.scenes.reduce((n, s) => n + (s.narration || "").length, 0)}, this)">🎙 일레븐랩스로 녹음하기 (크레딧)</button>`;
   if (p.ask === "publish" && p.final) return `<button class="btn" onclick="lfPublish(this)">⬆️ 유튜브에 비공개로 올리기</button>`;
   if (p.ask === "comment" && p.youtubeUrl && p.youtube?.pinned) return `<button class="btn" onclick="lfComment(this)">📌 고정 댓글 달기</button>`;
   if (!p.plan) return btn("plan", "다음: 기획안 만들기", true);
@@ -585,12 +585,12 @@ function renderLong(p) {
     <ol>${p.plan.chapters.map((c) => `<li><b>${esc(c.title)}</b> — ${c.points.map(esc).join(" · ")}</li>`).join("")}</ol>
     ${p.plan.sell ? `<details open><summary>🛒 이 영상이 파는 것</summary><div class="readout" style="font-size:14px">${[["누구의 어떤 순간", "who"], ["진짜 원하는 것", "need"], ["주 감정", "emotion"], ["보고 나서 남는 것", "value"], ["썸네일·제목의 약속", "promise"], ["보내고 싶은 사람", "share"], ["운결로 넘어가는 문장", "bridge"], ["안 될 이유", "risk"]].filter(([, k]) => p.plan.sell[k]).map(([l, k]) => `<b>${l}</b> ${esc(p.plan.sell[k])}`).join("\n")}</div></details>` : ""}</div>` : "";
   const thumbs = p.thumbs?.length ? `<div class="panel"><b>썸네일 시안</b><div class="thumbs" style="margin-top:8px">${p.thumbs.map((t, i) => `<div><img src="/upload?p=${encodeURIComponent(t)}"><div class="note">${i + 1}번</div></div>`).join("")}</div></div>` : "";
-  const read = p.episode ? `<div class="panel"><b>🎙 녹음용 대본</b> <span class="note">빈 줄마다 장면이 바뀌어요. 이대로 읽어서 mp3 한 파일로 올려주세요.</span>
-    <div class="readout" id="lfRead">${esc(p.episode.scenes.map((s) => s.narration).join("\n\n"))}</div>
-    <button class="btn sm ghost" style="margin-top:8px" onclick="navigator.clipboard.writeText($('#lfRead').textContent).then(()=>say('대본을 복사했어요.'))">대본 복사</button>
+  const read = p.episode ? `<div class="panel"><b>🎙 녹음용 대본</b> <span class="note">일레븐랩스에 그대로 붙여넣으세요 (말투 태그 포함). ${(p.voiceParts || []).length > 1 ? `5,000자가 넘어 ${p.voiceParts.length}개로 나눴어요. 차례대로 녹음해 mp3 한 파일로 합쳐 올려주세요.` : "녹음한 mp3 한 파일을 올려주세요."}</span>
+    ${(p.voiceParts?.length ? p.voiceParts : [p.episode.scenes.map((s) => s.narration).join("\n\n")]).map((t, i, all) => `<div class="readout" id="lfRead${i}" style="margin-top:8px">${esc(t)}</div>
+    <button class="btn sm ghost" style="margin-top:8px" onclick="navigator.clipboard.writeText($('#lfRead${i}').textContent).then(()=>say('대본${all.length > 1 ? ` ${i + 1}번` : ""}을 복사했어요.'))">대본${all.length > 1 ? ` ${i + 1}번` : ""} 복사 (${t.length.toLocaleString()}자)</button>`).join("")}
     <div style="margin-top:12px"><label>녹음 파일 (mp3)</label><input id="lfVoice" type="file" accept="audio/*"></div>
     <button class="btn" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfVoiceSend(this)">녹음 올리고 완성본 만들기</button>
-    <button class="btn ghost" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfEleven(${p.episode.scenes.reduce((n, s) => n + (s.narration || "").length, 0)}, this)">또는 일레븐랩스 천성준 목소리로</button></div>` : "";
+    <button class="btn ghost" style="margin-top:8px" ${busy ? "disabled" : ""} onclick="lfEleven(${(p.voiceParts || []).join("").length || p.episode.scenes.reduce((n, s) => n + (s.narration || "").length, 0)}, this)">또는 일레븐랩스 천성준 목소리로</button></div>` : "";
   const yt = p.youtube ? `<div class="panel"><b>업로드 문구</b>
     <p>${p.youtube.titles.map((t, i) => `<label style="display:block;margin:4px 0;color:var(--ink);font-size:15px"><input type="radio" name="lfTitle" value="${i}" ${i === (p.pick?.title || 0) ? "checked" : ""} style="width:auto"> ${esc(t)} <button type="button" class="btn sm ghost" onclick="navigator.clipboard.writeText(${esc(JSON.stringify(t))}).then(()=>say('제목 ${i + 1}을 복사했어요.'))">복사</button></label>`).join("")}</p>
     ${!short && p.thumbs?.length ? `<p class="note" style="margin-bottom:4px">올릴 썸네일</p><div style="display:flex;gap:8px;flex-wrap:wrap">${p.thumbs.map((t, i) => `<label style="width:150px"><input type="radio" name="lfThumb" value="${i}" ${i === (p.pick?.thumb || 0) ? "checked" : ""} style="width:auto"> ${i + 1}번<img src="/upload?p=${encodeURIComponent(t)}" style="width:100%;border-radius:8px"></label>`).join("")}</div>` : ""}

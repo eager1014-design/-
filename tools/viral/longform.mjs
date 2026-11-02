@@ -13,6 +13,7 @@ import { ROOT, DATA_DIR, UPLOAD_DIR, GEMINI_MODEL, load, save, saveUploads, imag
 import { gemini, watchVideo } from "../ai-bridge/gemini.mjs";
 import { SOUND_RULES, pickSections } from "./sound_rules.mjs";
 import { fillPhotos, creditLines } from "../commons.mjs";
+import { VOICE_RULE, stripVoiceTags, voiceParts, voiceScript } from "../voice_script.mjs";
 import { CITE_RULE, checkCitations, fillPaperPages, paperCreditLines } from "../paper_page.mjs";
 import { ensureSajuOutro, OUTRO_ASK, PINNED_ASK, withSaju } from "../saju_pin.mjs";
 import { BRIDGE_RULE, FORECAST_ASK, SELL_ASK, SELL_RULES } from "../sell_plan.mjs";
@@ -455,6 +456,7 @@ async function script(p) {
 
 기획안대로 ${short ? "쇼츠" : "롱폼"} 대본을 episode.json 으로 써. 사장님 목소리로 읽을 문장이니 입말로.
 ${SCENE_GUIDE}
+${VOICE_RULE}
 ${SOUND_RULES(short ? "쇼츠는 2구간" : "롱폼은 4구간: 오프닝·훅 tense → 과거 고백 sad → 깨달음·전환 playful → 다짐·마무리 hopeful (내용에 맞게 조정)")}${short ? "" : "\n   롱폼의 장면 전환 효과음은 swipe_card 를 기본으로, 가끔 다른 전환 소리를 섞기 (2026-10-30 사장님)"}
 ${p.plan?.sell ? `[이 영상이 파는 것] ${JSON.stringify(p.plan.sell)}\n썸네일·제목의 약속(promise)을 첫 15초 안에 지키고, 주 감정(emotion)을 끝까지 유지하고, 보고 나서 남는 것(value)을 한 문장으로 꼭 말할 것.\n` : ""}${BRIDGE_RULE}
 ${OUTRO_ASK}
@@ -466,6 +468,7 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
       ? { ...r.episode, format: "short", style: "punchy", pace: { speed: 1.3, trim: true }, presenter: true, skin, frame: { ...(r.episode.frame || {}), brand: p.channel.split(" (")[0] } } // 위 고정 제목 + 아래 한 무대 (나누지 않음)
       : { ...r.episode, format: "long", style: "calm", presenter: true, captions: true, skin, pace: { speed: 1.3, trim: true } };
     ensureSajuOutro(ep); // 모든 영상 마지막에 사주 안내 한 문장 (사장님 2026-10-27)
+    for (const s of ep.scenes || []) s.narration = stripVoiceTags(s.narration); // 태그가 자막에 나오지 않게
     const badPapers = await checkCitations(ep, (m) => log(p, m));
     if (badPapers.length && attempt < 3) {
       feedback = `이 논문은 학술 DB(OpenAlex)에서 못 찾았어 — 지어낸 것일 수 있으니 실제로 확인되는 논문으로 바꾸거나 그 내용을 빼: ${badPapers.join(" / ")}`;
@@ -479,6 +482,7 @@ JSON 하나만: {"reply": "사장님께 두세 줄 (어떻게 썼는지, 고민�
     const check = run(p, `대본 검사 (${attempt}번째)`, NODE, ["scripts/check_episode.mjs", path.relative(VIDEO, epFile)], { cwd: VIDEO, allowFail: true });
     if (check.ok) {
       p.episode = ep;
+      p.voiceParts = voiceParts(ep.scenes);
       p.photoCredits = credits;
       p.paperCredits = paperCredits;
       say(p, badPapers.length ? `${r.reply}\n\n⚠ 학술 DB 에서 못 찾은 논문이 남아 있어요. 올리기 전에 확인이 필요해요: ${badPapers.join(" / ")}` : r.reply);
@@ -545,7 +549,7 @@ async function eleven(p) {
   const ep = JSON.parse(fs.readFileSync(epFile, "utf8"));
   ep.voice = VOICE;
   fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
-  const chars = ep.scenes.reduce((n, s) => n + (s.narration || "").length, 0);
+  const chars = voiceScript(ep.scenes).length;
   run(p, `🎙 일레븐랩스 천성준 목소리 녹음 (${chars}자 ≈ 크레딧 ${chars})`, NODE, ["tools/elevenlabs.mjs", "narrate", path.relative(ROOT, epFile), "--yes"], { timeout: 900_000 });
   finish(p, epFile);
 }
