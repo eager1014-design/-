@@ -151,7 +151,7 @@ function FrameShell({ frame, presenter, children }) {
         <div style={{ position: "absolute", top: boxTop, left: 0, width: SIZES.short.width, height: STAGE_H, overflow: "hidden" }}>
           <SizeContext.Provider value={{ width: SIZES.short.width, height: STAGE_H }}>
             {/* frame.captionLift: 자막 높이(무대 아래에서의 비율). 롱폼에서 잘라 온 쇼츠는 장면 그래픽이 커서 아래로(0.1) — 2026-10-27 자막이 비교 카드를 가림.
-                기본 0.48 = 캐릭터 머리 바로 위(댓글 말풍선 자리) — 2026-10-28 0.605 일 때 '3가지' 숫자 위에 자막이 겹침 */}
+                기본 0.48 = 캐릭터 머리 바로 위 — 2026-10-28 0.605 일 때 '3가지' 숫자 위에 자막이 겹침 */}
             <CaptionBottomContext.Provider value={Math.round(STAGE_H * (frame.captionLift ?? 0.48))}>{children}</CaptionBottomContext.Provider>
           </SizeContext.Provider>
         </div>
@@ -287,7 +287,7 @@ export function Episode({ scenes = [], chapters = [], steps, pace, style = "calm
                 {it.scene.pose && <SideCharacter src={it.scene.pose} side={it.scene.poseSide} at={6} />}
                 {it.scene.stickers && <Stickers scene={it.scene} />}
                 {it.scene.props && <Props scene={it.scene} />}
-                {it.scene.comments && <CommentPop scene={it.scene} framed={!!frame} />}
+                {it.scene.comments && <CommentPop scene={it.scene} framed={!!frame} castPos={castTimeline(it.scene).at(-1)?.pos ?? it.castStart} />}
                 {it.scene.cite && <CiteTag cite={it.scene.cite} />}
                 {it.scene.punch && !BUSY_CENTER.has(it.scene.type) && <Punch scene={it.scene} />}
                 {it.scene.punch && !BUSY_CENTER.has(it.scene.type) && <PunchSfx scene={it.scene} />}
