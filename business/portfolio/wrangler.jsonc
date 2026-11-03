@@ -1,0 +1,7 @@
+{
+  // 포트폴리오 사이트 (Cloudflare Workers, 정적 파일만)
+  // 원본 수정 후: python3 tools/portfolio_site.py → 커밋 → git push public main
+  "name": "cheon-workflow",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./site" }
+}

@@ -1,0 +1,562 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>천성준 워크플로우 포트폴리오</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&family=Cormorant+Garamond:wght@500&display=swap">
+<style>
+  /* Layout: 작업 지시서처럼 — 위에 한 줄 선언, 아래로 사례마다 '손으로 할 때 → 자동 흐름 → 결과' 공정 띠 */
+  :root {
+    --bg: #F4F6F9;
+    --paper: #FFFFFF;
+    --ink: #14233A;
+    --muted: #56657A;
+    --line: #D6DDE7;
+    --accent: #2160D6;
+    --accent-soft: #E8F0FD;
+    --mark: #EAD9A2;
+    --manual: #8A6A3B;
+    --display: "Black Han Sans", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0D1522; --paper: #142033; --ink: #E6ECF4; --muted: #9AA8BB; --line: #253349;
+      --accent: #8DB2EA; --accent-soft: #1A2D49; --mark: #6E5A28; --manual: #CFAE78; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0D1522; --paper: #142033; --ink: #E6ECF4; --muted: #9AA8BB; --line: #253349;
+    --accent: #8DB2EA; --accent-soft: #1A2D49; --mark: #6E5A28; --manual: #CFAE78; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.65; }
+  .wrap { max-width: 980px; margin: 0 auto; padding-block: 48px 72px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--accent); text-transform: uppercase; }
+
+  header { display: grid; gap: 20px; padding-bottom: 36px; border-bottom: 2px solid var(--ink); }
+  .who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+  .who strong { font-size: 18px; }
+  .who span { color: var(--muted); }
+  .who .en { font-family: "Cormorant Garamond", Georgia, serif; font-size: 20px; color: var(--ink); letter-spacing: .02em; }
+  h1 { font-family: var(--display); font-weight: 400; font-size: clamp(34px, 6.4vw, 60px); line-height: 1.15; letter-spacing: -0.01em; }
+  h1 em { font-style: normal; background: linear-gradient(transparent 58%, var(--mark) 58%); }
+  h2 em { font-style: normal; background: linear-gradient(transparent 58%, var(--mark) 58%); }
+  header .cta { justify-self: start; }
+  .hero { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 12px; }
+  .mascot { width: clamp(84px, 16vw, 150px); height: auto; display: block; }
+  .mascot.small { width: clamp(64px, 11vw, 96px); }
+  footer .hero { align-items: center; }
+  @media (max-width: 560px) {
+    .hero { grid-template-columns: 1fr; gap: 0; }
+    .hero .mascot { order: -1; justify-self: end; width: 84px; margin-bottom: -18px; }
+    .hero .mascot.small { width: 64px; }
+  }
+  .lead { max-width: 62ch; color: var(--muted); font-size: 17px; margin: 0; }
+  .promo { margin: 0; display: grid; gap: 8px; }
+  .promo video { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: 14px; background: var(--ink); border: 1px solid var(--line); }
+  .promo figcaption { color: var(--muted); font-size: 13px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fact { font-family: var(--mono); font-size: 13px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); }
+
+  section { margin-top: 56px; }
+  .sec-head { display: grid; gap: 6px; margin-bottom: 22px; }
+  h2 { font-family: var(--display); font-weight: 400; font-size: clamp(26px, 4vw, 34px); }
+  .sec-head p { margin: 0; color: var(--muted); max-width: 62ch; }
+
+  .case { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 26px clamp(18px, 3vw, 30px); display: grid; gap: 18px; }
+  .cases { display: grid; gap: 18px; }
+  .case-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; }
+  .case h3 { font-size: 22px; font-weight: 700; }
+  .status { font-family: var(--mono); font-size: 12px; color: var(--accent); background: var(--accent-soft); padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
+  .case > p { margin: 0; color: var(--muted); max-width: 70ch; }
+  .rows { display: grid; gap: 12px; }
+  .row { display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: start; }
+  .row-label { font-family: var(--mono); font-size: 12px; padding-top: 7px; color: var(--muted); }
+  .row-label.manual { color: var(--manual); }
+  .row-label.auto { color: var(--accent); }
+  .flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+  .step { font-size: 14px; padding: 6px 11px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); }
+  .flow.auto .step { border-color: transparent; background: var(--accent-soft); }
+  .flow.auto .step.me { background: var(--mark); }
+  .arrow { color: var(--muted); font-size: 13px; }
+  .result { border-top: 1px dashed var(--line); padding-top: 14px; display: flex; flex-wrap: wrap; gap: 8px 22px; }
+  .result div { min-width: 0; }
+  .result b { font-family: var(--mono); font-weight: 500; font-size: 15px; }
+  .result small { display: block; color: var(--muted); font-size: 13px; }
+  .tools { display: flex; flex-wrap: wrap; gap: 6px; }
+  .demo-link { font-weight: 700; color: var(--accent); text-decoration: none; }
+  .demo-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tool { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+
+  .diag { margin-top: 28px; }
+  .diag-q { font-family: var(--body); font-weight: 700; font-size: 19px; margin: 26px 0 12px; }
+  .inds { display: flex; flex-wrap: wrap; gap: 8px; }
+  .inds button { font: inherit; font-size: 15px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 9px 16px; cursor: pointer; }
+  .inds button[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); font-weight: 700; }
+  .pains { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .pain { text-align: left; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 14px 48px; cursor: pointer; position: relative; display: grid; gap: 4px; min-width: 0; }
+  .pain::before { content: ""; position: absolute; left: 16px; top: 16px; width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--line); }
+  .pain[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .pain[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); }
+  .pain[aria-pressed="true"]::after { content: "✓"; position: absolute; left: 20px; top: 13px; color: var(--paper); font-weight: 700; font-size: 15px; }
+  .pain b { font-size: 16px; }
+  .pain span { color: var(--muted); font-size: 14px; }
+  .pain span::before { content: "→ "; color: var(--accent); }
+  .inds button:focus-visible, .pain:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .sendbar { position: sticky; bottom: max(12px, env(safe-area-inset-bottom, 0px)); margin-top: 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; background: var(--bg); padding-block: 10px; }
+  .sendnote { color: var(--muted); font-size: 13px; }
+  .cta { display: inline-block; font-weight: 700; font-size: 18px; color: var(--paper); background: var(--accent); text-decoration: none; padding: 15px 22px; border-radius: 12px; }
+  .cta:focus-visible { outline: 3px solid var(--mark); outline-offset: 2px; }
+  .menu-h { font-size: 18px; font-weight: 700; margin: 30px 0 12px; }
+  ol.top5 { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; counter-reset: t; }
+  ol.top5 li { counter-increment: t; display: grid; grid-template-columns: 40px 1fr; gap: 2px 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  ol.top5 li::before { content: counter(t); grid-row: span 2; font-family: var(--display); font-size: 28px; line-height: 1; color: var(--accent); }
+  ol.top5 b { font-size: 17px; }
+  ol.top5 span { color: var(--muted); font-size: 14px; min-width: 0; }
+  .menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px 20px; }
+  .menu div { border-top: 2px solid var(--ink); padding-top: 10px; min-width: 0; }
+  .menu b { font-size: 16px; }
+  .menu p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  .menu-note { color: var(--muted); font-size: 13px; margin: 16px 0 0; max-width: 70ch; }
+  .offer { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .offer div { border-top: 3px solid var(--ink); padding-top: 12px; }
+  .offer b { display: block; font-size: 17px; margin-bottom: 4px; }
+  .offer span { color: var(--muted); font-size: 14px; }
+
+  ol.how { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; counter-reset: s; }
+  ol.how li { counter-increment: s; display: grid; grid-template-columns: 52px 1fr; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  ol.how li::before { content: counter(s); font-family: var(--display); font-size: 30px; line-height: 1; color: var(--accent); }
+  ol.how b { display: block; font-size: 17px; }
+  ol.how span { color: var(--muted); font-size: 15px; }
+
+  footer { margin-top: 56px; padding-top: 22px; border-top: 2px solid var(--ink); display: grid; gap: 10px; }
+  .contact { margin: 6px 0 0; display: grid; gap: 8px; max-width: 520px; }
+  .contact div { display: grid; grid-template-columns: 96px 1fr auto; gap: 12px; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .contact dt { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .contact dd { margin: 0; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; user-select: all; }
+  .contact button { font: inherit; font-size: 13px; color: var(--ink); background: var(--accent-soft); border: 0; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  .contact button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  footer p { margin: 0; color: var(--muted); font-size: 14px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+
+  @media (max-width: 560px) {
+    .row { grid-template-columns: 1fr; gap: 4px; }
+    .row-label { padding-top: 0; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .case { transition: border-color .2s; }
+    .case:hover { border-color: var(--accent); }
+  }
+  /* 처음 온 손님 안내 (코치마크) */
+  .coach { position: fixed; inset: 0; z-index: 100; }
+  .coach-hole { position: fixed; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(10, 18, 30, .6); outline: 2px solid var(--accent); transition: all .25s; pointer-events: none; }
+  .coach-tip { position: fixed; width: min(320px, calc(100vw - 24px)); background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: 0 12px 32px rgba(0,0,0,.2); font-family: var(--body); }
+  .coach-tip small { color: var(--muted); }
+  .coach-tip b { display: block; font-size: 17px; margin-top: 2px; }
+  .coach-tip p { margin: 6px 0 12px; line-height: 1.6; font-size: 15px; }
+  .coach-row { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+  .coach-row button { font: 600 14px var(--body); border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: none; color: var(--muted); }
+  .coach-row [data-next] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .coach-row [data-next] { color: #0D1522; } }
+  :root[data-theme="dark"] .coach-row [data-next] { color: #0D1522; }
+  @media (prefers-reduced-motion: reduce) { .coach-hole { transition: none; } }
+  .onb { position: fixed; inset: 0; z-index: 110; background: rgba(10, 18, 30, .55); display: grid; place-items: center; padding: 16px; }
+  .onb-card { width: min(400px, 100%); background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 16px; padding: 24px 20px 20px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,.25); }
+  .onb-card img { width: 110px; height: auto; margin: 0 auto 8px; display: block; }
+  .onb-card h2 { font: 400 24px/1.3 var(--display); }
+  .onb-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.65; }
+  .onb-dots { display: flex; justify-content: center; gap: 6px; margin: 18px 0; }
+  .onb-dots i { width: 7px; height: 7px; border-radius: 4px; background: var(--line); }
+  .onb-dots i.on { width: 20px; background: var(--accent); }
+  .onb-card .coach-row { justify-content: center; }
+  .onb-step { animation: onbIn .35s ease-out both; }
+  @keyframes onbIn { from { opacity: 0; transform: translateY(8px); } }
+  @media (prefers-reduced-motion: reduce) { .onb-step { animation: none; } }
+  .coach-again { position: fixed; right: 16px; bottom: 16px; z-index: 50; font: 600 13px var(--body); padding: 8px 14px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="who"><strong>천성준</strong><span class="en">William Cheon</span><span>워크플로우 디자이너 · 개발자</span></div>
+    <div class="hero">
+      <h1>사장님 없으면<br><em>가게가 안 돌아가죠?</em></h1>
+      <img class="mascot" src="assets/4c368137bd878368ab7a76abfb06ebee.png" alt="">
+    </div>
+    <p class="lead">사장님이 꼭 직접 안 해도 되는 일을 찾아 줄여 드립니다. 어떤 가게인지 고르고, “이거 내 얘기다” 싶은 걸 눌러주세요.</p>
+    <figure class="promo">
+      <video controls playsinline preload="metadata" poster="assets/d059c6f7533bf55075e4d0af5c1fe944.jpg" src="assets/30cd3e67471670c6b33c37e650e52c35.mp4"></video>
+      <figcaption>1분 17초 · 직접 만들어 지금도 쓰고 있는 자동화 5가지 + 병원용 자동화 (지출 화면의 금액, '7시간 → 7분', 병원 화면은 예시)</figcaption>
+    </figure>
+  </header>
+
+  <section class="diag" id="diag">
+    <div class="hero"><h2 class="diag-q">어떤 가게세요?</h2><img class="mascot small" src="assets/9f3764c1ae1684298da075e9a1df8311.png" alt=""></div>
+    <div class="inds" role="radiogroup" aria-label="가게 종류"></div>
+    <h2 class="diag-q">“이거 내 얘기다” 싶은 걸 모두 눌러주세요</h2>
+    <div class="pains"></div>
+    <p class="menu-note">여기 있는 건 모두 직접 만들어 드릴 수 있는 일입니다. 리뷰처럼 외부 사이트에 올리는 일은 답글 초안까지 만들어 드리고, 올리기는 사장님이 확인 후 붙여넣습니다.</p>
+    <div class="sendbar">
+      <a class="cta" id="send" href="#" target="_blank" rel="noopener">골라주신 일 보내기 →</a>
+      <span class="sendnote" id="sendnote">고른 게 없어도 눌러서 직접 적으실 수 있어요</span>
+    </div>
+  </section>
+
+  <section class="about">
+    <div class="sec-head">
+      <span class="eyebrow">About</span>
+      <h2>매일 손으로 하던 일을, <em>알아서 돌아가는 시스템</em>으로.</h2>
+      <p>사업을 직접 손으로 돌려 본 개발자입니다. 영수증 정리, 홍보 글, 신청 받고 결과물 보내기까지 매일 반복하던 일을 AI와 함께 하나씩 자동화했고, 지금도 매일 돌아가고 있습니다.</p>
+    </div>
+    <div class="facts">
+      <span class="fact">직접 만든 자동화 7가지</span><span class="fact">병원 시연 2가지</span>
+      <span class="fact">매일 05:00 · 07:30 자동 실행</span>
+      <span class="fact">폰으로 확인하고 버튼으로 승인</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Portfolio</span>
+      <h2>지금까지 자동화한 일</h2>
+      <p>사례마다 손으로 하던 순서와 지금 자동으로 돌아가는 순서를 나란히 적었습니다. 노란 칸은 사람이 확인하는 단계입니다.</p>
+      <div class="legend"><span><i style="background:var(--bg);border:1px solid var(--line)"></i>손으로 하던 일</span><span><i style="background:var(--accent-soft)"></i>자동</span><span><i style="background:var(--mark)"></i>사람이 확인</span></div>
+    </div>
+
+    <div class="cases">
+      <article class="case">
+        <div class="case-top"><h3>사주 상담 서비스 ‘운결’</h3><span class="status">운영 중인 웹사이트</span></div>
+        <p>신청부터 결과물 발송까지 한 사람이 다 하던 상담 업무를 웹사이트 하나로 묶었습니다.</p>
+        <div class="rows">
+          <div class="row"><span class="row-label manual">손으로</span>
+            <div class="flow"><span class="step">메시지로 신청 받기</span><span class="arrow">→</span><span class="step">입금 확인</span><span class="arrow">→</span><span class="step">풀이 직접 쓰기</span><span class="arrow">→</span><span class="step">문서 만들기</span><span class="arrow">→</span><span class="step">메일 보내기</span></div></div>
+          <div class="row"><span class="row-label auto">지금</span>
+            <div class="flow auto"><span class="step">웹 신청서</span><span class="arrow">→</span><span class="step">입금 체크</span><span class="arrow">→</span><span class="step">AI 풀이 초안</span><span class="arrow">→</span><span class="step me">검토·수정</span><span class="arrow">→</span><span class="step">PDF 자동 생성</span><span class="arrow">→</span><span class="step">메일 자동 발송</span></div></div>
+        </div>
+        <div class="result">
+          <div><b>10장 · 약 1만 7천 자</b><small>신년운세 풀이 초안이 1분 안팎</small></div>
+          <div><b>무료 맛보기 → 친구 추천</b><small>추천 링크로 온 손님을 자동으로 집계</small></div>
+        </div>
+        <div class="tools"><span class="tool">웹사이트</span><span class="tool">챗GPT</span><span class="tool">제미나이</span><span class="tool">PDF</span><span class="tool">Gmail</span></div>
+      </article>
+
+      <article class="case">
+        <div class="case-top"><h3>사업 지출 관리</h3><span class="status">매일 자동</span></div>
+        <p>AI 구독료가 한 달에 얼마 나가는지도 모르던 상태에서 시작했습니다. 메일함에 쌓인 영수증을 AI가 읽어 시트에 정리합니다.</p>
+        <div class="rows">
+          <div class="row"><span class="row-label manual">손으로</span>
+            <div class="flow"><span class="step">메일함 영수증 찾기</span><span class="arrow">→</span><span class="step">금액·날짜 옮겨 적기</span><span class="arrow">→</span><span class="step">항목 나누기</span><span class="arrow">→</span><span class="step">엑셀 합계</span></div></div>
+          <div class="row"><span class="row-label auto">지금</span>
+            <div class="flow auto"><span class="step">Gmail 영수증 자동 수집</span><span class="arrow">→</span><span class="step">AI가 읽고 분류</span><span class="arrow">→</span><span class="step">구글 시트 기록</span><span class="arrow">→</span><span class="step me">폰 앱으로 사진 영수증 추가</span></div></div>
+        </div>
+        <div class="result">
+          <div><b>메일 + 사진 영수증</b><small>한 시트에 항목별로 모임</small></div>
+          <div><b>고정지출 · 차량·교통</b><small>사장이 정한 분류 규칙대로 자동 분류</small></div>
+        </div>
+        <div class="tools"><span class="tool">Gmail</span><span class="tool">구글 시트</span><span class="tool">폰 웹앱</span><span class="tool">제미나이</span></div>
+      </article>
+
+      <article class="case">
+        <div class="case-top"><h3>스레드 홍보 글 자동화</h3><span class="status">매일 07:30</span></div>
+        <p>매일 무엇을 올릴지 고민하던 홍보 글을, 아침마다 후보로 받아 고르기만 하게 바꿨습니다.</p>
+        <div class="rows">
+          <div class="row"><span class="row-label manual">손으로</span>
+            <div class="flow"><span class="step">주제 고민</span><span class="arrow">→</span><span class="step">글쓰기</span><span class="arrow">→</span><span class="step">올리기</span><span class="arrow">→</span><span class="step">반응 기억하기</span></div></div>
+          <div class="row"><span class="row-label auto">지금</span>
+            <div class="flow auto"><span class="step">반응 좋은 글 분석</span><span class="arrow">→</span><span class="step">글 후보 5개 작성</span><span class="arrow">→</span><span class="step me">고르고 고치기</span><span class="arrow">→</span><span class="step">예약 게시</span><span class="arrow">→</span><span class="step">채널별 유입 집계</span></div></div>
+        </div>
+        <div class="result">
+          <div><b>매일 아침 후보 5개</b><small>고르기만 하면 정한 시간에 올라감</small></div>
+        </div>
+        <div class="tools"><span class="tool">스레드</span><span class="tool">Claude</span><span class="tool">제미나이</span></div>
+      </article>
+
+      <article class="case">
+        <div class="case-top"><h3>매일 쇼츠 공장</h3><span class="status">매일 05:00</span></div>
+        <p>유튜브 채널 ‘예민한자립가’의 쇼츠를 하루 한 편씩 만듭니다. 자는 동안 초안이 나오고, 아침에 폰으로 보고 버튼만 누릅니다.</p>
+        <div class="rows">
+          <div class="row"><span class="row-label manual">손으로</span>
+            <div class="flow"><span class="step">인기 영상 찾아보기</span><span class="arrow">→</span><span class="step">대본</span><span class="arrow">→</span><span class="step">그림·자막</span><span class="arrow">→</span><span class="step">편집</span><span class="arrow">→</span><span class="step">녹음</span><span class="arrow">→</span><span class="step">업로드</span></div></div>
+          <div class="row"><span class="row-label auto">지금</span>
+            <div class="flow auto"><span class="step">인기 쇼츠 자동 수집</span><span class="arrow">→</span><span class="step">연출 분석</span><span class="arrow">→</span><span class="step">일기로 대본</span><span class="arrow">→</span><span class="step">사진·삽화</span><span class="arrow">→</span><span class="step">모션그래픽 초안</span><span class="arrow">→</span><span class="step me">폰으로 확인</span><span class="arrow">→</span><span class="step">내 목소리 · 업로드</span></div></div>
+        </div>
+        <div class="result">
+          <div><b>초안 1편 약 2~5분</b><small>대본·그림·영상까지, 사람 손은 확인 버튼만</small></div>
+          <div><b>저작권 확인된 자료만</b><small>위인 사진은 퍼블릭 도메인, 음악·효과음은 무료 라이선스</small></div>
+        </div>
+        <div class="tools"><span class="tool">유튜브</span><span class="tool">Claude</span><span class="tool">챗GPT 그림</span><span class="tool">제미나이</span><span class="tool">복제 목소리</span></div>
+      </article>
+
+      <article class="case">
+        <div class="case-top"><h3>떡상 콘텐츠 리서치 앱</h3><span class="status">필요할 때 실행</span></div>
+        <p>‘무엇이 뜨는가’를 감으로 고르지 않도록, 숫자로 걸러 보고 이유를 분석하는 도구입니다.</p>
+        <div class="rows">
+          <div class="row"><span class="row-label manual">손으로</span>
+            <div class="flow"><span class="step">하나씩 검색</span><span class="arrow">→</span><span class="step">조회수 눈으로 비교</span><span class="arrow">→</span><span class="step">감으로 주제 고르기</span></div></div>
+          <div class="row"><span class="row-label auto">지금</span>
+            <div class="flow auto"><span class="step">조회 9만·좋아요 5천·댓글 50 이상만</span><span class="arrow">→</span><span class="step">AI가 영상을 보고 왜 떴는지 정리</span><span class="arrow">→</span><span class="step">대본 초안</span></div></div>
+        </div>
+        <div class="result">
+          <div><b>24개 주제 × 50개 쇼츠</b><small>한 번에 비교해 뜨는 주제와 안 뜨는 주제를 가려냄</small></div>
+        </div>
+        <div class="tools"><span class="tool">유튜브 데이터</span><span class="tool">제미나이</span><span class="tool">챗GPT</span></div>
+      </article>
+      <article class="case">
+        <div class="case-top"><h3>대화로 영상 만들기</h3><span class="status">필요할 때 실행</span></div>
+        <p>영상 하나에 하루가 걸리던 기획·대본·썸네일·업로드 준비를, 휴대폰으로 대화하듯 말하면 진행되게 바꿨습니다.</p>
+        <div class="rows">
+          <div class="row"><span class="row-label manual">손으로</span>
+            <div class="flow"><span class="step">주제 고민</span><span class="arrow">→</span><span class="step">대본</span><span class="arrow">→</span><span class="step">썸네일</span><span class="arrow">→</span><span class="step">편집</span><span class="arrow">→</span><span class="step">제목·설명·태그</span><span class="arrow">→</span><span class="step">고정 댓글</span></div></div>
+          <div class="row"><span class="row-label auto">지금</span>
+            <div class="flow auto"><span class="step me">“이런 영상 만들어줘”</span><span class="arrow">→</span><span class="step">무엇을 누구에게 팔지 설계</span><span class="arrow">→</span><span class="step">썸네일 시안 4장</span><span class="arrow">→</span><span class="step">대본·초안 영상</span><span class="arrow">→</span><span class="step me">녹음 확인</span><span class="arrow">→</span><span class="step">업로드 문구·올리기 전 점검</span></div></div>
+        </div>
+        <div class="result">
+          <div><b>버튼 대신 대화</b><small>“썸네일 다시”, “다음 편 이어서”라고 말하면 그 단계가 돌아감</small></div>
+          <div><b>돈 드는 일은 확인 후</b><small>녹음·유튜브 올리기는 사장님이 누를 때만</small></div>
+        </div>
+        <div class="tools"><span class="tool">Claude</span><span class="tool">챗GPT 그림</span><span class="tool">제미나이</span><span class="tool">유튜브</span></div>
+      </article>
+
+      <article class="case">
+        <div class="case-top"><h3>고객 고충 접수와 관리</h3><span class="status">운영 중</span></div>
+        <p>이 포트폴리오에서 “내 얘기다” 고른 내용이 그대로 접수되고, 처리 단계까지 한 화면에서 관리됩니다.</p>
+        <div class="rows">
+          <div class="row"><span class="row-label manual">손으로</span>
+            <div class="flow"><span class="step">전화·문자로 문의</span><span class="arrow">→</span><span class="step">메모장에 적기</span><span class="arrow">→</span><span class="step">누구한테 연락했는지 기억하기</span></div></div>
+          <div class="row"><span class="row-label auto">지금</span>
+            <div class="flow auto"><span class="step">업종·고충 고르기</span><span class="arrow">→</span><span class="step">구글 시트에 자동 접수</span><span class="arrow">→</span><span class="step me">연락함 → 미팅 → 만드는 중 → 완료</span><span class="arrow">→</span><span class="step">업종별·고충별 집계</span></div></div>
+        </div>
+        <div class="result">
+          <div><b>고른 항목이 미리 체크된 채로</b><small>손님은 1분, 사장은 시트 한 장으로</small></div>
+        </div>
+        <div class="tools"><span class="tool">구글 시트</span><span class="tool">구글 앱스 스크립트</span><span class="tool">폰 웹앱</span></div>
+      </article>
+
+      <article class="case">
+        <div class="case-top"><h3>병원 상담 1차 응대</h3><span class="status">시연 · 직접 써 보기</span></div>
+        <p>밤사이 쌓이는 성형외과 상담 문의를 병원이 승인한 안내로 먼저 답하고, 의료 판단이 필요한 질문은 상담실장에게 넘깁니다. 가상 병원으로 만든 시연입니다.</p>
+        <div class="rows">
+          <div class="row"><span class="row-label manual">손으로</span>
+            <div class="flow"><span class="step">아침에 쌓인 문의 확인</span><span class="arrow">→</span><span class="step">같은 답 반복</span><span class="arrow">→</span><span class="step">급한 문의 놓치기</span></div></div>
+          <div class="row"><span class="row-label auto">지금</span>
+            <div class="flow auto"><span class="step">질문 분류</span><span class="arrow">→</span><span class="step">비용·회복·예약·위치는 승인된 답</span><span class="arrow">→</span><span class="step">의료 질문·할인 문의는 넘김</span><span class="arrow">→</span><span class="step">위험 신호는 ‘긴급’</span><span class="arrow">→</span><span class="step me">상담실장 접수 대장</span></div></div>
+        </div>
+        <div class="result">
+          <div><b>AI가 문장을 지어내지 않음</b><small>병원 확인을 거친 안내문 안에서만 답해 과장 광고 걱정을 줄임</small></div>
+          <div><a class="demo-link" href="https://claude.ai/artifact/BktWivzxtTKPgU83a2Ty99" target="_blank" rel="noopener">시연 열어 보기 →</a><small>손님 자리에서 질문을 눌러 보세요</small></div>
+        </div>
+        <div class="tools"><span class="tool">웹 상담 창</span><span class="tool">구글 시트</span><span class="tool">카카오톡 알림</span></div>
+      </article>
+
+      <article class="case">
+        <div class="case-top"><h3>병원 콘텐츠 기획</h3><span class="status">시연 · 실제 생성물</span></div>
+        <p>시술 키워드 하나를 넣으면 블로그 초안, 쇼츠 대본, 카드뉴스 5장이 한 번에 나오고, 의료광고에서 자주 걸리는 표현을 검사해 걸린 부분만 다시 씁니다.</p>
+        <div class="rows">
+          <div class="row"><span class="row-label manual">손으로</span>
+            <div class="flow"><span class="step">주제 고민</span><span class="arrow">→</span><span class="step">블로그 쓰기</span><span class="arrow">→</span><span class="step">쇼츠·카드뉴스 따로 쓰기</span><span class="arrow">→</span><span class="step">금지 표현 눈으로 찾기</span></div></div>
+          <div class="row"><span class="row-label auto">지금</span>
+            <div class="flow auto"><span class="step me">키워드 하나</span><span class="arrow">→</span><span class="step">블로그·쇼츠·카드뉴스 초안</span><span class="arrow">→</span><span class="step">위험 표현 10가지 검사</span><span class="arrow">→</span><span class="step">걸린 곳만 고쳐 쓰기</span><span class="arrow">→</span><span class="step me">담당자 확인 후 게시</span></div></div>
+        </div>
+        <div class="result">
+          <div><b>세 가지 글감 38~70초</b><small>시연 예시 3개를 실제로 만들 때 걸린 시간</small></div>
+          <div><a class="demo-link" href="https://claude.ai/artifact/1EHAXWusJfyQNwFmoXs3bC" target="_blank" rel="noopener">결과물·검사기 열어 보기 →</a><small>올리려는 문구를 붙여 넣어 검사해 볼 수 있어요</small></div>
+        </div>
+        <div class="tools"><span class="tool">Claude</span><span class="tool">광고 표현 검사</span><span class="tool">블로그·쇼츠·카드뉴스</span></div>
+      </article>
+    </div>
+  </section>
+
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">How it works</span>
+      <h2>이렇게 진행합니다</h2>
+    </div>
+    <ol class="how">
+      <li><div><b>가게에 찾아가 30분 이야기</b><span>매주 가장 귀찮은 일, 거기에 쓰는 시간을 여쭙니다.</span></div></li>
+      <li><div><b>제일 귀찮은 일 하나만 고르기</b><span>한 번에 다 바꾸지 않고, 효과가 가장 큰 일 하나부터.</span></div></li>
+      <li><div><b>자동화 만들기</b><span>사장님이 이미 쓰는 구글 시트·메일·폰에서 돌아가게.</span></div></li>
+      <li><div><b>같이 써보고 고치기</b><span>실제로 써보며 불편한 점을 고칩니다. 확인 버튼은 사장님 손에.</span></div></li>
+    </ol>
+    <div class="offer" style="margin-top:28px">
+      <div><b>처음 3곳은 무료</b><span>써 보신 뒤 솔직한 후기만 부탁드려요. 인터뷰 촬영은 원하시는 분만.</span></div>
+      <div><b>비용은 상담 후 견적</b><span>30분 이야기를 듣고, 줄어드는 시간에 맞춰 알려 드립니다.</span></div>
+      <div><b>첫 3개월 관리 무료</b><span>양식이 바뀌거나 고장 나면 고쳐 드립니다.</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <span class="eyebrow">Contact</span>
+    <div class="hero">
+      <h2>가게의 제일 귀찮은 일, 이야기해 주세요</h2>
+      <img class="mascot small" src="assets/95ddef334ac5d7dceb3100ae818f1e70.png" alt="">
+    </div>
+    <p><b>천성준</b> · William Cheon · 워크플로우 디자이너 · 개발자</p>
+    <dl class="contact">
+      <div><dt>전화</dt><dd id="c-tel">010-4763-7063</dd><button type="button" data-copy="c-tel">복사</button></div>
+      <div><dt>카카오톡 ID</dt><dd id="c-kakao">eager1014</dd><button type="button" data-copy="c-kakao">복사</button></div>
+      <div><dt>이메일</dt><dd id="c-mail">eager1014@gmail.com</dd><button type="button" data-copy="c-mail">복사</button></div>
+    </dl>
+  </footer>
+</div>
+<button type="button" class="coach-again">안내 다시 보기</button>
+<script>
+  // 진단: 가게 종류 → 그 가게에 맞는 고충 카드. 고른 것은 고충 적는 창(구글 폼)으로 ?industry=&pick= 로 넘어가 미리 체크된다.
+  // 실제로 만들어 드릴 수 있는 것만 (문자 자동 발송·예약 카톡·DM 자동 답장처럼 외부 계약이 필요한 건 뺌)
+  const FORM = "https://script.google.com/macros/s/AKfycbxVgmsZq-YnQhNeOqFIgum5Pz9MyR7ZLxbgQ0hesh_VD8DcrLgYLuL-QdB20gzsBvNp/exec";
+  const PAINS = {
+    kakao: ["카톡으로 온 주문·예약 옮겨 적기", "대화를 붙여넣으면 날짜·이름·내용이 표로 정리"],
+    settle: ["들어온 돈이 맞는지 모를 배달앱·카드 정산", "정산 파일을 맞춰보고 빠진 돈만 표시"],
+    receipt: ["세금 신고 때 영수증 찾기", "메일·사진 영수증이 항목별로 한 시트에"],
+    review: ["하나에 10분 걸리는 리뷰 답글", "사장님 말투로 답글 초안, 붙여넣기만"],
+    sns: ["오늘은 뭘 올리지? 인스타·블로그", "매일 아침 올릴 글 후보 3개"],
+    newitem: ["신상·메뉴 사진 올릴 때마다 설명 쓰기", "사진만 주시면 소개글·해시태그까지"],
+    staff: ["알바에게 같은 걸 또 설명하기", "가게 매뉴얼 + 폰으로 체크하는 오픈·마감표"],
+    schedule: ["근무표 짜고 급여 계산하기", "가능 시간 받아 근무표, 출퇴근 기록으로 급여 계산표"],
+    stock: ["몇 개 남았는지 헷갈리는 재고·발주", "폰으로 수량 입력, 부족하면 알림·발주서"],
+    history: ["“지난번에 뭐 했더라?” 손님 기록", "폰으로 남기는 손님 기록, 이름만 치면 바로"],
+    revisit: ["다시 올 때 된 손님 챙기기", "연락할 손님 목록과 안부 문구를 매주"],
+    unpaid: ["수강료·외상 미납 챙기기", "미납 목록과 안내 문구 자동 정리"],
+    shipping: ["주문 정리와 송장 입력", "주문 엑셀을 택배사 양식으로 바로 변환"],
+    grant: ["있는 줄도 몰랐던 지원금·정책자금", "우리 가게에 해당하는 공고만 골라 알림"],
+    consult: ["밤사이 쌓이는 상담 문의 1차 답변", "승인된 안내로 먼저 답하고, 의료 질문은 실장에게"],
+    adcopy: ["시술 블로그·쇼츠 글감 고민", "키워드로 초안, 의료광고 금지 표현은 따로 표시"],
+    noshow: ["예약 확인·노쇼 챙기기", "내일 예약 명단과 확인 문구를 매일 저녁"],
+  };
+  const COMMON = ["kakao", "receipt", "review", "sns", "staff", "grant"];
+  const INDS = {
+    "식당·카페": ["settle", "stock", "schedule", "newitem"],
+    "옷가게·소품샵": ["newitem", "stock", "revisit"],
+    "미용실·네일·속눈썹": ["history", "revisit", "newitem", "schedule"],
+    "학원·레슨·공방": ["unpaid", "history", "schedule"],
+    "온라인 판매": ["shipping", "newitem", "stock"],
+    "병원·성형외과": ["consult", "adcopy", "noshow", "history"],
+    "기타": ["schedule", "stock"],
+  };
+  let ind = "", picked = new Set();
+  const indsEl = document.querySelector(".inds"), painsEl = document.querySelector(".pains");
+  indsEl.innerHTML = Object.keys(INDS).map((k) => `<button type="button" role="radio" aria-checked="false">${k}</button>`).join("");
+  function renderPains() {
+    const keys = [...(ind ? INDS[ind] : []), ...COMMON.filter((k) => !(ind && INDS[ind].includes(k)))];
+    painsEl.innerHTML = keys.map((k) => `<button type="button" class="pain" data-k="${k}" aria-pressed="${picked.has(k)}"><b>${PAINS[k][0]}</b><span>${PAINS[k][1]}</span></button>`).join("");
+    const n = picked.size;
+    const q = new URLSearchParams();
+    if (ind) q.set("industry", ind);
+    if (n) q.set("pick", [...picked].join(","));
+    document.getElementById("send").href = FORM + (q.toString() ? "?" + q : "");
+    document.getElementById("send").textContent = n ? `골라주신 ${n}가지 보내기 →` : "직접 적으러 가기 →";
+    document.getElementById("sendnote").textContent = n ? "다음 화면에서 이미 체크돼 있어요. 1분이면 끝나요" : "고른 게 없어도 눌러서 직접 적으실 수 있어요";
+  }
+  indsEl.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    ind = ind === b.textContent ? "" : b.textContent;
+    indsEl.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x.textContent === ind)));
+    renderPains();
+  });
+  painsEl.addEventListener("click", (e) => {
+    const b = e.target.closest(".pain"); if (!b) return;
+    const k = b.dataset.k; picked.has(k) ? picked.delete(k) : picked.add(k);
+    b.setAttribute("aria-pressed", String(picked.has(k)));
+    renderPains();
+  });
+  renderPains();
+
+  document.querySelectorAll("[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const el = document.getElementById(btn.dataset.copy);
+      const done = () => { btn.textContent = "복사됨"; setTimeout(() => (btn.textContent = "복사"), 1500); };
+      const select = () => { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "선택됨"; };
+      try { navigator.clipboard.writeText(el.textContent.trim()).then(done, select); } catch (e) { select(); }
+    });
+  });
+
+  // 처음 온 손님에게 볼 곳을 하나씩 밝혀 짚어 준다 (2026-10-30). 한 번 보면(건너뛰어도) 이 브라우저에선 저절로는 안 뜸.
+  // again=true 면 본 적 있어도 다시 보여 준다 — 오른쪽 아래 '안내 다시 보기' 버튼 (사장님 2026-10-30)
+  function coach(key, steps, again) {
+    if (!again) try { if (localStorage.getItem("coach:" + key)) return; } catch (e) { return; }
+    if (document.querySelector(".coach")) return;
+    const list = steps.filter((s) => document.querySelector(s.sel)?.offsetParent);
+    if (!list.length) return;
+    let i = 0;
+    const veil = document.createElement("div");
+    veil.className = "coach";
+    veil.innerHTML = `<div class="coach-hole"></div><div class="coach-tip" role="dialog" aria-modal="true" aria-labelledby="coachT"></div>`;
+    document.body.appendChild(veil);
+    const hole = veil.querySelector(".coach-hole"), tip = veil.querySelector(".coach-tip");
+    const onKey = (e) => { if (e.key === "Escape") done(); };
+    function done() {
+      veil.remove();
+      removeEventListener("resize", show);
+      removeEventListener("keydown", onKey);
+      try { localStorage.setItem("coach:" + key, "1"); } catch (e) { /* 다음에 또 보일 뿐 */ }
+    }
+    function show() {
+      const s = list[i], el = document.querySelector(s.sel);
+      if (!el) return done();
+      const tall = el.offsetHeight > innerHeight * 0.55; // 화면보다 긴 곳은 위에 맞추고 안내는 화면 아래에
+      el.scrollIntoView({ block: tall ? "start" : "center" });
+      const r = el.getBoundingClientRect(), p = 8;
+      Object.assign(hole.style, { left: `${r.left - p}px`, top: `${Math.max(4, r.top - p)}px`, width: `${r.width + p * 2}px`, height: `${Math.min(r.height + p * 2, innerHeight - 8)}px` });
+      tip.innerHTML = `<small>${i + 1} / ${list.length}</small><b id="coachT">${s.title}</b><p>${s.text}</p>
+        <div class="coach-row"><button type="button" data-skip>건너뛰기</button><button type="button" data-next>${i === list.length - 1 ? "둘러보기" : "다음"}</button></div>`;
+      const below = r.bottom + tip.offsetHeight + 20 < innerHeight;
+      Object.assign(tip.style, { left: `${Math.max(12, Math.min(r.left, innerWidth - tip.offsetWidth - 12))}px`, top: `${tall ? innerHeight - tip.offsetHeight - 12 : below ? Math.min(r.bottom + 16, innerHeight - tip.offsetHeight - 12) : Math.max(12, r.top - tip.offsetHeight - 16)}px` });
+      tip.querySelector("[data-next]").onclick = () => (++i < list.length ? show() : done());
+      tip.querySelector("[data-skip]").onclick = done;
+      tip.querySelector("[data-next]").focus({ preventScroll: true });
+    }
+    addEventListener("resize", show);
+    addEventListener("keydown", onKey);
+    show();
+  }
+  const TOUR = [
+    { sel: ".promo", title: "1분 영상부터", text: "직접 만들어서 지금도 매일 쓰고 있는 자동화가 실제로 돌아가는 모습이에요." },
+    { sel: ".inds", title: "어떤 가게세요?", text: "가게 종류를 고르면 그 업종에서 자주 귀찮은 일만 추려서 보여 드려요." },
+    { sel: ".pains", title: "\u201c이거 내 얘기다\u201d 싶은 것", text: "해당하는 걸 모두 눌러 주세요. 하나도 없어도 괜찮아요." },
+    { sel: "#send", title: "보내기", text: "고른 일이 체크된 채로 문의 화면이 열려요. 1분이면 끝나요." },
+    { sel: ".cases", title: "지금까지 자동화한 일", text: "사례마다 손으로 하던 순서와 지금 자동으로 돌아가는 순서를 나란히 적었어요." },
+  ];
+  // 처음 온 손님에게 인사 3장(온보딩) → 이어서 볼 곳 짚어 주기(코치마크). 오른쪽 아래 버튼으로 둘 다 다시 볼 수 있음 (사장님 2026-10-30)
+  const INTRO = [
+    { img: "assets/4c368137bd878368ab7a76abfb06ebee.png", title: "안녕하세요, 천성준입니다", text: "사장님이 매일 손으로 하는 귀찮은 일을 알아서 돌아가게 만들어 드려요." },
+    { img: "assets/9f3764c1ae1684298da075e9a1df8311.png", title: "가게 종류만 골라 주세요", text: "그 업종에서 자주 귀찮은 일을 추려 보여 드려요. \u201c내 얘기다\u201d 싶은 걸 누르면 끝이에요." },
+    { img: "assets/95ddef334ac5d7dceb3100ae818f1e70.png", title: "1분이면 충분해요", text: "고른 일이 체크된 채로 문의 화면이 열려요. 부담 없이 둘러보세요." },
+  ];
+  function intro(then) {
+    if (document.querySelector(".onb")) return;
+    let i = 0;
+    const veil = document.createElement("div");
+    veil.className = "onb";
+    document.body.appendChild(veil);
+    const end = () => {
+      veil.remove();
+      removeEventListener("keydown", onKey);
+      try { localStorage.setItem("onb:portfolio", "1"); } catch (e) { /* 다음에 또 보일 뿐 */ }
+      then();
+    };
+    const onKey = (e) => { if (e.key === "Escape") end(); };
+    const draw = () => {
+      const s = INTRO[i], last = i === INTRO.length - 1;
+      veil.innerHTML = `<div class="onb-card" role="dialog" aria-modal="true" aria-labelledby="onbT"><div class="onb-step">
+        <img src="${s.img}" alt=""><h2 id="onbT">${s.title}</h2><p>${s.text}</p></div>
+        <div class="onb-dots" aria-hidden="true">${INTRO.map((_, k) => `<i class="${k === i ? "on" : ""}"></i>`).join("")}</div>
+        <div class="coach-row"><button type="button" data-skip>건너뛰기</button><button type="button" data-next>${last ? "둘러보기 시작" : "다음"}</button></div></div>`;
+      veil.querySelector("[data-next]").onclick = () => (last ? end() : (i++, draw()));
+      veil.querySelector("[data-skip]").onclick = end;
+      veil.querySelector("[data-next]").focus({ preventScroll: true });
+    };
+    addEventListener("keydown", onKey);
+    draw();
+  }
+  let seen = true;
+  try { seen = !!localStorage.getItem("onb:portfolio"); } catch (e) { /* 저장이 막힌 브라우저면 안 띄움 */ }
+  setTimeout(() => (seen ? coach("portfolio", TOUR) : intro(() => coach("portfolio", TOUR))), 1000);
+  document.querySelector(".coach-again").onclick = () => intro(() => coach("portfolio", TOUR, true));
+</script>
+
+
+</body></html>
