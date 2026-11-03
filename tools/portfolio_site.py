@@ -8,6 +8,7 @@
 """
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -45,8 +46,11 @@ def main():
         )
     if not html.lstrip().lower().startswith("<!doctype"):
         html = HEAD + html + TAIL
+    # 눈에 안 보이는 만든 시각 — 사이트에 반영됐는지 확인용 (curl ... | grep portfolio-built)
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    html = html.replace("<head>", f'<head><meta name="portfolio-built" content="{stamp}">', 1)
     (SITE / "index.html").write_text(html, encoding="utf-8")
-    print(f"완료: {SITE / 'index.html'} (그림·영상 {len(files)}개)")
+    print(f"완료: {SITE / 'index.html'} (그림·영상 {len(files)}개, 만든 시각 {stamp})")
 
 
 if __name__ == "__main__":
