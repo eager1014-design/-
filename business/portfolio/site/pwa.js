@@ -17,6 +17,7 @@
     .pwa-bar { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); z-index: 60;
       display: flex; align-items: center; gap: 2px; background: #14233A; color: #fff; border-radius: 999px; box-shadow: 0 6px 18px rgba(0,0,0,.2);
       font: 600 14px "IBM Plex Sans KR", -apple-system, sans-serif; max-width: calc(100vw - 32px); }
+    body:has(.onb, .coach) .pwa-bar, body:has(.onb, .coach) .pwa-tip { display: none; } /* 처음 안내 창이 떠 있는 동안은 숨김 */
     .pwa-bar button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 10px 6px 10px 16px; }
     .pwa-bar button.x { padding: 10px 14px 10px 6px; opacity: .7; font-size: 16px; line-height: 1; }
     .pwa-bar button:focus-visible { outline: 2px solid #8DB2EA; outline-offset: 2px; border-radius: 999px; }
