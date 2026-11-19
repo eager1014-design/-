@@ -1,0 +1,23 @@
+{
+  "name": "천성준 워크플로우 — 가게 업무 자동화",
+  "short_name": "천성준 자동화",
+  "description": "사장님이 매일 손으로 하던 일을 알아서 돌아가게 만듭니다. 워크플로우 디자이너 · 개발자 천성준의 포트폴리오.",
+  "lang": "ko",
+  "dir": "ltr",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F6F9",
+  "theme_color": "#14233A",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "icons/screenshot-mobile.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "포트폴리오 첫 화면" }
+  ]
+}

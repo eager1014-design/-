@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta name="portfolio-built" content="2026-11-03 15:43"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<!doctype html><html lang="ko"><head><meta name="portfolio-built" content="2026-11-19 11:02"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="사장님이 매일 손으로 하던 일, 자동으로 돌아가게 만듭니다. 워크플로우 디자이너 · 개발자 천성준의 포트폴리오."><meta name="theme-color" content="#14233A"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon-192.png" type="image/png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="천성준 자동화"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta property="og:type" content="website"><meta property="og:locale" content="ko_KR"><meta property="og:title" content="천성준 · 가게 업무 자동화 포트폴리오"><meta property="og:description" content="사장님이 매일 손으로 하던 일, 자동으로 돌아가게 만듭니다. 워크플로우 디자이너 · 개발자 천성준의 포트폴리오."><meta property="og:url" content="https://cheon-workflow.eager1014.workers.dev/"><meta property="og:image" content="https://cheon-workflow.eager1014.workers.dev/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><script src="pwa.js" defer></script><style>:root{color-scheme:light;box-sizing:border-box}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
 <title>천성준 워크플로우 포트폴리오</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -89,6 +89,21 @@
   .tools { display: flex; flex-wrap: wrap; gap: 6px; }
   .demo-link { font-weight: 700; color: var(--accent); text-decoration: none; }
   .demo-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* 바로 열어 볼 수 있는 웹사이트 (2026-11-19) */
+  .sites { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px; }
+  .site { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+  .site .shot { display: block; aspect-ratio: 4 / 5; overflow: hidden; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .site .shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+  .site-body { padding: 16px 18px 18px; display: grid; gap: 8px; align-content: start; }
+  .site-body .case-top h3 { font-size: 19px; }
+  .site-body p { margin: 0; color: var(--muted); font-size: 15px; }
+  .site-body ul { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 2px; }
+  .site-body .go { justify-self: start; margin-top: 4px; font-weight: 700; color: var(--accent); text-decoration: none; padding: 8px 14px; border: 1.5px solid var(--accent); border-radius: 10px; }
+  .site-body .go:hover { background: var(--accent-soft); }
+  .site-body .go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .site-body .lock { justify-self: start; margin-top: 4px; font-size: 13px; color: var(--muted); padding: 8px 0; }
+  .more-sites { margin: 16px 0 0; color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .more-sites a { color: var(--accent); font-weight: 600; }
   .tool { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
 
   .diag { margin-top: 28px; }
@@ -213,10 +228,48 @@
       <p>사업을 직접 손으로 돌려 본 개발자입니다. 영수증 정리, 홍보 글, 신청 받고 결과물 보내기까지 매일 반복하던 일을 AI와 함께 하나씩 자동화했고, 지금도 매일 돌아가고 있습니다.</p>
     </div>
     <div class="facts">
-      <span class="fact">직접 만든 자동화 7가지</span><span class="fact">병원 시연 2가지</span>
+      <span class="fact">직접 만든 자동화 7가지</span><span class="fact">공개 웹사이트 2곳 운영</span><span class="fact">병원 시연 2가지</span>
       <span class="fact">매일 05:00 · 07:30 자동 실행</span>
       <span class="fact">폰으로 확인하고 버튼으로 승인</span>
     </div>
+  </section>
+
+  <section id="sites">
+    <div class="sec-head">
+      <span class="eyebrow">Websites</span>
+      <h2>지금 <em>바로 열어 볼 수 있는</em> 웹사이트</h2>
+      <p>직접 기획하고 만들어 인터넷에 올린 사이트입니다. 휴대폰으로 눌러서 그대로 써 보실 수 있어요.</p>
+    </div>
+    <div class="sites">
+      <article class="site">
+        <a class="shot" href="https://sajumiho.eager1014.workers.dev" target="_blank" rel="noopener" aria-label="사주미호 열기"><img src="assets/882cc8190c0d78d860b1b85459af8ca6.jpg" alt="사주미호 첫 화면: 구미호와 토끼 캐릭터, 오늘의 운세 보기 버튼" loading="lazy" width="390" height="600"></a>
+        <div class="site-body">
+          <div class="case-top"><h3>사주미호</h3><span class="status">운영 중</span></div>
+          <p>생일만 넣으면 사주 풀이·궁합·신년운세를 보여 주는 손님용 서비스.</p>
+          <ul><li>구글 로그인 · 풀이 신청부터 PDF 발송까지</li><li>AI 풀이 초안 → 사람이 검토</li><li>매일 아침 운세 메일</li></ul>
+          <a class="go" href="https://sajumiho.eager1014.workers.dev" target="_blank" rel="noopener">사이트 열기 →</a>
+        </div>
+      </article>
+      <article class="site">
+        <a class="shot" href="https://facility-assistant.eager1014.workers.dev" target="_blank" rel="noopener" aria-label="AI 시설관리 비서 열기"><img src="assets/c208149a6700928390c378dc30a2e1e0.jpg" alt="AI 시설관리 비서: 점검 메모 한 줄이 구역별 정상·이상 보고서로 정리된 화면" loading="lazy" width="390" height="600"></a>
+        <div class="site-body">
+          <div class="case-top"><h3>AI 시설관리 비서</h3><span class="status">시안 · 써 보기</span></div>
+          <p>순찰하며 말로 남긴 점검 메모를 일일 시설관리 보고서로 바꿔 줍니다.</p>
+          <ul><li>마이크로 말하면 글로 받아 적기</li><li>구역별 정상·이상 · 후속 조치 정리</li><li>PDF로 저장·인쇄</li></ul>
+          <a class="go" href="https://facility-assistant.eager1014.workers.dev" target="_blank" rel="noopener">사이트 열기 →</a>
+        </div>
+      </article>
+      <article class="site">
+        <div class="shot"><img src="assets/5c96b49342506bd6a2211fed6d7ec685.jpg" alt="STEADY LIFE OS 비밀번호 입력 화면" loading="lazy" width="390" height="600"></div>
+        <div class="site-body">
+          <div class="case-top"><h3>STEADY LIFE OS</h3><span class="status">매일 쓰는 중</span></div>
+          <p>일기만 쓰면 AI가 지출·시간·컨디션·아이디어를 알아서 나눠 기록하는 개인 관리 앱.</p>
+          <ul><li>말로 일기 쓰기 · 페이지별 AI 분석</li><li>인터넷이 끊겨도 열리고, 다시 연결되면 저장</li><li>폰 홈 화면 앱 · 알림</li></ul>
+          <span class="lock">🔒 개인 기록이라 비밀번호로 잠겨 있어요</span>
+        </div>
+      </article>
+    </div>
+    <p class="more-sites"><span>그 밖에 열어 볼 수 있는 것</span><a href="https://claude.ai/artifact/BktWivzxtTKPgU83a2Ty99" target="_blank" rel="noopener">병원 상담 데스크</a><a href="https://claude.ai/artifact/1EHAXWusJfyQNwFmoXs3bC" target="_blank" rel="noopener">병원 콘텐츠 기획실</a><a href="#diag">가게 고충 접수 창</a></p>
   </section>
 
   <section>
@@ -229,7 +282,7 @@
 
     <div class="cases">
       <article class="case">
-        <div class="case-top"><h3>사주 상담 서비스 ‘운결’</h3><span class="status">운영 중인 웹사이트</span></div>
+        <div class="case-top"><h3>사주 상담 서비스 ‘사주미호’</h3><span class="status">운영 중인 웹사이트</span></div>
         <p>신청부터 결과물 발송까지 한 사람이 다 하던 상담 업무를 웹사이트 하나로 묶었습니다.</p>
         <div class="rows">
           <div class="row"><span class="row-label manual">손으로</span>
@@ -240,8 +293,9 @@
         <div class="result">
           <div><b>10장 · 약 1만 7천 자</b><small>신년운세 풀이 초안이 1분 안팎</small></div>
           <div><b>무료 맛보기 → 친구 추천</b><small>추천 링크로 온 손님을 자동으로 집계</small></div>
+          <div><a class="demo-link" href="https://sajumiho.eager1014.workers.dev" target="_blank" rel="noopener">사이트 열어 보기 →</a><small>지금 실제로 손님을 받는 사이트예요</small></div>
         </div>
-        <div class="tools"><span class="tool">웹사이트</span><span class="tool">챗GPT</span><span class="tool">제미나이</span><span class="tool">PDF</span><span class="tool">Gmail</span></div>
+        <div class="tools"><span class="tool">웹사이트</span><span class="tool">구글 로그인</span><span class="tool">챗GPT</span><span class="tool">제미나이</span><span class="tool">PDF</span><span class="tool">Gmail</span></div>
       </article>
 
       <article class="case">
@@ -518,6 +572,7 @@
     { sel: ".inds", title: "어떤 가게세요?", text: "가게 종류를 고르면 그 업종에서 자주 귀찮은 일만 추려서 보여 드려요." },
     { sel: ".pains", title: "\u201c이거 내 얘기다\u201d 싶은 것", text: "해당하는 걸 모두 눌러 주세요. 하나도 없어도 괜찮아요." },
     { sel: "#send", title: "보내기", text: "고른 일이 체크된 채로 문의 화면이 열려요. 1분이면 끝나요." },
+    { sel: ".sites", title: "바로 열어 보는 웹사이트", text: "직접 만들어 올린 사이트예요. 눌러서 그대로 써 보실 수 있어요." },
     { sel: ".cases", title: "지금까지 자동화한 일", text: "사례마다 손으로 하던 순서와 지금 자동으로 돌아가는 순서를 나란히 적었어요." },
   ];
   // 처음 온 손님에게 인사 3장(온보딩) → 이어서 볼 곳 짚어 주기(코치마크). 오른쪽 아래 버튼으로 둘 다 다시 볼 수 있음 (사장님 2026-10-30)

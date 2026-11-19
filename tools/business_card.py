@@ -4,7 +4,8 @@
   python3 tools/business_card.py [--theme=gold|noir|light] [--name-en="William Cheon"] [--out=폴더이름]   → business/card/<폴더>/
   python3 tools/business_card.py --theme=gold --strong --out=final-gold   → 사장님 최종 명함
   python3 tools/business_card.py --theme=gold --out=final-gold --menu   → 같은 폴더에 한 장짜리 자동화 메뉴판(A5) menu.png·menu_print.pdf 에 front.png, back.png, card_print.pdf(2쪽), preview.png
-  gold(검정+금색만, 사장님 최종 선택 2026-10-23) · noir(검정+보라·청록 빛 번짐) · light(처음 버전, 회백색+초록)
+  python3 tools/business_card.py --theme=navy --strong --out=final-navy   → 남색·파랑 신뢰 명함 (2026-11-19)
+  navy(남색+파랑, 캐릭터 없음) · gold(검정+금색만, 사장님 최종 선택 2026-10-23) · noir(검정+보라·청록 빛 번짐) · light(처음 버전, 회백색+초록)
 내용(이름·직업·연락처·QR 주소)은 아래 CARD 에서 고친다. QR 은 segno(pip install --user segno).
 글꼴은 맥 기본 한글 글꼴(Apple SD Gothic Neo)이라 인쇄 파일에 그림으로 박혀서 글꼴 없는 인쇄소에서도 그대로 나온다.
 """
@@ -30,7 +31,7 @@ CARD = {
     # 사장님 입에서 나오는 말 + 실제로 만들어 드릴 수 있는 것만 (2026-10-23 사장님: "키워드가 안 와닿는다")
     # 2026-10-24: 엑셀·장부 → 카톡 주문·예약 (매출 장부는 캐시노트 같은 무료 앱이 이미 해 줌 — 이미 있는 프로그램이 못 하는 틈만)
     "back_items": ["카톡으로 온 주문·예약 옮겨 적기", "하나에 10분 걸리는 리뷰 답글", "신상·메뉴 사진마다 쓰는 설명 글", "알바에게 같은 걸 또 설명하기", "있는 줄도 몰랐던 지원금"],
-    "qr_url": "https://claude.ai/artifact/HfrXKBoNL643BggQ1Tpy8n",
+    "qr_url": "https://cheon-workflow.eager1014.workers.dev",  # 2026-11-19 클로드 페이지 → 공개 포트폴리오 사이트
     "qr_label": "내 가게 귀찮은 일 골라보기",
     "form_url": "https://script.google.com/macros/s/AKfycbxVgmsZq-YnQhNeOqFIgum5Pz9MyR7ZLxbgQ0hesh_VD8DcrLgYLuL-QdB20gzsBvNp/exec",
     # 한 장짜리 자동화 메뉴판 (python3 tools/business_card.py --menu)
@@ -154,10 +155,16 @@ PALETTES = {
     # 2026-10-23 사장님: "검은색이랑 금색만" — 깊은 검정 + 아주 옅은 따뜻한 빛 + 금색 글씨
     "gold": {"bg": (9, 9, 10), "ivory": "#E8D7A6", "muted": "#9E8B5E", "gold": "#C9A45C", "line": "#3A3426",
              "glow_f": [(0.85, 0.10, 0.30, (26, 22, 15))], "glow_b": [(0.15, 0.90, 0.30, (26, 22, 15))]},
+    # 2026-11-19 사장님: "귀여운 캐릭터 말고, 사업하는 사람들한테 남색·블루 계열로 신뢰감 있게" — 깊은 남색 + 흰 글씨 + 밝은 파랑 강조
+    "navy": {"bg": (13, 26, 50), "ivory": "#F2F6FC", "muted": "#A9BCD8", "gold": "#6FA8FF", "line": "#24385C",
+             "glow_f": [(0.90, 0.05, 0.32, (16, 44, 100)), (0.05, 1.00, 0.24, (8, 28, 66))],
+             "glow_b": [(0.10, 0.10, 0.28, (8, 28, 66)), (0.95, 0.95, 0.32, (16, 44, 100))]},
 }
 NOIR = dict(PALETTES.get(THEME, PALETTES["noir"]))
 if STRONG and THEME == "gold":
     NOIR.update(ivory="#F3E6C2", muted="#C9B07A", gold="#D6B46A")
+if STRONG and THEME == "navy":
+    NOIR.update(ivory="#FFFFFF", muted="#C3D3EA", gold="#7DB3FF")
 
 
 def haze(glows, seed):
@@ -215,7 +222,7 @@ def back_noir():
     pad = round(2.2 * MM)
     qr = segno.make(CARD["qr_url"], error="m")
     tmp = os.path.join(OUT, "_qr.png")
-    qr.save(tmp, scale=20, border=1, dark="#14141A", light=NOIR["ivory"])
+    qr.save(tmp, scale=20, border=1, dark="#0D1A32" if THEME == "navy" else "#14141A", light=NOIR["ivory"])
     q = Image.open(tmp).convert("RGB").resize((size, size), Image.NEAREST)
     os.remove(tmp)
     bx2, by1 = W - SAFE, SAFE
@@ -286,7 +293,7 @@ def menu_sheet():
     pad = round(2.2 * MM)
     qr = segno.make(CARD["form_url"], error="m")
     tmp = os.path.join(OUT, "_qr2.png")
-    qr.save(tmp, scale=20, border=1, dark="#14141A", light=NOIR["ivory"])
+    qr.save(tmp, scale=20, border=1, dark="#0D1A32" if THEME == "navy" else "#14141A", light=NOIR["ivory"])
     q = Image.open(tmp).convert("RGB").resize((size, size), Image.NEAREST)
     os.remove(tmp)
     bx2, by2 = MW - S, MH - S - round(7 * MM)
